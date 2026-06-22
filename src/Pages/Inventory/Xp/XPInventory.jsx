@@ -3,7 +3,8 @@ import { toast, ToastContainer } from "react-toastify";
 import {
   FaBox, FaPlus, FaSearch, FaFileExcel,
   FaUpload, FaDownload, FaEdit, FaTrash,
-  FaTimes, FaBell, FaCheckCircle, FaTimesCircle
+  FaTimes, FaBell, FaCheckCircle, FaTimesCircle,
+  FaChevronRight, FaHistory, FaArrowUp, FaArrowDown
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../../../Components/Navbar/Navbar";
@@ -249,7 +250,7 @@ const EditProductModal = ({
 };
 
 // ============================================
-// BULK UPLOAD MODAL
+// BULK UPLOAD MODAL (tabs instead of buried select)
 // ============================================
 const BulkUploadModal = ({
   show, onClose, fileInputRef, selectedFile, onFileChange,
@@ -271,17 +272,21 @@ const BulkUploadModal = ({
         </div>
         <div className="xp-modal-body">
           <div className="xp-upload-area">
-            <div className="xp-form-row">
-              <div className="xp-form-field">
-                <label>Upload Type *</label>
-                <select
-                  value={uploadType}
-                  onChange={(e) => setUploadType(e.target.value)}
-                >
-                  <option value="products">Products (Name + ML)</option>
-                  <option value="inventory">Inventory (Name + ML + Qty + Price)</option>
-                </select>
-              </div>
+            <div className="xp-upload-type-tabs">
+              <button
+                className={uploadType === 'products' ? 'xp-upload-type-active' : ''}
+                onClick={() => setUploadType('products')}
+                type="button"
+              >
+                <FaBox /> Products Only
+              </button>
+              <button
+                className={uploadType === 'inventory' ? 'xp-upload-type-active' : ''}
+                onClick={() => setUploadType('inventory')}
+                type="button"
+              >
+                <FaUpload /> Inventory (Stock)
+              </button>
             </div>
 
             <p className="xp-upload-hint">
@@ -304,7 +309,7 @@ const BulkUploadModal = ({
               )}
             </div>
 
-            <button className="xp-btn-download" onClick={onDownloadTemplate}>
+            <button className="xp-btn-download" onClick={onDownloadTemplate} type="button">
               <FaDownload /> Download Template
             </button>
           </div>
@@ -579,6 +584,75 @@ const DeleteConfirmModal = ({ show, onClose, product, onConfirm, isDeleting }) =
 };
 
 // ============================================
+// TRANSACTION HISTORY PANEL (the new feature)
+// Renders inline below an expanded row
+// ============================================
+const TransactionPanel = ({ transactions, isLoading }) => {
+  const formatDateTime = (dateString) => {
+    const date = new Date(dateString);
+    return {
+      date: date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+      time: date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+    };
+  };
+
+  if (isLoading) {
+    return (
+      <div className="xp-transaction-panel">
+        <div className="xp-transaction-loading">
+          <div className="xp-loading-spinner tiny"></div>
+          Loading transaction history...
+        </div>
+      </div>
+    );
+  }
+
+  if (!transactions || transactions.length === 0) {
+    return (
+      <div className="xp-transaction-panel">
+        <div className="xp-transaction-panel-header">
+          <h5><FaHistory /> Transaction History</h5>
+        </div>
+        <div className="xp-transaction-empty">No stock transactions recorded yet for this product.</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="xp-transaction-panel">
+      <div className="xp-transaction-panel-header">
+        <h5><FaHistory /> Transaction History ({transactions.length})</h5>
+      </div>
+      <div className="xp-transaction-list">
+        {transactions.map((t, idx) => {
+          const { date, time } = formatDateTime(t.createdAt);
+          return (
+            <div key={t.transactionId || idx} className="xp-transaction-item">
+              <span className={`xp-txn-type-badge ${t.transactionType === 'IN' ? 'xp-txn-in' : 'xp-txn-out'}`}>
+                {t.transactionType === 'IN' ? <FaArrowUp /> : <FaArrowDown />}
+                {t.transactionType}
+              </span>
+              <span className="xp-txn-qty">{t.quantity} KG</span>
+              <span className="xp-txn-price">
+                {t.purchasePrice ? `₹${t.purchasePrice}/KG` : '—'}
+              </span>
+              <span className="xp-txn-by">
+                <span className="xp-txn-by-name">{t.performedBy?.userName || 'Unknown'}</span>
+                <span className="xp-txn-by-reason">{t.reason}{t.notes ? ` · ${t.notes}` : ''}</span>
+              </span>
+              <span className="xp-txn-date">
+                {date}
+                <span className="xp-txn-time">{time}</span>
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// ============================================
 // MAIN COMPONENT
 // ============================================
 const XPInventory = () => {
@@ -616,12 +690,17 @@ const XPInventory = () => {
 
   // Bulk upload states
   const [selectedFile, setSelectedFile] = useState(null);
-  const [uploadType, setUploadType] = useState("products");
+  const [uploadType, setUploadType] = useState("inventory");
   const [bulkErrors, setBulkErrors] = useState([]);
   const [bulkSuccessCount, setBulkSuccessCount] = useState(0);
   const [bulkErrorCount, setBulkErrorCount] = useState(0);
   const [bulkSuccessDetails, setBulkSuccessDetails] = useState([]);
   const [bulkUploadId, setBulkUploadId] = useState("");
+
+  // ── Row expansion / transaction history states (NEW) ──
+  const [expandedRowId, setExpandedRowId] = useState(null);
+  const [transactionsByXpId, setTransactionsByXpId] = useState({});
+  const [loadingTransactionsId, setLoadingTransactionsId] = useState(null);
 
   const fileInputRef = useRef(null);
 
@@ -684,6 +763,49 @@ const XPInventory = () => {
     );
     setFilteredInventory(filtered);
   }, [searchTerm, inventory]);
+
+  // ============================================
+  // ROW EXPANSION — FETCH TRANSACTION HISTORY (NEW)
+  // ============================================
+  const fetchTransactionsForProduct = async (xpId) => {
+    try {
+      setLoadingTransactionsId(xpId);
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/xp/get-transactions?xpId=${xpId}&limit=100`,
+        { credentials: 'include' }
+      );
+      if (!response.ok) throw new Error('Failed to fetch transaction history');
+      const data = await response.json();
+
+      // Transactions come newest-last from the array push; show newest first
+      const sorted = [...(data.transactions || [])].sort(
+        (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+      );
+
+      setTransactionsByXpId(prev => ({ ...prev, [xpId]: sorted }));
+    } catch (error) {
+      console.error("Error fetching transactions:", error);
+      toast.error("Failed to load transaction history");
+      setTransactionsByXpId(prev => ({ ...prev, [xpId]: [] }));
+    } finally {
+      setLoadingTransactionsId(null);
+    }
+  };
+
+  const handleRowClick = (xpId) => {
+    if (expandedRowId === xpId) {
+      // Collapse if clicking the already-open row
+      setExpandedRowId(null);
+      return;
+    }
+
+    setExpandedRowId(xpId);
+
+    // Only fetch if we don't already have it cached
+    if (!transactionsByXpId[xpId]) {
+      fetchTransactionsForProduct(xpId);
+    }
+  };
 
   // ============================================
   // CREATE PRODUCT
@@ -782,6 +904,8 @@ const XPInventory = () => {
       const result = await response.json();
       toast.success(result.message);
 
+      const updatedXpId = addStockData.xpId;
+
       setAddStockData({
         xpId: "",
         productName: "",
@@ -793,6 +917,18 @@ const XPInventory = () => {
       setShowAddStockModal(false);
       await fetchInventory();
       await fetchAlerts();
+
+      // If that product's history panel is open, refresh it so the new transaction shows immediately
+      if (expandedRowId === updatedXpId) {
+        await fetchTransactionsForProduct(updatedXpId);
+      } else {
+        // Invalidate cache so next expand fetches fresh data
+        setTransactionsByXpId(prev => {
+          const next = { ...prev };
+          delete next[updatedXpId];
+          return next;
+        });
+      }
 
     } catch (error) {
       console.error("Error adding stock:", error);
@@ -878,6 +1014,16 @@ const XPInventory = () => {
       const result = await response.json();
       toast.success(result.message);
 
+      // Clean up any cached transaction state for the deleted product
+      if (expandedRowId === selectedProduct.xpId) {
+        setExpandedRowId(null);
+      }
+      setTransactionsByXpId(prev => {
+        const next = { ...prev };
+        delete next[selectedProduct.xpId];
+        return next;
+      });
+
       setShowDeleteModal(false);
       setSelectedProduct(null);
       await fetchInventory();
@@ -952,6 +1098,15 @@ const XPInventory = () => {
       setShowBulkUploadModal(false);
       await fetchInventory();
       await fetchAlerts();
+
+      // Bulk inventory upload can touch many products' transaction history —
+      // clear the whole cache so any expanded rows refetch fresh data
+      if (uploadType === 'inventory') {
+        setTransactionsByXpId({});
+        if (expandedRowId) {
+          fetchTransactionsForProduct(expandedRowId);
+        }
+      }
 
     } catch (error) {
       console.error("Error in bulk upload:", error);
@@ -1069,8 +1224,25 @@ const XPInventory = () => {
                 <FaBell />
                 {alerts.length > 0 && <span className="xp-alert-badge">{alerts.length}</span>}
               </button>
-              <button className="xp-upload-btn" onClick={() => setShowBulkUploadModal(true)}>
-                <FaUpload /> Bulk Upload
+              <button
+                className="xp-bulk-stock-btn"
+                onClick={() => {
+                  setUploadType('inventory');
+                  setShowBulkUploadModal(true);
+                }}
+                title="Bulk add stock for multiple products at once"
+              >
+                <FaUpload /> Bulk Add Stock
+              </button>
+              <button
+                className="xp-upload-btn"
+                onClick={() => {
+                  setUploadType('products');
+                  setShowBulkUploadModal(true);
+                }}
+                title="Bulk create new products"
+              >
+                <FaBox /> Bulk Add Products
               </button>
               <button className="xp-add-stock-btn" onClick={() => setShowAddStockModal(true)}>
                 <FaPlus /> Add Stock
@@ -1115,40 +1287,63 @@ const XPInventory = () => {
                 ) : (
                   filteredInventory.map((item) => {
                     const status = getStockStatus(item.quantity, item.minStock);
+                    const isExpanded = expandedRowId === item.xpId;
+
                     return (
-                      <tr key={item.xpId}>
-                        <td className="xp-name-cell">{item.productName}</td>
-                        <td className="xp-ml-cell">{item.ml}ml</td>
-                        <td className="xp-qty-cell">{item.quantity}</td>
-                        <td className="xp-price-cell">
-                          ₹{item.avgPurchasePrice?.toFixed(2) || '0.00'}
-                        </td>
-                        <td className="xp-min-cell">{item.minStock}</td>
-                        <td>
-                          <span className={`xp-status-badge xp-status-${status.status}`}>
-                            <span className="xp-status-dot"></span>
-                            {status.label}
-                          </span>
-                        </td>
-                        <td>
-                          <div className="xp-row-actions">
-                            <button
-                              className="xp-edit-btn"
-                              onClick={() => openEditModal(item)}
-                              title="Edit"
-                            >
-                              <FaEdit />
-                            </button>
-                            <button
-                              className="xp-delete-btn"
-                              onClick={() => openDeleteModal(item)}
-                              title="Delete"
-                            >
-                              <FaTrash />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
+                      <React.Fragment key={item.xpId}>
+                        <tr
+                          className={`xp-product-row ${isExpanded ? 'xp-row-expanded' : ''}`}
+                          onClick={() => handleRowClick(item.xpId)}
+                        >
+                          <td className="xp-name-cell">
+                            <span className="xp-name-cell-content">
+                              <FaChevronRight className={`xp-expand-chevron ${isExpanded ? 'xp-chevron-open' : ''}`} />
+                              {item.productName}
+                            </span>
+                          </td>
+                          <td className="xp-ml-cell">{item.ml}ml</td>
+                          <td className="xp-qty-cell">{item.quantity}</td>
+                          <td className="xp-price-cell">
+                            ₹{item.avgPurchasePrice?.toFixed(2) || '0.00'}
+                          </td>
+                          <td className="xp-min-cell">{item.minStock}</td>
+                          <td>
+                            <span className={`xp-status-badge xp-status-${status.status}`}>
+                              <span className="xp-status-dot"></span>
+                              {status.label}
+                            </span>
+                          </td>
+                          <td>
+                            <div className="xp-row-actions" onClick={(e) => e.stopPropagation()}>
+                              <button
+                                className="xp-edit-btn"
+                                onClick={() => openEditModal(item)}
+                                title="Edit"
+                              >
+                                <FaEdit />
+                              </button>
+                              <button
+                                className="xp-delete-btn"
+                                onClick={() => openDeleteModal(item)}
+                                title="Delete"
+                              >
+                                <FaTrash />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+
+                        {isExpanded && (
+                          <tr className="xp-transaction-row">
+                            <td colSpan="7">
+                              <TransactionPanel
+                                transactions={transactionsByXpId[item.xpId]}
+                                isLoading={loadingTransactionsId === item.xpId}
+                              />
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
                     );
                   })
                 )}

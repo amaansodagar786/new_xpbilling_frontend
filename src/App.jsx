@@ -13,6 +13,8 @@ import PromoCodes from "./Pages/PromoCodes/PromoCodes";
 import Packages from "./Pages/Packages/Packages";
 import Workshops from "./Pages/Workshop/Workshops";
 import BottleInventory from "./Pages/Inventory/Bottle/BottleInventory";
+import XPInventory from "./Pages/Inventory/Xp/XPInventory";
+import DispenserInventory from "./Pages/Inventory/Dispenser/DispenserInventory";
 
 function App() {
   return (
@@ -82,6 +84,20 @@ function App() {
               <ProtectedRoute>
                 <PermissionRoute requiredPermission="inventory">
                   <BottleInventory />
+                </PermissionRoute>
+              </ProtectedRoute>
+            } />
+            <Route path="/inventory/xp" element={
+              <ProtectedRoute>
+                <PermissionRoute requiredPermission="inventory">
+                  <XPInventory />
+                </PermissionRoute>
+              </ProtectedRoute>
+            } />
+            <Route path="/inventory/dispenser" element={
+              <ProtectedRoute>
+                <PermissionRoute requiredPermission="inventory">
+                  <DispenserInventory />
                 </PermissionRoute>
               </ProtectedRoute>
             } />

@@ -143,6 +143,8 @@ const Navbar = ({
     { icon: <MdDiscount />, title: "Packages", path: "/packages", permission: "packages" },
     { icon: <MdDiscount />, title: "Workshop", path: "/workshop", permission: "packages" },
     { icon: <BiLayout />, title: "Bottle Inventory", path: "/inventory/bottles", permission: "inventory" },
+    { icon: <BiLayout />, title: "Xp Inventory", path: "/inventory/xp", permission: "inventory" },
+    { icon: <BiLayout />, title: "Dispenser Inventory", path: "/inventory/dispenser", permission: "inventory" },
     { icon: <TbTrash />, title: "Product Disposal", path: "/defective", permission: "disposal" },
     { icon: <TbReportAnalytics />, title: "Report", path: "/report", permission: "report" },
 
