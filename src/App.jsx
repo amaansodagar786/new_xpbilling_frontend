@@ -36,7 +36,7 @@ function App() {
             <Route path="/" element={
               <ProtectedRoute>
                 <PermissionRoute requiredPermission="invoice">
-                  <Home />
+                  <Customer />
                 </PermissionRoute>
               </ProtectedRoute>
             } />

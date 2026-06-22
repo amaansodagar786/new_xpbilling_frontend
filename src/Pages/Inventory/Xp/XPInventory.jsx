@@ -10,6 +10,7 @@ import { useNavigate } from "react-router-dom";
 import Navbar from "../../../Components/Navbar/Navbar";
 import "./XPInventory.scss";
 import "react-toastify/dist/ReactToastify.css";
+import * as XLSX from 'xlsx';
 
 // ============================================
 // ADD PRODUCT MODAL
@@ -1116,16 +1117,55 @@ const XPInventory = () => {
     }
   };
 
-  const handleDownloadErrorExcel = async () => {
+  // ============================================
+  // DOWNLOAD ERROR EXCEL - DIRECTLY FROM FRONTEND
+  // ============================================
+  const handleDownloadErrorExcel = () => {
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/xp/download-error-excel/${bulkUploadId}`,
-        { credentials: 'include' }
-      );
+      if (!bulkErrors || bulkErrors.length === 0) {
+        toast.error("No errors to download");
+        return;
+      }
 
-      if (!response.ok) throw new Error('Failed to download error file');
+      // Format errors for Excel
+      const errorData = bulkErrors.map(err => ({
+        'Row': err.row || '',
+        'Product Name': err.productName || '',
+        'ML': err.ml || '',
+        'Quantity': err.quantity || '',
+        'Purchase Price': err.purchasePrice || '',
+        'Error Reason': err.error || 'Unknown error'
+      }));
 
-      const blob = await response.blob();
+      // Create worksheet
+      const worksheetData = [
+        ['Row', 'Product Name', 'ML', 'Quantity', 'Purchase Price', 'Error Reason'],
+        ...errorData.map(item => [
+          item['Row'],
+          item['Product Name'],
+          item['ML'],
+          item['Quantity'],
+          item['Purchase Price'],
+          item['Error Reason']
+        ])
+      ];
+
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(worksheetData);
+      ws['!cols'] = [
+        { wch: 8 },
+        { wch: 35 },
+        { wch: 10 },
+        { wch: 12 },
+        { wch: 18 },
+        { wch: 50 }
+      ];
+
+      XLSX.utils.book_append_sheet(wb, ws, 'Errors');
+
+      // Download
+      const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([wbout], { type: 'application/octet-stream' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -1134,6 +1174,8 @@ const XPInventory = () => {
       a.click();
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
+
+      toast.success("Error report downloaded successfully");
 
     } catch (error) {
       console.error("Error downloading error file:", error);

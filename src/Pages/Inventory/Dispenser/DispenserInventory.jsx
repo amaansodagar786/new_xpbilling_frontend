@@ -11,6 +11,7 @@ import { useNavigate } from "react-router-dom";
 import Navbar from "../../../Components/Navbar/Navbar";
 import "./DispenserInventory.scss";
 import "react-toastify/dist/ReactToastify.css";
+import * as XLSX from 'xlsx';
 
 // ============================================
 // ADD PRODUCT MODAL
@@ -1219,16 +1220,49 @@ const DispenserInventory = () => {
     }
   };
 
-  const handleDownloadErrorExcel = async () => {
+  const handleDownloadErrorExcel = () => {
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/dispenser/download-error-excel/${bulkUploadId}`,
-        { credentials: 'include' }
-      );
+      if (!bulkErrors || bulkErrors.length === 0) {
+        toast.error("No errors to download");
+        return;
+      }
 
-      if (!response.ok) throw new Error('Failed to download error file');
+      const errorData = bulkErrors.map(err => ({
+        'Row': err.row || '',
+        'Product Name': err.productName || '',
+        'ML': err.ml || '',
+        'Selling Price': err.sellingPrice || '',
+        'Discount (%)': err.discount || '',
+        'Error Reason': err.error || 'Unknown error'
+      }));
 
-      const blob = await response.blob();
+      const worksheetData = [
+        ['Row', 'Product Name', 'ML', 'Selling Price', 'Discount (%)', 'Error Reason'],
+        ...errorData.map(item => [
+          item['Row'],
+          item['Product Name'],
+          item['ML'],
+          item['Selling Price'],
+          item['Discount (%)'],
+          item['Error Reason']
+        ])
+      ];
+
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(worksheetData);
+      ws['!cols'] = [
+        { wch: 8 },
+        { wch: 35 },
+        { wch: 10 },
+        { wch: 15 },
+        { wch: 12 },
+        { wch: 50 }
+      ];
+
+      XLSX.utils.book_append_sheet(wb, ws, 'Errors');
+
+      const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([wbout], { type: 'application/octet-stream' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -1237,6 +1271,8 @@ const DispenserInventory = () => {
       a.click();
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
+
+      toast.success("Error report downloaded successfully");
 
     } catch (error) {
       console.error("Error downloading error file:", error);
