@@ -43,6 +43,7 @@ const AdminUsers = () => {
     { id: "report", name: "Reports" },
     { id: "packages", name: "Packages" },
     { id: "workshop", name: "Workshop" },
+    { id: "dispose", name: "Product Disposal" },
   
   ];
 

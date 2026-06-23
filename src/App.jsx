@@ -15,6 +15,7 @@ import Workshops from "./Pages/Workshop/Workshops";
 import BottleInventory from "./Pages/Inventory/Bottle/BottleInventory";
 import XPInventory from "./Pages/Inventory/Xp/XPInventory";
 import DispenserInventory from "./Pages/Inventory/Dispenser/DispenserInventory";
+import ProductDisposal from "./Pages/ProductDisposal/ProductDisposal";
 
 function App() {
   return (
@@ -98,6 +99,13 @@ function App() {
               <ProtectedRoute>
                 <PermissionRoute requiredPermission="inventory">
                   <DispenserInventory />
+                </PermissionRoute>
+              </ProtectedRoute>
+            } />
+            <Route path="/productdisposal" element={
+              <ProtectedRoute>
+                <PermissionRoute requiredPermission="dispose">
+                  <ProductDisposal />
                 </PermissionRoute>
               </ProtectedRoute>
             } />

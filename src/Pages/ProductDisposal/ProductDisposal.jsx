@@ -74,8 +74,11 @@ const ProductDisposal = () => {
 
             const data = await response.json();
 
+            // ✅ FIX: Check if data is array or object
+            const productsArray = Array.isArray(data) ? data : data.products || data.data || [];
+
             // Format products based on inventory type
-            let formattedProducts = data.map(p => ({
+            let formattedProducts = productsArray.map(p => ({
                 id: p.xpId || p.dispenserId || p.bottleItemId || p._id,
                 name: p.productName || `${p.mlSize} ${p.itemType}`,
                 ml: p.ml || p.mlSize || '',

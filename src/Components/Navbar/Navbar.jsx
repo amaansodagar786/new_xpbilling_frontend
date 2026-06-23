@@ -120,7 +120,7 @@ const Navbar = ({
         return 'Dashboard';
       case '/admin':
         return 'Admin Dashboard';
-      case '/defective':
+      case '/productdisposal':
         return 'Product Disposal Dashboard';
       case '/report':
         return 'Business Reports And Analytics';
@@ -145,7 +145,7 @@ const Navbar = ({
     { icon: <BiLayout />, title: "Bottle Inventory", path: "/inventory/bottles", permission: "inventory" },
     { icon: <BiLayout />, title: "Xp Inventory", path: "/inventory/xp", permission: "inventory" },
     { icon: <BiLayout />, title: "Dispenser Inventory", path: "/inventory/dispenser", permission: "inventory" },
-    { icon: <TbTrash />, title: "Product Disposal", path: "/defective", permission: "disposal" },
+    { icon: <TbTrash />, title: "Product Disposal", path: "/productdisposal", permission: "disposal" },
     { icon: <TbReportAnalytics />, title: "Report", path: "/report", permission: "report" },
 
   ];
