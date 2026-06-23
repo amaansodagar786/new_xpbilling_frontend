@@ -11,6 +11,8 @@ import Navbar from "../../../Components/Navbar/Navbar";
 import "./XPInventory.scss";
 import "react-toastify/dist/ReactToastify.css";
 import * as XLSX from 'xlsx';
+import Select from 'react-select';
+
 
 // ============================================
 // ADD PRODUCT MODAL
@@ -76,8 +78,9 @@ const AddProductModal = ({
 };
 
 // ============================================
-// ADD STOCK MODAL
+// ADD STOCK MODAL (UPDATED with Searchable Dropdown)
 // ============================================
+
 const AddStockModal = ({
   show, onClose, products, addStockData, setAddStockData,
   isSubmitting, onSubmit
@@ -85,6 +88,122 @@ const AddStockModal = ({
   if (!show) return null;
 
   const selectedProduct = products.find(p => p.xpId === addStockData.xpId);
+
+  // Convert products to react-select format
+  const productOptions = products.map(p => ({
+    value: p.xpId,
+    label: `${p.productName} - ${p.ml}ml`,
+    product: p // Store full product for later use
+  }));
+
+  // Handle selection change
+  const handleProductSelect = (selectedOption) => {
+    if (selectedOption) {
+      const product = selectedOption.product;
+      setAddStockData({
+        ...addStockData,
+        xpId: product.xpId,
+        productName: product.productName,
+        ml: product.ml
+      });
+    } else {
+      // Clear selection
+      setAddStockData({
+        ...addStockData,
+        xpId: "",
+        productName: "",
+        ml: ""
+      });
+    }
+  };
+
+  // Find current selected option
+  const currentSelectedOption = productOptions.find(
+    opt => opt.value === addStockData.xpId
+  );
+
+  // Custom styles to match your design system
+  const customSelectStyles = {
+    control: (provided, state) => ({
+      ...provided,
+      border: '1.5px solid #e3e8f0',
+      borderRadius: '8px',
+      padding: '2px 2px',
+      fontFamily: "'Open Sans', sans-serif",
+      fontSize: '14px',
+      minHeight: '42px',
+      boxShadow: state.isFocused ? '0 0 0 3px rgba(106, 106, 197, 0.12)' : 'none',
+      borderColor: state.isFocused ? '#6a6ac5' : '#e3e8f0',
+      '&:hover': {
+        borderColor: '#6a6ac5'
+      },
+      backgroundColor: '#fafbfc',
+      cursor: 'text'
+    }),
+    placeholder: (provided) => ({
+      ...provided,
+      color: '#bfc5ce',
+      fontSize: '14px'
+    }),
+    option: (provided, state) => ({
+      ...provided,
+      backgroundColor: state.isSelected ? '#3f3f91' : state.isFocused ? '#f0f0fb' : 'white',
+      color: state.isSelected ? 'white' : '#333',
+      fontFamily: "'Open Sans', sans-serif",
+      fontSize: '13.5px',
+      padding: '10px 14px',
+      cursor: 'pointer',
+      '&:hover': {
+        backgroundColor: state.isSelected ? '#3f3f91' : '#f0f0fb'
+      }
+    }),
+    menu: (provided) => ({
+      ...provided,
+      borderRadius: '8px',
+      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.12)',
+      zIndex: 100,
+      marginTop: '4px'
+    }),
+    menuList: (provided) => ({
+      ...provided,
+      maxHeight: '200px',
+      padding: '4px 0'
+    }),
+    dropdownIndicator: (provided) => ({
+      ...provided,
+      color: '#aab0bc',
+      '&:hover': {
+        color: '#3f3f91'
+      }
+    }),
+    clearIndicator: (provided) => ({
+      ...provided,
+      color: '#aab0bc',
+      '&:hover': {
+        color: '#dc3545'
+      }
+    }),
+    input: (provided) => ({
+      ...provided,
+      fontFamily: "'Open Sans', sans-serif",
+      fontSize: '14px',
+      color: '#333',
+      margin: '0'
+    }),
+    singleValue: (provided) => ({
+      ...provided,
+      color: '#333',
+      fontFamily: "'Open Sans', sans-serif",
+      fontSize: '14px'
+    }),
+    noOptionsMessage: (provided) => ({
+      ...provided,
+      fontFamily: "'Open Sans', sans-serif",
+      fontSize: '13px',
+      color: '#aab0bc',
+      padding: '12px 14px'
+    })
+  };
 
   return (
     <div className="xp-modal-overlay" onClick={onClose}>
@@ -100,26 +219,17 @@ const AddStockModal = ({
         <div className="xp-modal-body">
           <div className="xp-form-row">
             <div className="xp-form-field">
-              <label>Select Product *</label>
-              <select
-                value={addStockData.xpId}
-                onChange={(e) => {
-                  const product = products.find(p => p.xpId === e.target.value);
-                  setAddStockData({
-                    ...addStockData,
-                    xpId: e.target.value,
-                    productName: product?.productName || '',
-                    ml: product?.ml || ''
-                  });
-                }}
-              >
-                <option value="">Select Product</option>
-                {products.map(p => (
-                  <option key={p.xpId} value={p.xpId}>
-                    {p.productName} - {p.ml}ml
-                  </option>
-                ))}
-              </select>
+              <label>Search & Select Product *</label>
+              <Select
+                options={productOptions}
+                value={currentSelectedOption}
+                onChange={handleProductSelect}
+                placeholder="🔍 Type to search products..."
+                isClearable
+                styles={customSelectStyles}
+                noOptionsMessage={() => "No products found"}
+                isDisabled={isSubmitting}
+              />
             </div>
           </div>
 
@@ -141,6 +251,7 @@ const AddStockModal = ({
                 onChange={(e) => setAddStockData({ ...addStockData, quantity: e.target.value })}
                 placeholder="Enter quantity in KG"
                 autoComplete="off"
+                disabled={isSubmitting}
               />
             </div>
             <div className="xp-form-field">
@@ -153,6 +264,7 @@ const AddStockModal = ({
                 onChange={(e) => setAddStockData({ ...addStockData, purchasePrice: e.target.value })}
                 placeholder="Enter price per KG"
                 autoComplete="off"
+                disabled={isSubmitting}
               />
             </div>
           </div>
@@ -166,12 +278,13 @@ const AddStockModal = ({
                 onChange={(e) => setAddStockData({ ...addStockData, notes: e.target.value })}
                 placeholder="Add notes..."
                 autoComplete="off"
+                disabled={isSubmitting}
               />
             </div>
           </div>
         </div>
         <div className="xp-modal-footer">
-          <button className="xp-btn-cancel" onClick={onClose}>
+          <button className="xp-btn-cancel" onClick={onClose} disabled={isSubmitting}>
             Cancel
           </button>
           <button
