@@ -4,7 +4,7 @@ import {
     FaBox, FaPlus, FaSearch, FaFileExcel,
     FaUpload, FaDownload, FaEdit, FaTrash,
     FaTimes, FaEye, FaFilter, FaBell,
-    FaCheckCircle, FaTimesCircle
+    FaCheckCircle, FaTimesCircle, FaChevronLeft, FaChevronRight
 } from "react-icons/fa";
 
 import { useNavigate } from "react-router-dom";
@@ -461,6 +461,17 @@ const BottleInventory = () => {
     const [showErrorModal, setShowErrorModal] = useState(false);
     const [showAlertModal, setShowAlertModal] = useState(false);
 
+    // Pagination states
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pagination, setPagination] = useState({
+        total: 0,
+        page: 1,
+        limit: 20,
+        totalPages: 0,
+        hasNextPage: false,
+        hasPrevPage: false
+    });
+
     // Form states
     const [addStockData, setAddStockData] = useState({
         mlSize: "",
@@ -482,25 +493,48 @@ const BottleInventory = () => {
     const navigate = useNavigate();
 
     // ============================================
-    // FETCH DATA
+    // FETCH DATA WITH PAGINATION
     // ============================================
-    const fetchInventory = async () => {
+    const fetchInventory = async (page = 1, search = '', mlSize = '', itemType = '') => {
         try {
             setIsLoading(true);
+            const queryParams = new URLSearchParams({
+                page: page,
+                limit: 20,
+                search: search,
+                mlSize: mlSize,
+                itemType: itemType
+            });
+
             const response = await fetch(
-                `${import.meta.env.VITE_API_URL}/bottles/get-all`,
+                `${import.meta.env.VITE_API_URL}/bottles/get-all?${queryParams}`,
                 { credentials: 'include' }
             );
+
             if (!response.ok) {
                 if (response.status === 401) navigate('/login');
                 throw new Error('Failed to fetch inventory');
             }
+
             const data = await response.json();
-            setInventory(data);
-            setFilteredInventory(data);
+
+            setInventory(data.inventory || []);
+            setFilteredInventory(data.inventory || []);
+            setPagination(data.pagination || {
+                total: 0,
+                page: 1,
+                limit: 20,
+                totalPages: 0,
+                hasNextPage: false,
+                hasPrevPage: false
+            });
+            setCurrentPage(data.pagination?.page || 1);
+
         } catch (error) {
             console.error("Error fetching inventory:", error);
             toast.error("Failed to fetch inventory");
+            setInventory([]);
+            setFilteredInventory([]);
         } finally {
             setIsLoading(false);
         }
@@ -537,48 +571,49 @@ const BottleInventory = () => {
     const fetchAlerts = async () => {
         try {
             const response = await fetch(
-                `${import.meta.env.VITE_API_URL}/bottles/get-alerts`,
+                `${import.meta.env.VITE_API_URL}/bottles/get-alerts?page=1&limit=100`,
                 { credentials: 'include' }
             );
             if (!response.ok) throw new Error('Failed to fetch alerts');
             const data = await response.json();
-            setAlerts(data);
+            setAlerts(data.alerts || []);
         } catch (error) {
             console.error("Error fetching alerts:", error);
         }
     };
 
     useEffect(() => {
-        fetchInventory();
+        fetchInventory(1, '', '', '');
         fetchMLSizes();
         fetchItemTypes();
         fetchAlerts();
     }, []);
 
     // ============================================
-    // FILTERS
+    // HANDLE SEARCH
     // ============================================
-    useEffect(() => {
-        let filtered = inventory;
+    const handleSearch = (term) => {
+        setSearchTerm(term);
+        fetchInventory(1, term, selectedML, selectedItemType);
+    };
 
-        if (searchTerm) {
-            const search = searchTerm.toLowerCase();
-            filtered = filtered.filter(item =>
-                item.mlSize?.toLowerCase().includes(search) ||
-                item.itemType?.toLowerCase().includes(search)
-            );
-        }
+    // ============================================
+    // HANDLE FILTER CHANGE
+    // ============================================
+    const handleFilterChange = (mlSize, itemType) => {
+        setSelectedML(mlSize);
+        setSelectedItemType(itemType);
+        fetchInventory(1, searchTerm, mlSize, itemType);
+    };
 
-        if (selectedML) {
-            filtered = filtered.filter(item => item.mlSize === selectedML);
-        }
-
-        if (selectedItemType) {
-            filtered = filtered.filter(item => item.itemType === selectedItemType);
-        }
-
-        setFilteredInventory(filtered);
-    }, [searchTerm, selectedML, selectedItemType, inventory]);
+    // ============================================
+    // HANDLE PAGE CHANGE
+    // ============================================
+    const handlePageChange = (newPage) => {
+        if (newPage < 1 || newPage > pagination.totalPages) return;
+        setCurrentPage(newPage);
+        fetchInventory(newPage, searchTerm, selectedML, selectedItemType);
+    };
 
     // ============================================
     // ADD STOCK
@@ -625,7 +660,7 @@ const BottleInventory = () => {
 
             setAddStockData({ mlSize: "", itemType: "", quantity: "", reason: "Purchase" });
             setShowAddStockModal(false);
-            await fetchInventory();
+            await fetchInventory(currentPage, searchTerm, selectedML, selectedItemType);
             await fetchAlerts();
 
         } catch (error) {
@@ -668,7 +703,7 @@ const BottleInventory = () => {
 
             setNewML("");
             setShowAddMLModal(false);
-            await fetchInventory();
+            await fetchInventory(currentPage, searchTerm, selectedML, selectedItemType);
             await fetchMLSizes();
 
         } catch (error) {
@@ -711,7 +746,7 @@ const BottleInventory = () => {
 
             setNewItemType("");
             setShowAddItemModal(false);
-            await fetchInventory();
+            await fetchInventory(currentPage, searchTerm, selectedML, selectedItemType);
             await fetchItemTypes();
 
         } catch (error) {
@@ -760,13 +795,11 @@ const BottleInventory = () => {
 
             const result = await response.json();
 
-            // ✅ Set success details
             if (result.success && result.success.details) {
                 setBulkSuccessDetails(result.success.details);
                 setBulkSuccessCount(result.success.count || 0);
             }
 
-            // ✅ Set error details
             if (result.errors && result.errors.details) {
                 setBulkErrors(result.errors.details);
                 setBulkErrorCount(result.errors.count || 0);
@@ -782,7 +815,7 @@ const BottleInventory = () => {
                 fileInputRef.current.value = "";
             }
             setShowBulkUploadModal(false);
-            await fetchInventory();
+            await fetchInventory(currentPage, searchTerm, selectedML, selectedItemType);
             await fetchAlerts();
 
         } catch (error) {
@@ -794,62 +827,57 @@ const BottleInventory = () => {
     };
 
     // ============================================
-// DOWNLOAD ERROR EXCEL - DIRECTLY FROM FRONTEND
-// ============================================
-const handleDownloadErrorExcel = () => {
-    try {
-        if (!bulkErrors || bulkErrors.length === 0) {
-            toast.error("No errors to download");
-            return;
+    // DOWNLOAD ERROR EXCEL - DIRECTLY FROM FRONTEND
+    // ============================================
+    const handleDownloadErrorExcel = () => {
+        try {
+            if (!bulkErrors || bulkErrors.length === 0) {
+                toast.error("No errors to download");
+                return;
+            }
+
+            const errorData = bulkErrors.map(err => ({
+                'ML Size': err.mlSize || '',
+                'Item Type': err.itemType || '',
+                'Quantity': err.quantity || '',
+                'Error Reason': err.error || 'Unknown error'
+            }));
+
+            const worksheetData = [
+                ['ML Size', 'Item Type', 'Quantity', 'Error Reason'],
+                ...errorData.map(item => [item['ML Size'], item['Item Type'], item['Quantity'], item['Error Reason']])
+            ];
+
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(worksheetData);
+
+            ws['!cols'] = [
+                { wch: 15 },
+                { wch: 15 },
+                { wch: 12 },
+                { wch: 40 }
+            ];
+
+            XLSX.utils.book_append_sheet(wb, ws, 'Errors');
+
+            const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+            const blob = new Blob([wbout], { type: 'application/octet-stream' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'bulk_upload_errors.xlsx';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+
+            toast.success("Error report downloaded successfully");
+
+        } catch (error) {
+            console.error("Error downloading error file:", error);
+            toast.error("Failed to download error file");
         }
-
-        // Format errors for Excel
-        const errorData = bulkErrors.map(err => ({
-            'ML Size': err.mlSize || '',
-            'Item Type': err.itemType || '',
-            'Quantity': err.quantity || '',
-            'Error Reason': err.error || 'Unknown error'
-        }));
-
-        // Add header row
-        const worksheetData = [
-            ['ML Size', 'Item Type', 'Quantity', 'Error Reason'],
-            ...errorData.map(item => [item['ML Size'], item['Item Type'], item['Quantity'], item['Error Reason']])
-        ];
-
-        // Create workbook
-        const wb = XLSX.utils.book_new();
-        const ws = XLSX.utils.aoa_to_sheet(worksheetData);
-        
-        // Set column widths
-        ws['!cols'] = [
-            { wch: 15 },
-            { wch: 15 },
-            { wch: 12 },
-            { wch: 40 }
-        ];
-
-        XLSX.utils.book_append_sheet(wb, ws, 'Errors');
-
-        // Generate and download
-        const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-        const blob = new Blob([wbout], { type: 'application/octet-stream' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'bulk_upload_errors.xlsx';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-
-        toast.success("Error report downloaded successfully");
-
-    } catch (error) {
-        console.error("Error downloading error file:", error);
-        toast.error("Failed to download error file");
-    }
-};
+    };
 
     const handleDownloadTemplate = async () => {
         try {
@@ -912,7 +940,7 @@ const handleDownloadErrorExcel = () => {
                                 type="text"
                                 placeholder="Search by ML or Item Type..."
                                 value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
+                                onChange={(e) => handleSearch(e.target.value)}
                                 autoComplete="off"
                             />
                         </div>
@@ -945,7 +973,10 @@ const handleDownloadErrorExcel = () => {
                 <div className="bi-filters">
                     <div className="bi-filter-group">
                         <label>Filter by ML:</label>
-                        <select value={selectedML} onChange={(e) => setSelectedML(e.target.value)}>
+                        <select
+                            value={selectedML}
+                            onChange={(e) => handleFilterChange(e.target.value, selectedItemType)}
+                        >
                             <option value="">All ML Sizes</option>
                             {mlSizes.map(ml => (
                                 <option key={ml} value={ml}>{ml}</option>
@@ -954,7 +985,10 @@ const handleDownloadErrorExcel = () => {
                     </div>
                     <div className="bi-filter-group">
                         <label>Filter by Item:</label>
-                        <select value={selectedItemType} onChange={(e) => setSelectedItemType(e.target.value)}>
+                        <select
+                            value={selectedItemType}
+                            onChange={(e) => handleFilterChange(selectedML, e.target.value)}
+                        >
                             <option value="">All Item Types</option>
                             {itemTypes.map(type => (
                                 <option key={type} value={type}>{type}</option>
@@ -1017,6 +1051,57 @@ const handleDownloadErrorExcel = () => {
                         </table>
                     )}
                 </div>
+
+                {/* Pagination */}
+                {!isLoading && pagination.totalPages > 0 && (
+                    <div className="bi-pagination">
+                        <div className="bi-pagination-info">
+                            Showing {((pagination.page - 1) * pagination.limit) + 1} - {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} items
+                        </div>
+                        <div className="bi-pagination-controls">
+                            <button
+                                className="bi-pagination-btn"
+                                onClick={() => handlePageChange(pagination.page - 1)}
+                                disabled={!pagination.hasPrevPage}
+                            >
+                                <FaChevronLeft />
+                            </button>
+
+                            <div className="bi-pagination-pages">
+                                {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                                    let pageNum;
+                                    if (pagination.totalPages <= 5) {
+                                        pageNum = i + 1;
+                                    } else if (pagination.page <= 3) {
+                                        pageNum = i + 1;
+                                    } else if (pagination.page >= pagination.totalPages - 2) {
+                                        pageNum = pagination.totalPages - 4 + i;
+                                    } else {
+                                        pageNum = pagination.page - 2 + i;
+                                    }
+
+                                    return (
+                                        <button
+                                            key={pageNum}
+                                            className={`bi-pagination-page ${pagination.page === pageNum ? 'bi-pagination-active' : ''}`}
+                                            onClick={() => handlePageChange(pageNum)}
+                                        >
+                                            {pageNum}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
+                            <button
+                                className="bi-pagination-btn"
+                                onClick={() => handlePageChange(pagination.page + 1)}
+                                disabled={!pagination.hasNextPage}
+                            >
+                                <FaChevronRight />
+                            </button>
+                        </div>
+                    </div>
+                )}
 
                 {/* Modals */}
                 <AddStockModal

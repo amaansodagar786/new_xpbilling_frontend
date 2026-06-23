@@ -5,15 +5,15 @@ import {
   FaUpload, FaDownload, FaEdit, FaTrash,
   FaTimes, FaBell,
   FaCheckCircle, FaTimesCircle, FaMoneyBillWave,
-  FaChevronDown, FaChevronUp, FaHistory, FaUser, FaCalendarAlt, FaArrowUp
+  FaChevronDown, FaChevronUp, FaHistory, FaUser, FaCalendarAlt, FaArrowUp,
+  FaChevronLeft, FaChevronRight
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../../../Components/Navbar/Navbar";
 import "./DispenserInventory.scss";
 import "react-toastify/dist/ReactToastify.css";
 import * as XLSX from 'xlsx';
-import Select from 'react-select';  // Add this import at the top of the file!
-
+import Select from 'react-select';
 
 // ============================================
 // ADD PRODUCT MODAL
@@ -107,7 +107,6 @@ const AddProductModal = ({
 // ============================================
 // ADD STOCK MODAL (UPDATED with Searchable Dropdown)
 // ============================================
-
 const AddStockModal = ({
   show, onClose, products, addStockData, setAddStockData,
   isSubmitting, onSubmit
@@ -120,7 +119,7 @@ const AddStockModal = ({
   const productOptions = products.map(p => ({
     value: p.dispenserId,
     label: `${p.productName} - ${p.ml}ml`,
-    product: p // Store full product for later use
+    product: p
   }));
 
   // Handle selection change
@@ -136,7 +135,6 @@ const AddStockModal = ({
         discount: product.discount || ''
       });
     } else {
-      // Clear selection
       setAddStockData({
         ...addStockData,
         dispenserId: "",
@@ -153,7 +151,7 @@ const AddStockModal = ({
     opt => opt.value === addStockData.dispenserId
   );
 
-  // Custom styles to match your design system (using di- prefix)
+  // Custom styles to match your design system
   const customSelectStyles = {
     control: (provided, state) => ({
       ...provided,
@@ -230,7 +228,7 @@ const AddStockModal = ({
     noOptionsMessage: (provided) => ({
       ...provided,
       fontFamily: "'Open Sans', sans-serif",
-      fontSize: "13px",
+      fontSize: '13px',
       color: '#aab0bc',
       padding: '12px 14px'
     })
@@ -771,9 +769,7 @@ const DeleteConfirmModal = ({ show, onClose, product, onConfirm, isDeleting }) =
 };
 
 // ============================================
-// TRANSACTION HISTORY ROW (expanded inline below the product row)
-// Shows every "IN" transaction — qty added, purchase price, who added,
-// when added, and notes — for the clicked product.
+// TRANSACTION HISTORY ROW
 // ============================================
 const TransactionHistoryRow = ({ colSpan, isLoading, transactions }) => {
   const formatDateTime = (dateString) => {
@@ -865,6 +861,17 @@ const DispenserInventory = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState({
+    total: 0,
+    page: 1,
+    limit: 20,
+    totalPages: 0,
+    hasNextPage: false,
+    hasPrevPage: false
+  });
+
   const navigate = useNavigate();
 
   // Modal states
@@ -900,33 +907,54 @@ const DispenserInventory = () => {
   const [bulkSuccessDetails, setBulkSuccessDetails] = useState([]);
   const [bulkUploadId, setBulkUploadId] = useState("");
 
-  // Expandable row states (transaction history)
+  // Expandable row states
   const [expandedRowId, setExpandedRowId] = useState(null);
-  const [transactionCache, setTransactionCache] = useState({}); // { [dispenserId]: transactions[] }
+  const [transactionCache, setTransactionCache] = useState({});
   const [loadingTransactionsFor, setLoadingTransactionsFor] = useState(null);
 
   const fileInputRef = useRef(null);
 
   // ============================================
-  // FETCH DATA
+  // FETCH DATA WITH PAGINATION
   // ============================================
-  const fetchInventory = async () => {
+  const fetchInventory = async (page = 1, search = '') => {
     try {
       setIsLoading(true);
+      const queryParams = new URLSearchParams({
+        page: page,
+        limit: 20,
+        search: search
+      });
+
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/dispenser/get-all`,
+        `${import.meta.env.VITE_API_URL}/dispenser/get-all?${queryParams}`,
         { credentials: 'include' }
       );
+
       if (!response.ok) {
         if (response.status === 401) navigate('/login');
         throw new Error('Failed to fetch inventory');
       }
+
       const data = await response.json();
-      setInventory(data);
-      setFilteredInventory(data);
+
+      setInventory(data.products || []);
+      setFilteredInventory(data.products || []);
+      setPagination(data.pagination || {
+        total: 0,
+        page: 1,
+        limit: 20,
+        totalPages: 0,
+        hasNextPage: false,
+        hasPrevPage: false
+      });
+      setCurrentPage(data.pagination?.page || 1);
+
     } catch (error) {
       console.error("Error fetching inventory:", error);
       toast.error("Failed to fetch inventory");
+      setInventory([]);
+      setFilteredInventory([]);
     } finally {
       setIsLoading(false);
     }
@@ -935,40 +963,41 @@ const DispenserInventory = () => {
   const fetchAlerts = async () => {
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/dispenser/get-alerts`,
+        `${import.meta.env.VITE_API_URL}/dispenser/get-alerts?page=1&limit=100`,
         { credentials: 'include' }
       );
       if (!response.ok) throw new Error('Failed to fetch alerts');
       const data = await response.json();
-      setAlerts(data);
+      setAlerts(data.alerts || []);
     } catch (error) {
       console.error("Error fetching alerts:", error);
     }
   };
 
   useEffect(() => {
-    fetchInventory();
+    fetchInventory(1, '');
     fetchAlerts();
   }, []);
 
   // ============================================
-  // FILTERS
+  // HANDLE SEARCH
   // ============================================
-  useEffect(() => {
-    if (!searchTerm.trim()) {
-      setFilteredInventory(inventory);
-      return;
-    }
-
-    const search = searchTerm.toLowerCase();
-    const filtered = inventory.filter(item =>
-      item.productName?.toLowerCase().includes(search)
-    );
-    setFilteredInventory(filtered);
-  }, [searchTerm, inventory]);
+  const handleSearch = (term) => {
+    setSearchTerm(term);
+    fetchInventory(1, term);
+  };
 
   // ============================================
-  // FETCH TRANSACTIONS FOR A PRODUCT (on row expand)
+  // HANDLE PAGE CHANGE
+  // ============================================
+  const handlePageChange = (newPage) => {
+    if (newPage < 1 || newPage > pagination.totalPages) return;
+    setCurrentPage(newPage);
+    fetchInventory(newPage, searchTerm);
+  };
+
+  // ============================================
+  // FETCH TRANSACTIONS FOR A PRODUCT
   // ============================================
   const fetchTransactionsForProduct = async (dispenserId) => {
     try {
@@ -1009,8 +1038,6 @@ const DispenserInventory = () => {
     }
 
     setExpandedRowId(dispenserId);
-
-    // Always refetch fresh data on open (keeps history accurate after add-stock)
     fetchTransactionsForProduct(dispenserId);
   };
 
@@ -1067,7 +1094,7 @@ const DispenserInventory = () => {
 
       setNewProduct({ productName: "", ml: "", sellingPrice: "", discount: "0" });
       setShowAddProductModal(false);
-      await fetchInventory();
+      await fetchInventory(currentPage, searchTerm);
       await fetchAlerts();
 
     } catch (error) {
@@ -1137,10 +1164,9 @@ const DispenserInventory = () => {
         notes: ""
       });
       setShowAddStockModal(false);
-      await fetchInventory();
+      await fetchInventory(currentPage, searchTerm);
       await fetchAlerts();
 
-      // If this product's row is currently expanded, refresh its transaction history
       if (expandedRowId === updatedDispenserId) {
         fetchTransactionsForProduct(updatedDispenserId);
       }
@@ -1207,7 +1233,7 @@ const DispenserInventory = () => {
       setEditData({ dispenserId: "", productName: "", ml: "", sellingPrice: "", discount: "0" });
       setShowEditModal(false);
       setSelectedProduct(null);
-      await fetchInventory();
+      await fetchInventory(currentPage, searchTerm);
 
     } catch (error) {
       console.error("Error updating product:", error);
@@ -1242,14 +1268,13 @@ const DispenserInventory = () => {
       const result = await response.json();
       toast.success(result.message);
 
-      // If the deleted product's row was expanded, collapse it
       if (expandedRowId === selectedProduct.dispenserId) {
         setExpandedRowId(null);
       }
 
       setShowDeleteModal(false);
       setSelectedProduct(null);
-      await fetchInventory();
+      await fetchInventory(currentPage, searchTerm);
       await fetchAlerts();
 
     } catch (error) {
@@ -1319,10 +1344,9 @@ const DispenserInventory = () => {
         fileInputRef.current.value = "";
       }
       setShowBulkUploadModal(false);
-      await fetchInventory();
+      await fetchInventory(currentPage, searchTerm);
       await fetchAlerts();
 
-      // If the bulk upload touched the currently expanded product, refresh it
       if (expandedRowId) {
         fetchTransactionsForProduct(expandedRowId);
       }
@@ -1467,7 +1491,7 @@ const DispenserInventory = () => {
                 type="text"
                 placeholder="Search by Product Name..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => handleSearch(e.target.value)}
                 autoComplete="off"
               />
             </div>
@@ -1508,7 +1532,6 @@ const DispenserInventory = () => {
                   <th>Product Name</th>
                   <th>ML</th>
                   <th>Quantity (KG)</th>
-                  {/* <th>Avg Price (₹/KG)</th> */}
                   <th>Selling Price (₹/KG)</th>
                   <th>Discount (%)</th>
                   <th>Min Stock</th>
@@ -1519,7 +1542,7 @@ const DispenserInventory = () => {
               <tbody>
                 {filteredInventory.length === 0 ? (
                   <tr>
-                    <td colSpan="10">
+                    <td colSpan="9">
                       <div className="di-empty-state">
                         <FaBox className="di-empty-icon" />
                         <p>No products found</p>
@@ -1542,9 +1565,6 @@ const DispenserInventory = () => {
                           <td className="di-name-cell">{item.productName}</td>
                           <td className="di-ml-cell">{item.ml}ml</td>
                           <td className="di-qty-cell">{item.quantity}</td>
-                          {/* <td className="di-price-cell">
-                            ₹{item.avgPurchasePrice?.toFixed(2) || '0.00'}
-                          </td> */}
                           <td className="di-selling-price-cell">
                             ₹{item.sellingPrice?.toFixed(2) || '0.00'}
                           </td>
@@ -1580,7 +1600,7 @@ const DispenserInventory = () => {
 
                         {isExpanded && (
                           <TransactionHistoryRow
-                            colSpan={10}
+                            colSpan={9}
                             isLoading={loadingTransactionsFor === item.dispenserId}
                             transactions={transactionCache[item.dispenserId]}
                           />
@@ -1593,6 +1613,57 @@ const DispenserInventory = () => {
             </table>
           )}
         </div>
+
+        {/* Pagination */}
+        {!isLoading && pagination.totalPages > 0 && (
+          <div className="di-pagination">
+            <div className="di-pagination-info">
+              Showing {((pagination.page - 1) * pagination.limit) + 1} - {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} products
+            </div>
+            <div className="di-pagination-controls">
+              <button
+                className="di-pagination-btn"
+                onClick={() => handlePageChange(pagination.page - 1)}
+                disabled={!pagination.hasPrevPage}
+              >
+                <FaChevronLeft />
+              </button>
+
+              <div className="di-pagination-pages">
+                {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                  let pageNum;
+                  if (pagination.totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (pagination.page <= 3) {
+                    pageNum = i + 1;
+                  } else if (pagination.page >= pagination.totalPages - 2) {
+                    pageNum = pagination.totalPages - 4 + i;
+                  } else {
+                    pageNum = pagination.page - 2 + i;
+                  }
+
+                  return (
+                    <button
+                      key={pageNum}
+                      className={`di-pagination-page ${pagination.page === pageNum ? 'di-pagination-active' : ''}`}
+                      onClick={() => handlePageChange(pageNum)}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <button
+                className="di-pagination-btn"
+                onClick={() => handlePageChange(pagination.page + 1)}
+                disabled={!pagination.hasNextPage}
+              >
+                <FaChevronRight />
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Modals */}
         <AddProductModal

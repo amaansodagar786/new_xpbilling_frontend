@@ -4,7 +4,8 @@ import {
   FaBox, FaPlus, FaSearch, FaFileExcel,
   FaUpload, FaDownload, FaEdit, FaTrash,
   FaTimes, FaBell, FaCheckCircle, FaTimesCircle,
-  FaChevronRight, FaHistory, FaArrowUp, FaArrowDown
+  FaChevronRight, FaHistory, FaArrowUp, FaArrowDown,
+  FaChevronLeft, FaChevronRight as FaChevronRightIcon
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../../../Components/Navbar/Navbar";
@@ -12,7 +13,6 @@ import "./XPInventory.scss";
 import "react-toastify/dist/ReactToastify.css";
 import * as XLSX from 'xlsx';
 import Select from 'react-select';
-
 
 // ============================================
 // ADD PRODUCT MODAL
@@ -80,7 +80,6 @@ const AddProductModal = ({
 // ============================================
 // ADD STOCK MODAL (UPDATED with Searchable Dropdown)
 // ============================================
-
 const AddStockModal = ({
   show, onClose, products, addStockData, setAddStockData,
   isSubmitting, onSubmit
@@ -93,7 +92,7 @@ const AddStockModal = ({
   const productOptions = products.map(p => ({
     value: p.xpId,
     label: `${p.productName} - ${p.ml}ml`,
-    product: p // Store full product for later use
+    product: p
   }));
 
   // Handle selection change
@@ -107,7 +106,6 @@ const AddStockModal = ({
         ml: product.ml
       });
     } else {
-      // Clear selection
       setAddStockData({
         ...addStockData,
         xpId: "",
@@ -364,7 +362,7 @@ const EditProductModal = ({
 };
 
 // ============================================
-// BULK UPLOAD MODAL (tabs instead of buried select)
+// BULK UPLOAD MODAL
 // ============================================
 const BulkUploadModal = ({
   show, onClose, fileInputRef, selectedFile, onFileChange,
@@ -698,8 +696,7 @@ const DeleteConfirmModal = ({ show, onClose, product, onConfirm, isDeleting }) =
 };
 
 // ============================================
-// TRANSACTION HISTORY PANEL (the new feature)
-// Renders inline below an expanded row
+// TRANSACTION HISTORY PANEL
 // ============================================
 const TransactionPanel = ({ transactions, isLoading }) => {
   const formatDateTime = (dateString) => {
@@ -778,6 +775,17 @@ const XPInventory = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState({
+    total: 0,
+    page: 1,
+    limit: 20,
+    totalPages: 0,
+    hasNextPage: false,
+    hasPrevPage: false
+  });
+
   const navigate = useNavigate();
 
   // Modal states
@@ -811,7 +819,7 @@ const XPInventory = () => {
   const [bulkSuccessDetails, setBulkSuccessDetails] = useState([]);
   const [bulkUploadId, setBulkUploadId] = useState("");
 
-  // ── Row expansion / transaction history states (NEW) ──
+  // Row expansion / transaction history states
   const [expandedRowId, setExpandedRowId] = useState(null);
   const [transactionsByXpId, setTransactionsByXpId] = useState({});
   const [loadingTransactionsId, setLoadingTransactionsId] = useState(null);
@@ -819,25 +827,47 @@ const XPInventory = () => {
   const fileInputRef = useRef(null);
 
   // ============================================
-  // FETCH DATA
+  // FETCH DATA WITH PAGINATION
   // ============================================
-  const fetchInventory = async () => {
+  const fetchInventory = async (page = 1, search = '') => {
     try {
       setIsLoading(true);
+      const queryParams = new URLSearchParams({
+        page: page,
+        limit: 20,
+        search: search
+      });
+
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/xp/get-all`,
+        `${import.meta.env.VITE_API_URL}/xp/get-all?${queryParams}`,
         { credentials: 'include' }
       );
+
       if (!response.ok) {
         if (response.status === 401) navigate('/login');
         throw new Error('Failed to fetch inventory');
       }
+
       const data = await response.json();
-      setInventory(data);
-      setFilteredInventory(data);
+
+      // Set inventory and pagination
+      setInventory(data.products || []);
+      setFilteredInventory(data.products || []);
+      setPagination(data.pagination || {
+        total: 0,
+        page: 1,
+        limit: 20,
+        totalPages: 0,
+        hasNextPage: false,
+        hasPrevPage: false
+      });
+      setCurrentPage(data.pagination?.page || 1);
+
     } catch (error) {
       console.error("Error fetching inventory:", error);
       toast.error("Failed to fetch inventory");
+      setInventory([]);
+      setFilteredInventory([]);
     } finally {
       setIsLoading(false);
     }
@@ -851,35 +881,36 @@ const XPInventory = () => {
       );
       if (!response.ok) throw new Error('Failed to fetch alerts');
       const data = await response.json();
-      setAlerts(data);
+      setAlerts(data.alerts || []);
     } catch (error) {
       console.error("Error fetching alerts:", error);
     }
   };
 
   useEffect(() => {
-    fetchInventory();
+    fetchInventory(1, '');
     fetchAlerts();
   }, []);
 
   // ============================================
-  // FILTERS
+  // HANDLE SEARCH
   // ============================================
-  useEffect(() => {
-    if (!searchTerm.trim()) {
-      setFilteredInventory(inventory);
-      return;
-    }
-
-    const search = searchTerm.toLowerCase();
-    const filtered = inventory.filter(item =>
-      item.productName?.toLowerCase().includes(search)
-    );
-    setFilteredInventory(filtered);
-  }, [searchTerm, inventory]);
+  const handleSearch = (term) => {
+    setSearchTerm(term);
+    fetchInventory(1, term); // Reset to page 1 on search
+  };
 
   // ============================================
-  // ROW EXPANSION — FETCH TRANSACTION HISTORY (NEW)
+  // HANDLE PAGE CHANGE
+  // ============================================
+  const handlePageChange = (newPage) => {
+    if (newPage < 1 || newPage > pagination.totalPages) return;
+    setCurrentPage(newPage);
+    fetchInventory(newPage, searchTerm);
+  };
+
+  // ============================================
+  // ROW EXPANSION — FETCH TRANSACTION HISTORY
   // ============================================
   const fetchTransactionsForProduct = async (xpId) => {
     try {
@@ -891,7 +922,6 @@ const XPInventory = () => {
       if (!response.ok) throw new Error('Failed to fetch transaction history');
       const data = await response.json();
 
-      // Transactions come newest-last from the array push; show newest first
       const sorted = [...(data.transactions || [])].sort(
         (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
       );
@@ -908,14 +938,12 @@ const XPInventory = () => {
 
   const handleRowClick = (xpId) => {
     if (expandedRowId === xpId) {
-      // Collapse if clicking the already-open row
       setExpandedRowId(null);
       return;
     }
 
     setExpandedRowId(xpId);
 
-    // Only fetch if we don't already have it cached
     if (!transactionsByXpId[xpId]) {
       fetchTransactionsForProduct(xpId);
     }
@@ -961,7 +989,7 @@ const XPInventory = () => {
 
       setNewProduct({ productName: "", ml: "" });
       setShowAddProductModal(false);
-      await fetchInventory();
+      await fetchInventory(currentPage, searchTerm);
       await fetchAlerts();
 
     } catch (error) {
@@ -1029,14 +1057,12 @@ const XPInventory = () => {
         notes: ""
       });
       setShowAddStockModal(false);
-      await fetchInventory();
+      await fetchInventory(currentPage, searchTerm);
       await fetchAlerts();
 
-      // If that product's history panel is open, refresh it so the new transaction shows immediately
       if (expandedRowId === updatedXpId) {
         await fetchTransactionsForProduct(updatedXpId);
       } else {
-        // Invalidate cache so next expand fetches fresh data
         setTransactionsByXpId(prev => {
           const next = { ...prev };
           delete next[updatedXpId];
@@ -1093,7 +1119,7 @@ const XPInventory = () => {
       setEditData({ xpId: "", productName: "", ml: "" });
       setShowEditModal(false);
       setSelectedProduct(null);
-      await fetchInventory();
+      await fetchInventory(currentPage, searchTerm);
 
     } catch (error) {
       console.error("Error updating product:", error);
@@ -1128,7 +1154,6 @@ const XPInventory = () => {
       const result = await response.json();
       toast.success(result.message);
 
-      // Clean up any cached transaction state for the deleted product
       if (expandedRowId === selectedProduct.xpId) {
         setExpandedRowId(null);
       }
@@ -1140,7 +1165,7 @@ const XPInventory = () => {
 
       setShowDeleteModal(false);
       setSelectedProduct(null);
-      await fetchInventory();
+      await fetchInventory(currentPage, searchTerm);
       await fetchAlerts();
 
     } catch (error) {
@@ -1210,11 +1235,9 @@ const XPInventory = () => {
         fileInputRef.current.value = "";
       }
       setShowBulkUploadModal(false);
-      await fetchInventory();
+      await fetchInventory(currentPage, searchTerm);
       await fetchAlerts();
 
-      // Bulk inventory upload can touch many products' transaction history —
-      // clear the whole cache so any expanded rows refetch fresh data
       if (uploadType === 'inventory') {
         setTransactionsByXpId({});
         if (expandedRowId) {
@@ -1231,7 +1254,7 @@ const XPInventory = () => {
   };
 
   // ============================================
-  // DOWNLOAD ERROR EXCEL - DIRECTLY FROM FRONTEND
+  // DOWNLOAD ERROR EXCEL
   // ============================================
   const handleDownloadErrorExcel = () => {
     try {
@@ -1240,7 +1263,6 @@ const XPInventory = () => {
         return;
       }
 
-      // Format errors for Excel
       const errorData = bulkErrors.map(err => ({
         'Row': err.row || '',
         'Product Name': err.productName || '',
@@ -1250,7 +1272,6 @@ const XPInventory = () => {
         'Error Reason': err.error || 'Unknown error'
       }));
 
-      // Create worksheet
       const worksheetData = [
         ['Row', 'Product Name', 'ML', 'Quantity', 'Purchase Price', 'Error Reason'],
         ...errorData.map(item => [
@@ -1276,7 +1297,6 @@ const XPInventory = () => {
 
       XLSX.utils.book_append_sheet(wb, ws, 'Errors');
 
-      // Download
       const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
       const blob = new Blob([wbout], { type: 'application/octet-stream' });
       const url = window.URL.createObjectURL(blob);
@@ -1366,7 +1386,7 @@ const XPInventory = () => {
                 type="text"
                 placeholder="Search by Product Name..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => handleSearch(e.target.value)}
                 autoComplete="off"
               />
             </div>
@@ -1506,6 +1526,57 @@ const XPInventory = () => {
             </table>
           )}
         </div>
+
+        {/* Pagination */}
+        {!isLoading && pagination.totalPages > 0 && (
+          <div className="xp-pagination">
+            <div className="xp-pagination-info">
+              Showing {((pagination.page - 1) * pagination.limit) + 1} - {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} products
+            </div>
+            <div className="xp-pagination-controls">
+              <button
+                className="xp-pagination-btn"
+                onClick={() => handlePageChange(pagination.page - 1)}
+                disabled={!pagination.hasPrevPage}
+              >
+                <FaChevronLeft />
+              </button>
+
+              <div className="xp-pagination-pages">
+                {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                  let pageNum;
+                  if (pagination.totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (pagination.page <= 3) {
+                    pageNum = i + 1;
+                  } else if (pagination.page >= pagination.totalPages - 2) {
+                    pageNum = pagination.totalPages - 4 + i;
+                  } else {
+                    pageNum = pagination.page - 2 + i;
+                  }
+
+                  return (
+                    <button
+                      key={pageNum}
+                      className={`xp-pagination-page ${pagination.page === pageNum ? 'xp-pagination-active' : ''}`}
+                      onClick={() => handlePageChange(pageNum)}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <button
+                className="xp-pagination-btn"
+                onClick={() => handlePageChange(pagination.page + 1)}
+                disabled={!pagination.hasNextPage}
+              >
+                <FaChevronRightIcon />
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Modals */}
         <AddProductModal
