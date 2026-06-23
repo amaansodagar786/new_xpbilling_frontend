@@ -1443,7 +1443,7 @@ const XPInventory = () => {
                   <th>Product Name</th>
                   <th>ML</th>
                   <th>Quantity (KG)</th>
-                  <th>Avg Price (₹/KG)</th>
+                  {/* <th>Avg Price (₹/KG)</th> */}
                   <th>Min Stock</th>
                   <th>Status</th>
                   <th>Actions</th>
@@ -1478,9 +1478,9 @@ const XPInventory = () => {
                           </td>
                           <td className="xp-ml-cell">{item.ml}ml</td>
                           <td className="xp-qty-cell">{item.quantity}</td>
-                          <td className="xp-price-cell">
+                          {/* <td className="xp-price-cell">
                             ₹{item.avgPurchasePrice?.toFixed(2) || '0.00'}
-                          </td>
+                          </td> */}
                           <td className="xp-min-cell">{item.minStock}</td>
                           <td>
                             <span className={`xp-status-badge xp-status-${status.status}`}>

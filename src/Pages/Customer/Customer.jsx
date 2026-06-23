@@ -571,12 +571,12 @@ const Customer = () => {
                 )}
               </div>
 
-              <div className="detail-row">
+              {/* <div className="detail-row">
                 <span className="detail-label">Loyalty Coins</span>
                 <span className="detail-value loyalty-coins">
                   {customer.loyaltyCoins || 0}
                 </span>
-              </div>
+              </div> */}
 
               {/* Created At */}
               <div className="detail-row">
@@ -893,7 +893,7 @@ const Customer = () => {
                     <th>Name</th>
                     <th>Email</th>
                     <th>Mobile Number</th>
-                    <th>Loyalty Coins</th>
+                    {/* <th>Loyalty Coins</th> */}
                   </tr>
                 </thead>
                 <tbody>
@@ -908,7 +908,7 @@ const Customer = () => {
                       <td>{cust.customerName}</td>
                       <td>{cust.email}</td>
                       <td>{cust.contactNumber}</td>
-                      <td>{cust.loyaltyCoins || 0}</td>
+                      {/* <td>{cust.loyaltyCoins || 0}</td> */}
                     </tr>
                   ))}
                 </tbody>
