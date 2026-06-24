@@ -5,7 +5,9 @@ import {
   FaUpload, FaDownload, FaEdit, FaTrash,
   FaTimes, FaBell, FaCheckCircle, FaTimesCircle,
   FaChevronRight, FaHistory, FaArrowUp, FaArrowDown,
-  FaChevronLeft, FaChevronRight as FaChevronRightIcon
+  FaChevronLeft, FaChevronRight as FaChevronRightIcon,
+  FaUser, FaCalendarAlt, FaClock, FaMoneyBillWave,
+  FaTag, FaInfoCircle, FaTrashAlt
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../../../Components/Navbar/Navbar";
@@ -78,7 +80,7 @@ const AddProductModal = ({
 };
 
 // ============================================
-// ADD STOCK MODAL (UPDATED with Searchable Dropdown)
+// ADD STOCK MODAL
 // ============================================
 const AddStockModal = ({
   show, onClose, products, addStockData, setAddStockData,
@@ -88,14 +90,12 @@ const AddStockModal = ({
 
   const selectedProduct = products.find(p => p.xpId === addStockData.xpId);
 
-  // Convert products to react-select format
   const productOptions = products.map(p => ({
     value: p.xpId,
     label: `${p.productName} - ${p.ml}ml`,
     product: p
   }));
 
-  // Handle selection change
   const handleProductSelect = (selectedOption) => {
     if (selectedOption) {
       const product = selectedOption.product;
@@ -115,12 +115,10 @@ const AddStockModal = ({
     }
   };
 
-  // Find current selected option
   const currentSelectedOption = productOptions.find(
     opt => opt.value === addStockData.xpId
   );
 
-  // Custom styles to match your design system
   const customSelectStyles = {
     control: (provided, state) => ({
       ...provided,
@@ -696,9 +694,9 @@ const DeleteConfirmModal = ({ show, onClose, product, onConfirm, isDeleting }) =
 };
 
 // ============================================
-// TRANSACTION HISTORY PANEL
+// DISPOSAL HISTORY PANEL (UPDATED - SINGLE ROW)
 // ============================================
-const TransactionPanel = ({ transactions, isLoading }) => {
+const DisposalHistoryPanel = ({ disposals, isLoading, onClose }) => {
   const formatDateTime = (dateString) => {
     const date = new Date(dateString);
     return {
@@ -706,6 +704,100 @@ const TransactionPanel = ({ transactions, isLoading }) => {
       time: date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
     };
   };
+
+  if (isLoading) {
+    return (
+      <div className="xp-disposal-panel">
+        <div className="xp-disposal-loading">
+          <div className="xp-loading-spinner tiny"></div>
+          Loading disposal history...
+        </div>
+      </div>
+    );
+  }
+
+  if (!disposals || disposals.length === 0) {
+    return (
+      <div className="xp-disposal-panel">
+        <div className="xp-disposal-header">
+          <h5><FaTrashAlt /> Disposal History</h5>
+          <button className="xp-disposal-close-btn" onClick={onClose}>
+            <FaTimes />
+          </button>
+        </div>
+        <div className="xp-disposal-empty">No disposal records found for this product.</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="xp-disposal-panel">
+      <div className="xp-disposal-header">
+        <h5><FaTrashAlt /> Disposal History ({disposals.length})</h5>
+        <button className="xp-disposal-close-btn" onClick={onClose}>
+          <FaTimes />
+        </button>
+      </div>
+      <div className="xp-disposal-list">
+        {disposals.map((d, idx) => {
+          const { date, time } = formatDateTime(d.disposedAt);
+          return (
+            <div key={d.disposalEntryId || idx} className="xp-disposal-item">
+              {/* ✅ SINGLE ROW - ALL FIELDS IN ONE LINE */}
+              <div className="xp-disposal-row">
+                <span className="xp-disposal-label"><FaUser /> Disposed By:</span>
+                <span className="xp-disposal-value">{d.performedBy?.userName || 'Unknown'}</span>
+
+                <span className="xp-disposal-separator">|</span>
+
+                <span className="xp-disposal-label"><FaTag /> Reason:</span>
+                <span className="xp-disposal-value xp-disposal-reason">{d.reason || 'N/A'}</span>
+
+                <span className="xp-disposal-separator">|</span>
+
+                <span className="xp-disposal-label"><FaCalendarAlt /> Date:</span>
+                <span className="xp-disposal-value">{date}</span>
+
+                <span className="xp-disposal-separator">|</span>
+
+                <span className="xp-disposal-label"><FaClock /> Time:</span>
+                <span className="xp-disposal-value">{time}</span>
+
+                <span className="xp-disposal-separator">|</span>
+
+                <span className="xp-disposal-label"><FaTrashAlt /> Quantity:</span>
+                <span className="xp-disposal-value xp-disposal-qty">-{d.disposedQuantity} KG</span>
+
+                {d.notes && (
+                  <>
+                    <span className="xp-disposal-separator">|</span>
+                    <span className="xp-disposal-label"><FaInfoCircle /> Notes:</span>
+                    <span className="xp-disposal-value">{d.notes}</span>
+                  </>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// ============================================
+// TRANSACTION HISTORY PANEL (UPDATED - SINGLE ROW)
+// ============================================
+const TransactionPanel = ({ transactions, isLoading, onViewDisposal, hasDisposal }) => {
+  const formatDateTime = (dateString) => {
+    const date = new Date(dateString);
+    return {
+      date: date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+      time: date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+    };
+  };
+
+  // ✅ FILTER: Only show IN transactions
+  const inTransactions = transactions?.filter(t => t.transactionType === 'IN') || [];
 
   if (isLoading) {
     return (
@@ -718,13 +810,18 @@ const TransactionPanel = ({ transactions, isLoading }) => {
     );
   }
 
-  if (!transactions || transactions.length === 0) {
+  if (inTransactions.length === 0) {
     return (
       <div className="xp-transaction-panel">
         <div className="xp-transaction-panel-header">
           <h5><FaHistory /> Transaction History</h5>
+          {hasDisposal && (
+            <button className="xp-view-disposal-btn" onClick={onViewDisposal}>
+              <FaTrashAlt /> View Disposals
+            </button>
+          )}
         </div>
-        <div className="xp-transaction-empty">No stock transactions recorded yet for this product.</div>
+        <div className="xp-transaction-empty">No stock IN transactions recorded yet.</div>
       </div>
     );
   }
@@ -732,29 +829,59 @@ const TransactionPanel = ({ transactions, isLoading }) => {
   return (
     <div className="xp-transaction-panel">
       <div className="xp-transaction-panel-header">
-        <h5><FaHistory /> Transaction History ({transactions.length})</h5>
+        <h5><FaHistory /> Transaction History ({inTransactions.length})</h5>
+        {hasDisposal && (
+          <button className="xp-view-disposal-btn" onClick={onViewDisposal}>
+            <FaTrashAlt /> View Disposals
+          </button>
+        )}
       </div>
       <div className="xp-transaction-list">
-        {transactions.map((t, idx) => {
+        {inTransactions.map((t, idx) => {
           const { date, time } = formatDateTime(t.createdAt);
           return (
             <div key={t.transactionId || idx} className="xp-transaction-item">
-              <span className={`xp-txn-type-badge ${t.transactionType === 'IN' ? 'xp-txn-in' : 'xp-txn-out'}`}>
-                {t.transactionType === 'IN' ? <FaArrowUp /> : <FaArrowDown />}
-                {t.transactionType}
-              </span>
-              <span className="xp-txn-qty">{t.quantity} KG</span>
-              <span className="xp-txn-price">
-                {t.purchasePrice ? `₹${t.purchasePrice}/KG` : '—'}
-              </span>
-              <span className="xp-txn-by">
-                <span className="xp-txn-by-name">{t.performedBy?.userName || 'Unknown'}</span>
-                <span className="xp-txn-by-reason">{t.reason}{t.notes ? ` · ${t.notes}` : ''}</span>
-              </span>
-              <span className="xp-txn-date">
-                {date}
-                <span className="xp-txn-time">{time}</span>
-              </span>
+              {/* ✅ SINGLE ROW - ALL FIELDS IN ONE LINE */}
+              <div className="xp-transaction-row">
+
+                <span className="xp-txn-label"><FaArrowUp /> Quantity:</span>
+                <span className="xp-txn-value xp-txn-qty">+{t.quantity} KG</span>
+
+                <span className="xp-txn-separator">|</span>
+
+                <span className="xp-txn-label"><FaMoneyBillWave /> Price:</span>
+                <span className="xp-txn-value xp-txn-price">₹{t.purchasePrice?.toFixed(2) || '0.00'}/KG</span>
+                                <span className="xp-txn-separator">|</span>
+
+                <span className="xp-txn-label"><FaUser /> Name:</span>
+                <span className="xp-txn-value">{t.performedBy?.userName || 'Unknown'}</span>
+
+                <span className="xp-txn-separator">|</span>
+
+                <span className="xp-txn-label"><FaTag /> Reason:</span>
+                <span className="xp-txn-value">{t.reason || 'Purchase'}</span>
+
+                <span className="xp-txn-separator">|</span>
+
+                <span className="xp-txn-label"><FaCalendarAlt /> Date:</span>
+                <span className="xp-txn-value">{date}</span>
+
+                <span className="xp-txn-separator">|</span>
+
+                <span className="xp-txn-label"><FaClock /> Time:</span>
+                <span className="xp-txn-value">{time}</span>
+
+
+
+
+                {t.notes && (
+                  <>
+                    <span className="xp-txn-separator">|</span>
+                    <span className="xp-txn-label"><FaInfoCircle /> Notes:</span>
+                    <span className="xp-txn-value">{t.notes}</span>
+                  </>
+                )}
+              </div>
             </div>
           );
         })}
@@ -824,6 +951,12 @@ const XPInventory = () => {
   const [transactionsByXpId, setTransactionsByXpId] = useState({});
   const [loadingTransactionsId, setLoadingTransactionsId] = useState(null);
 
+  // Disposal states
+  const [showDisposalPanel, setShowDisposalPanel] = useState(false);
+  const [disposalData, setDisposalData] = useState(null);
+  const [loadingDisposal, setLoadingDisposal] = useState(false);
+  const [currentDisposalXpId, setCurrentDisposalXpId] = useState(null);
+
   const fileInputRef = useRef(null);
 
   // ============================================
@@ -850,7 +983,6 @@ const XPInventory = () => {
 
       const data = await response.json();
 
-      // Set inventory and pagination
       setInventory(data.products || []);
       setFilteredInventory(data.products || []);
       setPagination(data.pagination || {
@@ -897,7 +1029,7 @@ const XPInventory = () => {
   // ============================================
   const handleSearch = (term) => {
     setSearchTerm(term);
-    fetchInventory(1, term); // Reset to page 1 on search
+    fetchInventory(1, term);
   };
 
   // ============================================
@@ -936,9 +1068,55 @@ const XPInventory = () => {
     }
   };
 
+  // ============================================
+  // FETCH DISPOSAL HISTORY
+  // ============================================
+  const fetchDisposalHistory = async (xpId) => {
+    try {
+      setLoadingDisposal(true);
+      setCurrentDisposalXpId(xpId);
+
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/disposal/get-by-product/${xpId}`,
+        { credentials: 'include' }
+      );
+
+      if (!response.ok) throw new Error('Failed to fetch disposal history');
+
+      const data = await response.json();
+      setDisposalData(data.data);
+      setShowDisposalPanel(true);
+    } catch (error) {
+      console.error("Error fetching disposal history:", error);
+      toast.error("Failed to load disposal history");
+      setDisposalData(null);
+    } finally {
+      setLoadingDisposal(false);
+    }
+  };
+
+  // ============================================
+  // CHECK IF PRODUCT HAS DISPOSAL HISTORY
+  // ============================================
+  const checkHasDisposal = async (xpId) => {
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/disposal/get-by-product/${xpId}`,
+        { credentials: 'include' }
+      );
+      if (!response.ok) return false;
+      const data = await response.json();
+      return data.data && data.data.disposals && data.data.disposals.length > 0;
+    } catch (error) {
+      return false;
+    }
+  };
+
   const handleRowClick = (xpId) => {
     if (expandedRowId === xpId) {
       setExpandedRowId(null);
+      setShowDisposalPanel(false);
+      setDisposalData(null);
       return;
     }
 
@@ -1156,6 +1334,8 @@ const XPInventory = () => {
 
       if (expandedRowId === selectedProduct.xpId) {
         setExpandedRowId(null);
+        setShowDisposalPanel(false);
+        setDisposalData(null);
       }
       setTransactionsByXpId(prev => {
         const next = { ...prev };
@@ -1443,7 +1623,6 @@ const XPInventory = () => {
                   <th>Product Name</th>
                   <th>ML</th>
                   <th>Quantity (KG)</th>
-                  {/* <th>Avg Price (₹/KG)</th> */}
                   <th>Min Stock</th>
                   <th>Status</th>
                   <th>Actions</th>
@@ -1452,7 +1631,7 @@ const XPInventory = () => {
               <tbody>
                 {filteredInventory.length === 0 ? (
                   <tr>
-                    <td colSpan="7">
+                    <td colSpan="6">
                       <div className="xp-empty-state">
                         <FaBox className="xp-empty-icon" />
                         <p>No products found</p>
@@ -1478,9 +1657,6 @@ const XPInventory = () => {
                           </td>
                           <td className="xp-ml-cell">{item.ml}ml</td>
                           <td className="xp-qty-cell">{item.quantity}</td>
-                          {/* <td className="xp-price-cell">
-                            ₹{item.avgPurchasePrice?.toFixed(2) || '0.00'}
-                          </td> */}
                           <td className="xp-min-cell">{item.minStock}</td>
                           <td>
                             <span className={`xp-status-badge xp-status-${status.status}`}>
@@ -1510,11 +1686,27 @@ const XPInventory = () => {
 
                         {isExpanded && (
                           <tr className="xp-transaction-row">
-                            <td colSpan="7">
+                            <td colSpan="6">
+                              {/* Transaction Panel */}
                               <TransactionPanel
                                 transactions={transactionsByXpId[item.xpId]}
                                 isLoading={loadingTransactionsId === item.xpId}
+                                onViewDisposal={() => fetchDisposalHistory(item.xpId)}
+                                hasDisposal={true}
                               />
+
+                              {/* Disposal Panel (shown when disposal data is loaded) */}
+                              {showDisposalPanel && currentDisposalXpId === item.xpId && (
+                                <DisposalHistoryPanel
+                                  disposals={disposalData?.disposals || []}
+                                  isLoading={loadingDisposal}
+                                  onClose={() => {
+                                    setShowDisposalPanel(false);
+                                    setDisposalData(null);
+                                    setCurrentDisposalXpId(null);
+                                  }}
+                                />
+                              )}
                             </td>
                           </tr>
                         )}
@@ -1661,5 +1853,6 @@ const XPInventory = () => {
     </Navbar>
   );
 };
+
 
 export default XPInventory;

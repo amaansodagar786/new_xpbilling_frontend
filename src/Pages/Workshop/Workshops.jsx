@@ -4,7 +4,8 @@ import {
     FaCalendarAlt, FaClock, FaPlus, FaSearch,
     FaSave, FaEdit, FaTrash, FaTimes,
     FaUser, FaPhone, FaEnvelope, FaBox,
-    FaEye, FaUsers, FaUserPlus, FaCheckCircle, FaUserMinus
+    FaEye, FaUsers, FaUserPlus, FaCheckCircle, FaUserMinus,
+    FaChevronLeft, FaChevronRight
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../../Components/Navbar/Navbar";
@@ -12,7 +13,7 @@ import "./Workshops.scss";
 import "react-toastify/dist/ReactToastify.css";
 
 // ============================================
-// DELETE CONFIRMATION MODAL (top-level — stable identity across re-renders)
+// DELETE CONFIRMATION MODAL
 // ============================================
 const DeleteConfirmationModal = ({
     show, workshop, isDeleting, onCancel, onConfirm, formatDate
@@ -71,7 +72,7 @@ const DeleteConfirmationModal = ({
 };
 
 // ============================================
-// REMOVE CUSTOMER CONFIRMATION MODAL (replaces window.confirm)
+// REMOVE CUSTOMER CONFIRMATION MODAL
 // ============================================
 const RemoveCustomerConfirmationModal = ({
     show, customer, isRemoving, onCancel, onConfirm
@@ -127,7 +128,7 @@ const RemoveCustomerConfirmationModal = ({
 };
 
 // ============================================
-// CUSTOMER MODAL (top-level — stable identity across re-renders)
+// CUSTOMER MODAL
 // ============================================
 const CustomerModal = ({
     show, selectedWorkshop, customerSearch, setCustomerSearch,
@@ -319,7 +320,7 @@ const CustomerModal = ({
 };
 
 // ============================================
-// WORKSHOP DETAILS MODAL (top-level — stable identity across re-renders)
+// WORKSHOP DETAILS MODAL
 // ============================================
 const WorkshopDetailsModal = ({
     show, viewingWorkshop, onClose,
@@ -474,12 +475,33 @@ const WorkshopDetailsModal = ({
 const Workshops = () => {
     const [workshops, setWorkshops] = useState([]);
     const [filteredWorkshops, setFilteredWorkshops] = useState([]);
-    const [searchTerm, setSearchTerm] = useState("");
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [viewMode, setViewMode] = useState("active");
     const navigate = useNavigate();
+
+    // ============================================
+    // FILTER STATES
+    // ============================================
+    const [filterType, setFilterType] = useState("today");
+    const [searchTerm, setSearchTerm] = useState("");
+    const [fromDate, setFromDate] = useState("");
+    const [toDate, setToDate] = useState("");
+    const [showCustomDate, setShowCustomDate] = useState(false);
+
+    // ============================================
+    // PAGINATION STATES
+    // ============================================
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pagination, setPagination] = useState({
+        total: 0,
+        page: 1,
+        limit: 20,
+        totalPages: 0,
+        hasNextPage: false,
+        hasPrevPage: false
+    });
 
     // Form states
     const [showForm, setShowForm] = useState(false);
@@ -510,9 +532,9 @@ const Workshops = () => {
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [workshopToDelete, setWorkshopToDelete] = useState(null);
 
-    // Remove customer confirmation (replaces window.confirm)
+    // Remove customer confirmation
     const [showRemoveCustomerConfirm, setShowRemoveCustomerConfirm] = useState(false);
-    const [customerToRemove, setCustomerToRemove] = useState(null); // { workshopId, customerId, customerName, contactNumber }
+    const [customerToRemove, setCustomerToRemove] = useState(null);
     const [isRemovingCustomer, setIsRemovingCustomer] = useState(false);
 
     // View workshop details
@@ -529,14 +551,30 @@ const Workshops = () => {
     const timeInputRef = useRef(null);
 
     // ============================================
-    // FETCH WORKSHOPS
+    // FETCH WORKSHOPS WITH FILTERS & PAGINATION
     // ============================================
-    const fetchWorkshops = async () => {
+    const fetchWorkshops = async (page = 1, filter = filterType, search = searchTerm) => {
         try {
             setIsLoading(true);
+
+            // Build query params
+            const queryParams = new URLSearchParams({
+                page: page,
+                limit: 20,
+                filter: filter,
+                search: search
+            });
+
+            // Add custom date range if filter is 'custom'
+            if (filter === 'custom' && fromDate && toDate) {
+                queryParams.append('from', fromDate);
+                queryParams.append('to', toDate);
+            }
+
+            // Determine endpoint based on viewMode
             const endpoint = viewMode === "active"
-                ? `${import.meta.env.VITE_API_URL}/workshops/get-active`
-                : `${import.meta.env.VITE_API_URL}/workshops/get-all`;
+                ? `${import.meta.env.VITE_API_URL}/workshops/get-active?${queryParams}`
+                : `${import.meta.env.VITE_API_URL}/workshops/get-all?${queryParams}`;
 
             const response = await fetch(endpoint, { credentials: 'include' });
 
@@ -549,11 +587,24 @@ const Workshops = () => {
             }
 
             const data = await response.json();
-            setWorkshops(data);
-            setFilteredWorkshops(data);
+
+            setWorkshops(data.workshops || []);
+            setFilteredWorkshops(data.workshops || []);
+            setPagination(data.pagination || {
+                total: 0,
+                page: 1,
+                limit: 20,
+                totalPages: 0,
+                hasNextPage: false,
+                hasPrevPage: false
+            });
+            setCurrentPage(data.pagination?.page || 1);
+
         } catch (error) {
             console.error("Error fetching workshops:", error);
             toast.error("Failed to fetch workshops");
+            setWorkshops([]);
+            setFilteredWorkshops([]);
         } finally {
             setIsLoading(false);
         }
@@ -613,35 +664,68 @@ const Workshops = () => {
         }
     };
 
+    // ============================================
+    // INITIAL FETCH
+    // ============================================
     useEffect(() => {
-        fetchWorkshops();
+        fetchWorkshops(1, filterType, searchTerm);
         fetchCustomers();
         fetchPackages();
     }, [viewMode]);
 
     // ============================================
-    // SEARCH
+    // HANDLE FILTER CHANGE
     // ============================================
-    useEffect(() => {
-        if (!searchTerm.trim()) {
-            setFilteredWorkshops(workshops);
+    const handleFilterChange = (newFilter) => {
+        setFilterType(newFilter);
+        setCurrentPage(1);
+
+        if (newFilter === 'custom') {
+            setShowCustomDate(true);
+            // Don't fetch until user selects dates
             return;
         }
 
-        const search = searchTerm.toLowerCase();
-        const filtered = workshops.filter((w) => {
-            const dateStr = new Date(w.date).toLocaleDateString();
-            return (
-                dateStr.includes(search) ||
-                w.startTime.includes(search) ||
-                w.customers.some(c =>
-                    c.customerName?.toLowerCase().includes(search) ||
-                    c.contactNumber?.includes(search)
-                )
-            );
-        });
-        setFilteredWorkshops(filtered);
-    }, [searchTerm, workshops]);
+        setShowCustomDate(false);
+        setFromDate("");
+        setToDate("");
+        fetchWorkshops(1, newFilter, searchTerm);
+    };
+
+    // ============================================
+    // HANDLE CUSTOM DATE SEARCH
+    // ============================================
+    const handleCustomDateSearch = () => {
+        if (!fromDate || !toDate) {
+            toast.error("Please select both From and To dates");
+            return;
+        }
+
+        if (new Date(fromDate) > new Date(toDate)) {
+            toast.error("From date cannot be after To date");
+            return;
+        }
+
+        fetchWorkshops(1, 'custom', searchTerm);
+    };
+
+    // ============================================
+    // HANDLE SEARCH
+    // ============================================
+    const handleSearch = (term) => {
+        setSearchTerm(term);
+        setCurrentPage(1);
+        fetchWorkshops(1, filterType, term);
+    };
+
+    // ============================================
+    // HANDLE PAGE CHANGE
+    // ============================================
+    const handlePageChange = (newPage) => {
+        if (newPage < 1 || newPage > pagination.totalPages) return;
+        setCurrentPage(newPage);
+        fetchWorkshops(newPage, filterType, searchTerm);
+    };
 
     // ============================================
     // RESET FORM
@@ -737,7 +821,7 @@ const Workshops = () => {
             const result = await response.json();
             toast.success(result.message);
 
-            await fetchWorkshops();
+            await fetchWorkshops(currentPage, filterType, searchTerm);
             resetForm();
             setShowForm(false);
         } catch (error) {
@@ -765,7 +849,7 @@ const Workshops = () => {
 
             const result = await response.json();
             toast.success(result.message);
-            await fetchWorkshops();
+            await fetchWorkshops(currentPage, filterType, searchTerm);
         } catch (error) {
             console.error("Error deleting workshop:", error);
             toast.error("Failed to delete workshop");
@@ -812,7 +896,7 @@ const Workshops = () => {
             toast.success(result.message);
 
             setSelectedWorkshop(result.workshop);
-            await fetchWorkshops();
+            await fetchWorkshops(currentPage, filterType, searchTerm);
 
             setSelectedCustomer("");
             setSelectedPackage("");
@@ -843,7 +927,7 @@ const Workshops = () => {
     };
 
     // ============================================
-    // OPEN REMOVE CUSTOMER CONFIRMATION (replaces window.confirm)
+    // REQUEST REMOVE CUSTOMER
     // ============================================
     const requestRemoveCustomer = (workshopId, customerId, customerName, contactNumber) => {
         setCustomerToRemove({ workshopId, customerId, customerName, contactNumber });
@@ -851,7 +935,7 @@ const Workshops = () => {
     };
 
     // ============================================
-    // HANDLE REMOVE CUSTOMER (actual API call, runs after confirm)
+    // HANDLE REMOVE CUSTOMER
     // ============================================
     const handleRemoveCustomer = async () => {
         if (!customerToRemove) return;
@@ -871,7 +955,7 @@ const Workshops = () => {
             toast.success(result.message);
 
             setSelectedWorkshop(result.workshop);
-            await fetchWorkshops();
+            await fetchWorkshops(currentPage, filterType, searchTerm);
 
             if (showWorkshopDetails && viewingWorkshop) {
                 const updatedWorkshop = await fetchWorkshopById(viewingWorkshop.workshopId);
@@ -971,7 +1055,7 @@ const Workshops = () => {
             if (updatedWorkshop) {
                 setViewingWorkshop(updatedWorkshop);
             }
-            await fetchWorkshops();
+            await fetchWorkshops(currentPage, filterType, searchTerm);
 
             setEditingCustomerId(null);
             setSelectedEditPackage("");
@@ -1009,7 +1093,7 @@ const Workshops = () => {
             if (updatedWorkshop) {
                 setViewingWorkshop(updatedWorkshop);
             }
-            await fetchWorkshops();
+            await fetchWorkshops(currentPage, filterType, searchTerm);
         } catch (error) {
             console.error("Error updating attendance:", error);
             toast.error("Failed to update attendance");
@@ -1045,7 +1129,7 @@ const Workshops = () => {
     };
 
     // ============================================
-    // FILTER CUSTOMERS BY SEARCH — empty search shows NOTHING (fixed)
+    // FILTER CUSTOMERS BY SEARCH
     // ============================================
     const filteredCustomers = !customerSearch.trim()
         ? []
@@ -1068,6 +1152,21 @@ const Workshops = () => {
     };
 
     // ============================================
+    // GET FILTER LABEL
+    // ============================================
+    const getFilterLabel = () => {
+        switch (filterType) {
+            case 'today': return 'Today';
+            case 'yesterday': return 'Yesterday';
+            case 'this-week': return 'This Week';
+            case 'this-month': return 'This Month';
+            case 'this-year': return 'This Year';
+            case 'custom': return 'Custom Range';
+            default: return 'Today';
+        }
+    };
+
+    // ============================================
     // RENDER
     // ============================================
     return (
@@ -1082,9 +1181,9 @@ const Workshops = () => {
                             <FaSearch className="ws-search-icon" />
                             <input
                                 type="text"
-                                placeholder="Search workshops..."
+                                placeholder="Search by date, customer name or number..."
                                 value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
+                                onChange={(e) => handleSearch(e.target.value)}
                                 autoComplete="off"
                             />
                         </div>
@@ -1108,6 +1207,101 @@ const Workshops = () => {
                     </div>
                 </div>
 
+                {/* ============================================
+                    FILTERS BAR
+                ============================================ */}
+                <div className="ws-filters-bar">
+                    <div className="ws-filters-group">
+                        <button
+                            className={`ws-filter-btn ${filterType === 'today' ? 'ws-filter-active' : ''}`}
+                            onClick={() => handleFilterChange('today')}
+                        >
+                            Today
+                        </button>
+                        <button
+                            className={`ws-filter-btn ${filterType === 'yesterday' ? 'ws-filter-active' : ''}`}
+                            onClick={() => handleFilterChange('yesterday')}
+                        >
+                            Yesterday
+                        </button>
+                        <button
+                            className={`ws-filter-btn ${filterType === 'this-week' ? 'ws-filter-active' : ''}`}
+                            onClick={() => handleFilterChange('this-week')}
+                        >
+                            This Week
+                        </button>
+                        <button
+                            className={`ws-filter-btn ${filterType === 'this-month' ? 'ws-filter-active' : ''}`}
+                            onClick={() => handleFilterChange('this-month')}
+                        >
+                            This Month
+                        </button>
+                        <button
+                            className={`ws-filter-btn ${filterType === 'this-year' ? 'ws-filter-active' : ''}`}
+                            onClick={() => handleFilterChange('this-year')}
+                        >
+                            This Year
+                        </button>
+                        <button
+                            className={`ws-filter-btn ws-filter-custom ${filterType === 'custom' ? 'ws-filter-active' : ''}`}
+                            onClick={() => handleFilterChange('custom')}
+                        >
+                            Custom
+                        </button>
+                    </div>
+
+                    {showCustomDate && (
+                        <div className="ws-custom-date-container">
+                            <div className="ws-custom-date-field">
+                                <label>From:</label>
+                                <input
+                                    type="date"
+                                    value={fromDate}
+                                    onChange={(e) => setFromDate(e.target.value)}
+                                    max={toDate || undefined}
+                                />
+                            </div>
+                            <div className="ws-custom-date-field">
+                                <label>To:</label>
+                                <input
+                                    type="date"
+                                    value={toDate}
+                                    onChange={(e) => setToDate(e.target.value)}
+                                    min={fromDate || undefined}
+                                />
+                            </div>
+                            <button
+                                className="ws-custom-date-apply"
+                                onClick={handleCustomDateSearch}
+                                disabled={!fromDate || !toDate}
+                            >
+                                Apply
+                            </button>
+                            <button
+                                className="ws-custom-date-clear"
+                                onClick={() => {
+                                    setFromDate("");
+                                    setToDate("");
+                                    setShowCustomDate(false);
+                                    setFilterType('today');
+                                    fetchWorkshops(1, 'today', searchTerm);
+                                }}
+                            >
+                                Clear
+                            </button>
+                        </div>
+                    )}
+
+                    {filterType !== 'custom' && (
+                        <div className="ws-filter-info">
+                            Showing: <strong>{getFilterLabel()}</strong>
+                        </div>
+                    )}
+                </div>
+
+                {/* ============================================
+                    FORM CONTAINER
+                ============================================ */}
                 {showForm && (
                     <div className="ws-form-container">
                         <h2>{editingWorkshop ? "Edit Workshop" : "Add New Workshop"}</h2>
@@ -1180,6 +1374,9 @@ const Workshops = () => {
                     </div>
                 )}
 
+                {/* ============================================
+                    DATA TABLE
+                ============================================ */}
                 <div className="ws-data-table">
                     {isLoading ? (
                         <div className="ws-loading-container">
@@ -1266,6 +1463,62 @@ const Workshops = () => {
                     )}
                 </div>
 
+                {/* ============================================
+                    PAGINATION
+                ============================================ */}
+                {!isLoading && pagination.totalPages > 0 && (
+                    <div className="ws-pagination">
+                        <div className="ws-pagination-info">
+                            Showing {((pagination.page - 1) * pagination.limit) + 1} - {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} workshops
+                        </div>
+                        <div className="ws-pagination-controls">
+                            <button
+                                className="ws-pagination-btn"
+                                onClick={() => handlePageChange(pagination.page - 1)}
+                                disabled={!pagination.hasPrevPage}
+                            >
+                                <FaChevronLeft />
+                            </button>
+
+                            <div className="ws-pagination-pages">
+                                {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                                    let pageNum;
+                                    if (pagination.totalPages <= 5) {
+                                        pageNum = i + 1;
+                                    } else if (pagination.page <= 3) {
+                                        pageNum = i + 1;
+                                    } else if (pagination.page >= pagination.totalPages - 2) {
+                                        pageNum = pagination.totalPages - 4 + i;
+                                    } else {
+                                        pageNum = pagination.page - 2 + i;
+                                    }
+
+                                    return (
+                                        <button
+                                            key={pageNum}
+                                            className={`ws-pagination-page ${pagination.page === pageNum ? 'ws-pagination-active' : ''}`}
+                                            onClick={() => handlePageChange(pageNum)}
+                                        >
+                                            {pageNum}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
+                            <button
+                                className="ws-pagination-btn"
+                                onClick={() => handlePageChange(pagination.page + 1)}
+                                disabled={!pagination.hasNextPage}
+                            >
+                                <FaChevronRight />
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* ============================================
+                    MODALS
+                ============================================ */}
                 <DeleteConfirmationModal
                     show={showDeleteConfirm}
                     workshop={workshops.find(w => w.workshopId === workshopToDelete)}

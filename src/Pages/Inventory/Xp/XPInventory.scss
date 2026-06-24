@@ -311,6 +311,9 @@ $border-radius-sm: 8px;
     }
 }
 
+// ============================================
+// TRANSACTION PANEL
+// ============================================
 .xp-transaction-panel {
     background: #fafaff;
     padding: 18px 24px 20px 56px;
@@ -368,84 +371,248 @@ $border-radius-sm: 8px;
 .xp-transaction-list {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    max-height: 320px;
+    gap: 6px;
+    max-height: 400px;
     overflow-y: auto;
     padding-right: 4px;
 }
 
+// ============================================
+// TRANSACTION ITEM - SINGLE ROW ONLY
+// ============================================
 .xp-transaction-item {
-    display: grid;
-    grid-template-columns: 90px 1fr 110px 130px 140px;
-    align-items: center;
-    gap: 14px;
     background: $white;
     border: 1px solid #eceef6;
     border-radius: $border-radius-sm;
-    padding: 10px 16px;
-    font-family: 'Open Sans', sans-serif;
-    font-size: 13px;
-    color: #3a3a5c;
+    padding: 8px 16px;
+    transition: all 0.2s;
 
-    .xp-txn-type-badge {
-        display: inline-flex;
+    &:hover {
+        border-color: $primary-light;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    }
+
+    // ✅ SINGLE ROW - ALL FIELDS IN ONE LINE
+    .xp-transaction-row {
+        display: flex;
         align-items: center;
-        gap: 5px;
-        padding: 3px 10px;
-        border-radius: 20px;
-        font-family: 'Roboto', sans-serif;
+        flex-wrap: wrap;
+        gap: 2px 12px;
+        padding: 0;
+
+        .xp-txn-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            font-family: 'Roboto', sans-serif;
+            font-size: 11px;
+            font-weight: 600;
+            color: #888;
+            white-space: nowrap;
+
+            svg {
+                font-size: 10px;
+                color: $primary-light;
+            }
+        }
+
+        .xp-txn-value {
+            font-family: 'Open Sans', sans-serif;
+            font-size: 12.5px;
+            color: #3a3a5c;
+            white-space: nowrap;
+
+            &.xp-txn-qty {
+                color: $success-color;
+                font-weight: 700;
+            }
+
+            &.xp-txn-price {
+                color: $primary-color;
+                font-weight: 600;
+            }
+        }
+
+        .xp-txn-separator {
+            color: #dde1ed;
+            font-weight: 300;
+            font-size: 13px;
+        }
+    }
+}
+
+// ============================================
+// VIEW DISPOSAL BUTTON
+// ============================================
+.xp-view-disposal-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 14px;
+    background: linear-gradient(135deg, #dc3545, #e74c3c);
+    color: $white;
+    border: none;
+    border-radius: 50px;
+    font-family: 'Roboto', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+
+    &:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+    }
+
+    svg {
         font-size: 11px;
-        font-weight: 700;
-        width: fit-content;
+    }
+}
 
-        &.xp-txn-in {
-            background: #d4edda;
-            color: #155724;
-        }
+// ============================================
+// DISPOSAL PANEL
+// ============================================
+.xp-disposal-panel {
+    background: #fafaff;
+    padding: 14px 24px 18px 56px;
+    border-top: 2px solid #f8d7da;
+    animation: xp-expandIn 0.2s ease-out;
 
-        &.xp-txn-out {
-            background: #f8d7da;
+    .xp-disposal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 10px;
+
+        h5 {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 0;
+            font-family: 'Roboto', sans-serif;
+            font-size: 13px;
+            font-weight: 700;
             color: #721c24;
+
+            svg {
+                color: $danger-color;
+            }
+        }
+
+        .xp-disposal-close-btn {
+            background: #f5f6fa;
+            border: none;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            font-size: 11px;
+            cursor: pointer;
+            color: #888;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+
+            &:hover {
+                background: #ffe8e8;
+                color: $danger-color;
+            }
         }
     }
 
-    .xp-txn-qty {
-        font-family: 'Roboto', sans-serif;
-        font-weight: 700;
-        color: #2d2d50;
+    .xp-disposal-loading {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 0;
+        font-family: 'Open Sans', sans-serif;
+        font-size: 13px;
+        color: #888;
     }
 
-    .xp-txn-price {
-        color: $success-color;
-        font-weight: 600;
+    .xp-disposal-empty {
+        padding: 12px 0;
+        font-family: 'Open Sans', sans-serif;
+        font-size: 13px;
+        color: #aab0bc;
+        text-align: center;
     }
 
-    .xp-txn-by {
+    .xp-disposal-list {
         display: flex;
         flex-direction: column;
-        gap: 1px;
+        gap: 6px;
+        max-height: 300px;
+        overflow-y: auto;
+        padding-right: 4px;
+    }
+}
 
-        .xp-txn-by-name {
-            font-weight: 600;
-            color: $primary-color;
-            font-size: 12.5px;
-        }
+// ============================================
+// DISPOSAL ITEM - SINGLE ROW ONLY
+// ============================================
+.xp-disposal-item {
+    background: #fff8f8;
+    border: 1px solid #f5d0d0;
+    border-radius: $border-radius-sm;
+    padding: 8px 16px;
+    transition: all 0.2s;
 
-        .xp-txn-by-reason {
-            font-size: 11px;
-            color: #aab0bc;
-        }
+    &:hover {
+        border-color: $danger-color;
+        box-shadow: 0 2px 8px rgba(220, 53, 69, 0.08);
     }
 
-    .xp-txn-date {
-        text-align: right;
-        color: #888;
-        font-size: 12px;
+    // ✅ SINGLE ROW - ALL FIELDS IN ONE LINE
+    .xp-disposal-row {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 2px 12px;
+        padding: 0;
 
-        .xp-txn-time {
-            display: block;
+        .xp-disposal-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            font-family: 'Roboto', sans-serif;
             font-size: 11px;
-            color: #bfc5ce;
+            font-weight: 600;
+            color: #888;
+            white-space: nowrap;
+
+            svg {
+                font-size: 10px;
+                color: $danger-color;
+            }
+        }
+
+        .xp-disposal-value {
+            font-family: 'Open Sans', sans-serif;
+            font-size: 12.5px;
+            color: #3a3a5c;
+            white-space: nowrap;
+
+            &.xp-disposal-reason {
+                background: #fff3cd;
+                color: #856404;
+                padding: 1px 10px;
+                border-radius: 20px;
+                font-weight: 600;
+                font-size: 11px;
+            }
+
+            &.xp-disposal-qty {
+                color: $danger-color;
+                font-weight: 700;
+            }
+        }
+
+        .xp-disposal-separator {
+            color: #dde1ed;
+            font-weight: 300;
+            font-size: 13px;
         }
     }
 }
@@ -1253,108 +1420,6 @@ $border-radius-sm: 8px;
 }
 
 // ============================================
-// RESPONSIVE
-// ============================================
-@media screen and (max-width: 768px) {
-    .xp-main {
-        padding: 16px 14px 32px;
-    }
-
-    .xp-page-header {
-        padding: 14px 16px;
-
-        h2 {
-            font-size: 18px;
-        }
-
-        .xp-right-section {
-            width: 100%;
-            flex-direction: column;
-            align-items: stretch;
-        }
-
-        .xp-search-container {
-            width: 100%;
-        }
-
-        .xp-action-buttons-group {
-            width: 100%;
-
-            button {
-                flex: 1;
-                justify-content: center;
-            }
-        }
-    }
-
-    .xp-data-table {
-        overflow-x: auto;
-
-        table {
-            min-width: 700px;
-        }
-
-        th,
-        td {
-            padding: 11px 12px;
-            font-size: 13px;
-        }
-    }
-
-    .xp-transaction-panel {
-        padding: 16px;
-    }
-
-    .xp-transaction-item {
-        grid-template-columns: 1fr;
-        gap: 6px;
-
-        .xp-txn-date {
-            text-align: left;
-        }
-    }
-
-    .xp-form-row {
-        flex-direction: column;
-        gap: 14px;
-    }
-
-    .xp-modal-content {
-        max-width: 100%;
-        border-radius: 16px 16px 0 0;
-    }
-
-    .xp-modal-overlay {
-        // align-items: flex-end;
-        padding: 5px;
-    }
-
-    .xp-upload-summary {
-        flex-direction: column;
-    }
-
-    .xp-current-stock-info {
-        flex-direction: column;
-        gap: 6px;
-    }
-}
-
-@media (max-width: 480px) {
-    .xp-modal-header {
-        padding: 14px 16px;
-    }
-
-    .xp-modal-body {
-        padding: 16px;
-    }
-
-    .xp-modal-footer {
-        padding: 12px 16px;
-    }
-}
-
-
-// ============================================
 // PAGINATION STYLES
 // ============================================
 .xp-pagination {
@@ -1448,9 +1513,100 @@ $border-radius-sm: 8px;
 }
 
 // ============================================
-// RESPONSIVE PAGINATION
+// RESPONSIVE
 // ============================================
 @media screen and (max-width: 768px) {
+    .xp-main {
+        padding: 16px 14px 32px;
+    }
+
+    .xp-page-header {
+        padding: 14px 16px;
+
+        h2 {
+            font-size: 18px;
+        }
+
+        .xp-right-section {
+            width: 100%;
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .xp-search-container {
+            width: 100%;
+        }
+
+        .xp-action-buttons-group {
+            width: 100%;
+
+            button {
+                flex: 1;
+                justify-content: center;
+            }
+        }
+    }
+
+    .xp-data-table {
+        overflow-x: auto;
+
+        table {
+            min-width: 700px;
+        }
+
+        th,
+        td {
+            padding: 11px 12px;
+            font-size: 13px;
+        }
+    }
+
+    .xp-transaction-panel {
+        padding: 16px 16px 16px 20px;
+    }
+
+    .xp-disposal-panel {
+        padding: 16px 16px 16px 20px;
+    }
+
+    .xp-transaction-item .xp-transaction-row,
+    .xp-disposal-item .xp-disposal-row {
+        gap: 2px 8px;
+
+        .xp-txn-label,
+        .xp-disposal-label {
+            font-size: 10px;
+        }
+
+        .xp-txn-value,
+        .xp-disposal-value {
+            font-size: 11.5px;
+        }
+    }
+
+    .xp-form-row {
+        flex-direction: column;
+        gap: 14px;
+    }
+
+    .xp-modal-content {
+        max-width: 100%;
+        border-radius: 16px 16px 0 0;
+    }
+
+    .xp-modal-overlay {
+        padding: 5px;
+    }
+
+    .xp-upload-summary {
+        flex-direction: column;
+    }
+
+    .xp-current-stock-info {
+        flex-direction: column;
+        gap: 6px;
+    }
+
     .xp-pagination {
         flex-direction: column;
         align-items: stretch;
@@ -1484,6 +1640,18 @@ $border-radius-sm: 8px;
 }
 
 @media (max-width: 480px) {
+    .xp-modal-header {
+        padding: 14px 16px;
+    }
+
+    .xp-modal-body {
+        padding: 16px;
+    }
+
+    .xp-modal-footer {
+        padding: 12px 16px;
+    }
+
     .xp-pagination {
         padding: 12px 16px;
 
@@ -1502,6 +1670,26 @@ $border-radius-sm: 8px;
             width: 28px;
             height: 28px;
             font-size: 11px;
+        }
+    }
+
+    .xp-transaction-item .xp-transaction-row,
+    .xp-disposal-item .xp-disposal-row {
+        gap: 2px 6px;
+
+        .xp-txn-label,
+        .xp-disposal-label {
+            font-size: 9px;
+        }
+
+        .xp-txn-value,
+        .xp-disposal-value {
+            font-size: 10.5px;
+        }
+
+        .xp-txn-separator,
+        .xp-disposal-separator {
+            font-size: 10px;
         }
     }
 }

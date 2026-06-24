@@ -1,11 +1,20 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, NavLink, useLocation } from "react-router-dom";
 
-// Icon imports
+// Icon imports - REMOVED ALL PI ICONS
 import { BiLogOut, BiLayout, BiLogIn } from "react-icons/bi";
-import { TbLayoutGridAdd, TbMessages, TbUsers, TbReportAnalytics, TbTrash } from "react-icons/tb";
+import { 
+  TbLayoutGridAdd, 
+  TbMessages, 
+  TbUsers, 
+  TbReportAnalytics, 
+  TbTrash, 
+  TbPackage, 
+  TbTools, 
+  TbBottle,
+  TbFlask
+} from "react-icons/tb";
 import { LuCircleDot, LuFile } from "react-icons/lu";
-import { PiBasket, PiLightbulbThin } from "react-icons/pi";
 import { CiShoppingBasket } from "react-icons/ci";
 import { HiOutlineHome } from "react-icons/hi";
 import { BsBell } from "react-icons/bs";
@@ -13,7 +22,7 @@ import { GiHamburgerMenu } from "react-icons/gi";
 import { RxCross1 } from "react-icons/rx";
 import { FiUser } from "react-icons/fi";
 import { MdDiscount } from "react-icons/md";
-import { FaSearch, FaFileExcel, FaPlus } from "react-icons/fa";
+import { FaSearch, FaFileExcel, FaPlus, FaBox, FaFlask, FaSyringe, FaVial } from "react-icons/fa";
 
 import logo from "../../assets/logo/jass_logo_new.png";
 import "./Navbar.scss";
@@ -133,21 +142,20 @@ const Navbar = ({
 
   const pageTitle = getPageTitle();
 
-  // Define all possible menu items with their required permissions
+  // Define all possible menu items with their required permissions - ALL WORKING ICONS
   const allMenuData = [
-    { icon: <PiBasket />, title: "Invoice", path: "/", permission: "invoice" },
-    { icon: <HiOutlineHome />, title: "Dashboard", path: "/dashboard", permission: "dashboard" },
+    // { icon: <PiBasket />, title: "Invoice", path: "/", permission: "invoice" },
+    // { icon: <HiOutlineHome />, title: "Dashboard", path: "/dashboard", permission: "dashboard" },
     { icon: <TbUsers />, title: "Customer", path: "/customer", permission: "customer" },
     { icon: <TbUsers />, title: "Admin", path: "/admin", permission: "admin" },
     { icon: <MdDiscount />, title: "PromoCodes", path: "/promo", permission: "discount" },
-    { icon: <MdDiscount />, title: "Packages", path: "/packages", permission: "packages" },
-    { icon: <MdDiscount />, title: "Workshop", path: "/workshop", permission: "packages" },
-    { icon: <BiLayout />, title: "Bottle Inventory", path: "/inventory/bottles", permission: "inventory" },
-    { icon: <BiLayout />, title: "Xp Inventory", path: "/inventory/xp", permission: "inventory" },
-    { icon: <BiLayout />, title: "Dispenser Inventory", path: "/inventory/dispenser", permission: "inventory" },
+    { icon: <TbPackage />, title: "Packages", path: "/packages", permission: "packages" },
+    { icon: <TbTools />, title: "Workshop", path: "/workshop", permission: "packages" },
+    { icon: <TbBottle />, title: "Bottle Inventory", path: "/inventory/bottles", permission: "inventory" },
+    { icon: <FaFlask />, title: "Xp Inventory", path: "/inventory/xp", permission: "inventory" },
+    { icon: <FaSyringe />, title: "Dispenser Inventory", path: "/inventory/dispenser", permission: "inventory" },
     { icon: <TbTrash />, title: "Product Disposal", path: "/productdisposal", permission: "disposal" },
-    { icon: <TbReportAnalytics />, title: "Report", path: "/report", permission: "report" },
-
+    // { icon: <TbReportAnalytics />, title: "Report", path: "/report", permission: "report" },
   ];
 
   // Filter menu items based on user permissions

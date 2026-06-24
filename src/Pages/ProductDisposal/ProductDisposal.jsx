@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { toast, ToastContainer } from "react-toastify";
 import {
-    FaBox, FaPlus, FaSearch, FaTimes,
-    FaBell, FaCheckCircle, FaTimesCircle,
-    FaTrash, FaFilter, FaHistory,
-    FaFlask, FaWineBottle, FaTint, FaExclamationTriangle
+    FaBox, FaSearch, FaTimes,
+    FaTrash, FaHistory, FaExclamationTriangle,
+    FaChevronLeft, FaChevronRight
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../../Components/Navbar/Navbar";
@@ -12,27 +11,297 @@ import "./ProductDisposal.scss";
 import "react-toastify/dist/ReactToastify.css";
 
 // ============================================
-// INVENTORY TYPE OPTIONS (for pill selector)
+// REASON OPTIONS (shared constant)
 // ============================================
-const INVENTORY_TYPES = [
-    { value: "xp", label: "XP Inventory", icon: <FaFlask /> },
-    { value: "dispenser", label: "Dispenser Inventory", icon: <FaTint /> },
-    { value: "bottles", label: "Bottles Inventory", icon: <FaWineBottle /> }
-];
+const REASON_OPTIONS = ["Damage", "Expired", "Broken", "Return", "Other"];
 
+// ============================================
+// DISPOSAL MODAL (top-level — stable identity, no focus loss)
+// ============================================
+const DisposalModal = ({
+    show, onClose, product, inventoryType,
+    disposalData, setDisposalData,
+    isSubmitting, onSubmit
+}) => {
+    if (!show || !product) return null;
+
+    const isBottles = inventoryType === 'bottles';
+
+    const kg = parseFloat(disposalData.kg) || 0;
+    const grams = parseFloat(disposalData.grams) || 0;
+    const totalDisposalKg = kg + grams / 1000;
+    const totalDisposalUnits = isBottles ? (parseInt(disposalData.kg) || 0) : totalDisposalKg;
+
+    const exceedsStock = totalDisposalUnits > product.quantity;
+    const hasEnteredQuantity = isBottles ? disposalData.kg !== "" : (disposalData.kg !== "" || disposalData.grams !== "");
+    const remainingStock = Math.max(0, product.quantity - totalDisposalUnits);
+
+    const formatTotalLabel = () => {
+        if (isBottles) return `${disposalData.kg || 0} Pieces`;
+        if (kg > 0 && grams > 0) return `${kg} KG ${grams} g  (${totalDisposalKg.toFixed(3)} KG)`;
+        if (kg > 0) return `${kg} KG`;
+        if (grams > 0) return `${grams} g  (${totalDisposalKg.toFixed(3)} KG)`;
+        return `0 ${isBottles ? 'Pieces' : 'KG'}`;
+    };
+
+    return (
+        <div className="pd-modal-overlay" onClick={onClose}>
+            <div className="pd-modal-content" onClick={(e) => e.stopPropagation()}>
+                <div className="pd-modal-header">
+                    <div className="pd-modal-title">
+                        <FaTrash /> Dispose Product
+                    </div>
+                    <button className="pd-modal-close" onClick={onClose}>
+                        <FaTimes />
+                    </button>
+                </div>
+
+                <div className="pd-modal-body">
+                    <div className="pd-product-info">
+                        <div className="pd-product-detail">
+                            <strong>Product:</strong> {product.name}
+                        </div>
+                        <div className="pd-product-detail">
+                            <strong>Available Stock:</strong> {product.quantity} {product.unit}
+                        </div>
+                        {product.ml && (
+                            <div className="pd-product-detail">
+                                <strong>ML:</strong> {product.ml}
+                            </div>
+                        )}
+                        {product.itemType && (
+                            <div className="pd-product-detail">
+                                <strong>Item Type:</strong> {product.itemType}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="pd-form-section">
+                        <h4>Disposal Details</h4>
+
+                        {isBottles ? (
+                            <div className="pd-form-row">
+                                <div className="pd-form-field">
+                                    <label>Quantity (Pieces) *</label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        value={disposalData.kg}
+                                        onChange={(e) => setDisposalData({ ...disposalData, kg: e.target.value })}
+                                        placeholder="Enter pieces to dispose"
+                                        autoComplete="off"
+                                        className={exceedsStock ? 'pd-input-error' : ''}
+                                    />
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="pd-form-row">
+                                <div className="pd-form-field">
+                                    <label>KG</label>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        value={disposalData.kg}
+                                        onChange={(e) => setDisposalData({ ...disposalData, kg: e.target.value })}
+                                        placeholder="Enter KG"
+                                        autoComplete="off"
+                                        className={exceedsStock ? 'pd-input-error' : ''}
+                                    />
+                                </div>
+                                <div className="pd-form-field">
+                                    <label>Grams</label>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        max="999"
+                                        value={disposalData.grams}
+                                        onChange={(e) => setDisposalData({ ...disposalData, grams: e.target.value })}
+                                        placeholder="Enter grams"
+                                        autoComplete="off"
+                                        className={exceedsStock ? 'pd-input-error' : ''}
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        {exceedsStock && hasEnteredQuantity && (
+                            <div className="pd-error-text">
+                                <FaExclamationTriangle />
+                                Cannot dispose more than available stock ({product.quantity} {product.unit})
+                            </div>
+                        )}
+
+                        <div className="pd-form-row">
+                            <div className="pd-form-field">
+                                <label>Reason *</label>
+                                <select
+                                    value={disposalData.reason}
+                                    onChange={(e) => setDisposalData({ ...disposalData, reason: e.target.value })}
+                                >
+                                    <option value="">Select Reason</option>
+                                    {REASON_OPTIONS.map(opt => (
+                                        <option key={opt} value={opt}>{opt}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="pd-form-field">
+                                <label>Notes (Optional)</label>
+                                <input
+                                    type="text"
+                                    value={disposalData.notes}
+                                    onChange={(e) => setDisposalData({ ...disposalData, notes: e.target.value })}
+                                    placeholder="Add notes..."
+                                    autoComplete="off"
+                                />
+                            </div>
+                        </div>
+
+                        {hasEnteredQuantity && totalDisposalUnits > 0 && (
+                            <>
+                                <div className="pd-total-disposal">
+                                    <strong>Total to Dispose:</strong> {formatTotalLabel()}
+                                </div>
+
+                                <div className="pd-stock-preview">
+                                    <span className="pd-stock-preview-label">Stock remaining after disposal</span>
+                                    <span className={`pd-stock-preview-value ${exceedsStock ? 'pd-stock-preview-warning' : 'pd-stock-preview-ok'}`}>
+                                        {exceedsStock ? '—' : `${remainingStock} ${product.unit}`}
+                                    </span>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                </div>
+
+                <div className="pd-modal-footer">
+                    <button className="pd-btn-cancel" onClick={onClose}>
+                        Cancel
+                    </button>
+                    <button
+                        className="pd-btn-danger"
+                        onClick={onSubmit}
+                        disabled={isSubmitting || exceedsStock || !hasEnteredQuantity || totalDisposalUnits <= 0 || !disposalData.reason}
+                    >
+                        {isSubmitting ? "Processing..." : "Dispose"}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// ============================================
+// HISTORY MODAL (top-level — stable identity)
+// ============================================
+const HistoryModal = ({ show, onClose, history, isLoading, inventoryType, formatDate }) => {
+    if (!show) return null;
+
+    // ✅ Handle both formats: data directly OR data.data
+    const historyData = history?.data || history;
+    const disposals = historyData?.disposals || [];
+    const unitLabel = inventoryType === 'bottles' ? 'Pieces' : 'KG';
+
+    return (
+        <div className="pd-modal-overlay" onClick={onClose}>
+            <div className="pd-modal-content pd-modal-lg" onClick={(e) => e.stopPropagation()}>
+                <div className="pd-modal-header pd-modal-header-info">
+                    <div className="pd-modal-title">
+                        <FaHistory /> Disposal History
+                    </div>
+                    <button className="pd-modal-close" onClick={onClose}>
+                        <FaTimes />
+                    </button>
+                </div>
+
+                <div className="pd-modal-body">
+                    {isLoading ? (
+                        <div className="pd-loading-container">
+                            <div className="pd-loading-spinner large"></div>
+                            <p>Loading disposal history...</p>
+                        </div>
+                    ) : !historyData ? (
+                        <div className="pd-history-empty">
+                            <FaHistory />
+                            <p>Could not load disposal history.</p>
+                        </div>
+                    ) : (
+                        <>
+                            <div className="pd-history-summary">
+                                <div>
+                                    <strong>Product:</strong> {historyData.productName}
+                                </div>
+                                <div>
+                                    <strong>Total Disposed:</strong> {historyData.totalDisposed || 0} {unitLabel}
+                                </div>
+                                <div>
+                                    <strong>Total Disposals:</strong> {disposals.length}
+                                </div>
+                            </div>
+
+                            {disposals.length === 0 ? (
+                                <div className="pd-history-empty">
+                                    <FaHistory />
+                                    <p>No disposal history yet for this product.</p>
+                                </div>
+                            ) : (
+                                <div className="pd-history-list">
+                                    {disposals.map((entry, index) => (
+                                        <div key={entry.disposalEntryId || index} className="pd-history-item">
+                                            <div className="pd-history-header">
+                                                <span className="pd-history-date">{formatDate(entry.disposedAt)}</span>
+                                                <span className="pd-history-quantity">
+                                                    −{entry.disposedQuantity} {unitLabel}
+                                                </span>
+                                            </div>
+                                            <div className="pd-history-details">
+                                                <span className="pd-history-reason">{entry.reason}</span>
+                                                <span className="pd-history-by">By: {entry.performedBy?.userName || 'Unknown'}</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </>
+                    )}
+                </div>
+
+                <div className="pd-modal-footer">
+                    <button className="pd-btn-primary" onClick={onClose}>
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// ============================================
+// MAIN COMPONENT
+// ============================================
 const ProductDisposal = () => {
     const [inventoryType, setInventoryType] = useState("");
     const [products, setProducts] = useState([]);
     const [filteredProducts, setFilteredProducts] = useState([]);
     const [selectedProduct, setSelectedProduct] = useState(null);
-    const [disposals, setDisposals] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
     const [showDisposalModal, setShowDisposalModal] = useState(false);
     const [showHistoryModal, setShowHistoryModal] = useState(false);
     const [selectedHistory, setSelectedHistory] = useState(null);
-    const [isHistoryLoading, setIsHistoryLoading] = useState(false);
+    const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+
+    // ✅ PAGINATION STATES
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pagination, setPagination] = useState({
+        total: 0,
+        page: 1,
+        limit: 20,
+        totalPages: 0,
+        hasNextPage: false,
+        hasPrevPage: false
+    });
 
     // Disposal form states
     const [disposalData, setDisposalData] = useState({
@@ -45,21 +314,37 @@ const ProductDisposal = () => {
     const navigate = useNavigate();
 
     // ============================================
-    // FETCH PRODUCTS BY INVENTORY TYPE
+    // FETCH PRODUCTS WITH PAGINATION
     // ============================================
-    const fetchProducts = async (type) => {
+    const fetchProducts = async (type, page = 1, search = '') => {
         if (!type) {
             setProducts([]);
             setFilteredProducts([]);
+            setPagination({
+                total: 0,
+                page: 1,
+                limit: 20,
+                totalPages: 0,
+                hasNextPage: false,
+                hasPrevPage: false
+            });
             return;
         }
 
         try {
             setIsLoading(true);
+
+            // Build query params with pagination
+            const queryParams = new URLSearchParams({
+                page: page,
+                limit: 20,
+                search: search
+            });
+
             const endpointMap = {
-                xp: "/xp/get-all",
-                dispenser: "/dispenser/get-all",
-                bottles: "/bottles/get-all"
+                xp: `/xp/get-all?${queryParams}`,
+                dispenser: `/dispenser/get-all?${queryParams}`,
+                bottles: `/bottles/get-all?${queryParams}`
             };
 
             const response = await fetch(
@@ -74,13 +359,66 @@ const ProductDisposal = () => {
 
             const data = await response.json();
 
-            // ✅ FIX: Check if data is array or object
-            const productsArray = Array.isArray(data) ? data : data.products || data.data || [];
+            // ✅ Extract products array and pagination
+            let productsArray;
+            let paginationData;
 
-            // Format products based on inventory type
+            if (Array.isArray(data)) {
+                productsArray = data;
+                paginationData = {
+                    total: data.length,
+                    page: 1,
+                    limit: data.length,
+                    totalPages: 1,
+                    hasNextPage: false,
+                    hasPrevPage: false
+                };
+            } else if (data.inventory && Array.isArray(data.inventory)) {
+                productsArray = data.inventory;
+                paginationData = data.pagination || {
+                    total: data.inventory.length,
+                    page: 1,
+                    limit: data.inventory.length,
+                    totalPages: 1,
+                    hasNextPage: false,
+                    hasPrevPage: false
+                };
+            } else if (data.products && Array.isArray(data.products)) {
+                productsArray = data.products;
+                paginationData = data.pagination || {
+                    total: data.products.length,
+                    page: 1,
+                    limit: data.products.length,
+                    totalPages: 1,
+                    hasNextPage: false,
+                    hasPrevPage: false
+                };
+            } else if (data.data && Array.isArray(data.data)) {
+                productsArray = data.data;
+                paginationData = data.pagination || {
+                    total: data.data.length,
+                    page: 1,
+                    limit: data.data.length,
+                    totalPages: 1,
+                    hasNextPage: false,
+                    hasPrevPage: false
+                };
+            } else {
+                productsArray = [];
+                paginationData = {
+                    total: 0,
+                    page: 1,
+                    limit: 20,
+                    totalPages: 0,
+                    hasNextPage: false,
+                    hasPrevPage: false
+                };
+            }
+
+            // ✅ Format products based on inventory type
             let formattedProducts = productsArray.map(p => ({
                 id: p.xpId || p.dispenserId || p.bottleItemId || p._id,
-                name: p.productName || `${p.mlSize} ${p.itemType}`,
+                name: p.productName || `${p.mlSize || ''} ${p.itemType || ''}`.trim(),
                 ml: p.ml || p.mlSize || '',
                 itemType: p.itemType || '',
                 quantity: p.quantity || 0,
@@ -89,9 +427,22 @@ const ProductDisposal = () => {
 
             setProducts(formattedProducts);
             setFilteredProducts(formattedProducts);
+            setPagination(paginationData);
+            setCurrentPage(paginationData.page || 1);
+
         } catch (error) {
             console.error("Error fetching products:", error);
             toast.error("Failed to fetch products");
+            setProducts([]);
+            setFilteredProducts([]);
+            setPagination({
+                total: 0,
+                page: 1,
+                limit: 20,
+                totalPages: 0,
+                hasNextPage: false,
+                hasPrevPage: false
+            });
         } finally {
             setIsLoading(false);
         }
@@ -102,8 +453,10 @@ const ProductDisposal = () => {
     // ============================================
     const fetchDisposalHistory = async (productId) => {
         try {
-            setIsHistoryLoading(true);
+            setIsLoadingHistory(true);
             setShowHistoryModal(true);
+            setSelectedHistory(null);
+
             const response = await fetch(
                 `${import.meta.env.VITE_API_URL}/disposal/get-by-product/${productId}`,
                 { credentials: 'include' }
@@ -120,20 +473,39 @@ const ProductDisposal = () => {
             toast.error("Failed to fetch disposal history");
             setShowHistoryModal(false);
         } finally {
-            setIsHistoryLoading(false);
+            setIsLoadingHistory(false);
         }
     };
 
     // ============================================
     // HANDLE INVENTORY TYPE CHANGE
     // ============================================
-    const handleTypeChange = (type) => {
-        if (type === inventoryType) return;
+    const handleTypeChange = (e) => {
+        const type = e.target.value;
         setInventoryType(type);
         setSelectedProduct(null);
         setSearchTerm("");
+        setCurrentPage(1);
         setDisposalData({ kg: "", grams: "", reason: "", notes: "" });
-        fetchProducts(type);
+        fetchProducts(type, 1, "");
+    };
+
+    // ============================================
+    // HANDLE SEARCH
+    // ============================================
+    const handleSearch = (term) => {
+        setSearchTerm(term);
+        setCurrentPage(1);
+        fetchProducts(inventoryType, 1, term);
+    };
+
+    // ============================================
+    // HANDLE PAGE CHANGE
+    // ============================================
+    const handlePageChange = (newPage) => {
+        if (newPage < 1 || newPage > pagination.totalPages) return;
+        setCurrentPage(newPage);
+        fetchProducts(inventoryType, newPage, searchTerm);
     };
 
     // ============================================
@@ -146,22 +518,13 @@ const ProductDisposal = () => {
     };
 
     // ============================================
-    // CALCULATE TOTAL DISPOSAL QUANTITY
-    // ============================================
-    const calculateTotalQuantity = () => {
-        const kg = parseFloat(disposalData.kg) || 0;
-        const grams = parseFloat(disposalData.grams) || 0;
-        return kg + (grams / 1000);
-    };
-
-    // ============================================
     // HANDLE DISPOSAL SUBMIT
     // ============================================
     const handleDisposalSubmit = async () => {
         try {
             const kg = parseFloat(disposalData.kg) || 0;
             const grams = parseFloat(disposalData.grams) || 0;
-            const totalQuantity = kg + (grams / 1000);
+            const totalQuantity = kg + grams / 1000;
 
             if (inventoryType === 'bottles') {
                 if (!disposalData.kg || parseInt(disposalData.kg) <= 0) {
@@ -216,10 +579,9 @@ const ProductDisposal = () => {
             const result = await response.json();
             toast.success(result.message);
 
-            // Refresh product list
-            await fetchProducts(inventoryType);
+            // ✅ Refresh current page after disposal
+            await fetchProducts(inventoryType, currentPage, searchTerm);
 
-            // Reset and close modal
             setDisposalData({ kg: "", grams: "", reason: "", notes: "" });
             setShowDisposalModal(false);
             setSelectedProduct(null);
@@ -231,24 +593,6 @@ const ProductDisposal = () => {
             setIsSubmitting(false);
         }
     };
-
-    // ============================================
-    // FILTER PRODUCTS BY SEARCH
-    // ============================================
-    useEffect(() => {
-        if (!searchTerm.trim()) {
-            setFilteredProducts(products);
-            return;
-        }
-
-        const search = searchTerm.toLowerCase();
-        const filtered = products.filter(p =>
-            p.name?.toLowerCase().includes(search) ||
-            p.ml?.toString().includes(search) ||
-            p.itemType?.toLowerCase().includes(search)
-        );
-        setFilteredProducts(filtered);
-    }, [searchTerm, products]);
 
     // ============================================
     // FORMAT DATE
@@ -265,290 +609,12 @@ const ProductDisposal = () => {
     };
 
     // ============================================
-    // REASON OPTIONS
+    // ROW STOCK STATE (visual cue helper)
     // ============================================
-    const reasonOptions = ["Damage", "Expired", "Broken", "Return", "Other"];
-
-    const getReasonClass = (reason) => {
-        const map = {
-            Damage: 'pd-reason-damage',
-            Expired: 'pd-reason-expired',
-            Broken: 'pd-reason-broken',
-            Return: 'pd-reason-return',
-            Other: 'pd-reason-other'
-        };
-        return map[reason] || 'pd-reason-other';
-    };
-
-    // ============================================
-    // STOCK STATUS HELPER (for color-coded badges)
-    // ============================================
-    const getStockLevelClass = (quantity) => {
-        if (quantity <= 0) return 'pd-stock-empty';
-        if (quantity <= 5) return 'pd-stock-low';
-        return 'pd-stock-healthy';
-    };
-
-    // ============================================
-    // HISTORY MODAL
-    // ============================================
-    const HistoryModal = () => {
-        if (!showHistoryModal) return null;
-
-        return (
-            <div className="pd-modal-overlay" onClick={() => setShowHistoryModal(false)}>
-                <div className="pd-modal-content pd-modal-lg" onClick={(e) => e.stopPropagation()}>
-                    <div className="pd-modal-header">
-                        <div className="pd-modal-title">
-                            <FaHistory /> Disposal History
-                        </div>
-                        <button className="pd-modal-close" onClick={() => setShowHistoryModal(false)}>
-                            <FaTimes />
-                        </button>
-                    </div>
-                    <div className="pd-modal-body">
-                        {isHistoryLoading ? (
-                            <div className="pd-loading-container">
-                                <div className="pd-loading-spinner large"></div>
-                                <p>Loading disposal history...</p>
-                            </div>
-                        ) : !selectedHistory ? (
-                            <div className="pd-empty-state">
-                                <FaHistory className="pd-empty-icon" />
-                                <p>No disposal history found</p>
-                            </div>
-                        ) : (
-                            <>
-                                <div className="pd-history-summary">
-                                    <div className="pd-history-summary-item">
-                                        <span className="pd-history-summary-label">Product</span>
-                                        <strong>{selectedHistory.productName}</strong>
-                                    </div>
-                                    <div className="pd-history-summary-item">
-                                        <span className="pd-history-summary-label">Total Disposed</span>
-                                        <strong>
-                                            {selectedHistory.totalDisposed || 0}{' '}
-                                            {inventoryType === 'bottles' ? 'Pieces' : 'KG'}
-                                        </strong>
-                                    </div>
-                                    <div className="pd-history-summary-item">
-                                        <span className="pd-history-summary-label">Total Entries</span>
-                                        <strong>{selectedHistory.disposals?.length || 0}</strong>
-                                    </div>
-                                </div>
-
-                                {!selectedHistory.disposals || selectedHistory.disposals.length === 0 ? (
-                                    <div className="pd-empty-state pd-empty-state-sm">
-                                        <FaHistory className="pd-empty-icon" />
-                                        <p>No disposal entries recorded yet for this product</p>
-                                    </div>
-                                ) : (
-                                    <div className="pd-history-list">
-                                        {selectedHistory.disposals.map((entry, index) => (
-                                            <div key={entry.disposalEntryId || index} className="pd-history-item">
-                                                <div className="pd-history-header">
-                                                    <span className="pd-history-date">{formatDate(entry.disposedAt)}</span>
-                                                    <span className="pd-history-quantity">
-                                                        <FaTrash />
-                                                        {entry.disposedQuantity} {inventoryType === 'bottles' ? 'Pieces' : 'KG'}
-                                                    </span>
-                                                </div>
-                                                <div className="pd-history-details">
-                                                    <span className={`pd-reason-tag ${getReasonClass(entry.reason)}`}>
-                                                        {entry.reason}
-                                                    </span>
-                                                    <span className="pd-history-by">
-                                                        By: <strong>{entry.performedBy?.userName || 'Unknown'}</strong>
-                                                    </span>
-                                                </div>
-                                                {entry.notes && (
-                                                    <div className="pd-history-notes">{entry.notes}</div>
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </>
-                        )}
-                    </div>
-                    <div className="pd-modal-footer">
-                        <button className="pd-btn-primary" onClick={() => setShowHistoryModal(false)}>
-                            Close
-                        </button>
-                    </div>
-                </div>
-            </div>
-        );
-    };
-
-    // ============================================
-    // DISPOSAL MODAL
-    // ============================================
-    const DisposalModal = () => {
-        if (!showDisposalModal || !selectedProduct) return null;
-
-        const isBottles = inventoryType === 'bottles';
-        const totalToDispose = isBottles
-            ? (parseFloat(disposalData.kg) || 0)
-            : calculateTotalQuantity();
-        const remainingStock = selectedProduct.quantity - totalToDispose;
-        const isOverLimit = totalToDispose > selectedProduct.quantity;
-
-        return (
-            <div className="pd-modal-overlay" onClick={() => setShowDisposalModal(false)}>
-                <div className="pd-modal-content" onClick={(e) => e.stopPropagation()}>
-                    <div className="pd-modal-header pd-modal-header-danger">
-                        <div className="pd-modal-title">
-                            <FaTrash /> Dispose Product
-                        </div>
-                        <button className="pd-modal-close" onClick={() => setShowDisposalModal(false)}>
-                            <FaTimes />
-                        </button>
-                    </div>
-                    <div className="pd-modal-body">
-                        <div className="pd-product-info">
-                            <div className="pd-product-detail">
-                                <span className="pd-product-detail-label">Product</span>
-                                <strong>{selectedProduct.name}</strong>
-                            </div>
-                            <div className="pd-product-detail">
-                                <span className="pd-product-detail-label">Available Stock</span>
-                                <strong>{selectedProduct.quantity} {selectedProduct.unit}</strong>
-                            </div>
-                            {selectedProduct.ml && (
-                                <div className="pd-product-detail">
-                                    <span className="pd-product-detail-label">ML</span>
-                                    <strong>{selectedProduct.ml}</strong>
-                                </div>
-                            )}
-                            {selectedProduct.itemType && (
-                                <div className="pd-product-detail">
-                                    <span className="pd-product-detail-label">Item Type</span>
-                                    <strong>{selectedProduct.itemType}</strong>
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="pd-form-section">
-                            <h4>Disposal Details</h4>
-
-                            {isBottles ? (
-                                <div className="pd-form-row">
-                                    <div className="pd-form-field">
-                                        <label>Quantity (Pieces) *</label>
-                                        <input
-                                            type="number"
-                                            min="1"
-                                            value={disposalData.kg}
-                                            onChange={(e) => setDisposalData({ ...disposalData, kg: e.target.value })}
-                                            placeholder="Enter pieces to dispose"
-                                            autoComplete="off"
-                                        />
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="pd-form-row">
-                                    <div className="pd-form-field">
-                                        <label>KG *</label>
-                                        <input
-                                            type="number"
-                                            min="0"
-                                            step="0.01"
-                                            value={disposalData.kg}
-                                            onChange={(e) => setDisposalData({ ...disposalData, kg: e.target.value })}
-                                            placeholder="Enter KG"
-                                            autoComplete="off"
-                                        />
-                                    </div>
-                                    <div className="pd-form-field">
-                                        <label>Grams</label>
-                                        <input
-                                            type="number"
-                                            min="0"
-                                            max="999"
-                                            value={disposalData.grams}
-                                            onChange={(e) => setDisposalData({ ...disposalData, grams: e.target.value })}
-                                            placeholder="Enter grams"
-                                            autoComplete="off"
-                                        />
-                                    </div>
-                                </div>
-                            )}
-
-                            <div className="pd-form-row">
-                                <div className="pd-form-field">
-                                    <label>Reason *</label>
-                                    <select
-                                        value={disposalData.reason}
-                                        onChange={(e) => setDisposalData({ ...disposalData, reason: e.target.value })}
-                                    >
-                                        <option value="">Select Reason</option>
-                                        {reasonOptions.map(opt => (
-                                            <option key={opt} value={opt}>{opt}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div className="pd-form-field">
-                                    <label>Notes (Optional)</label>
-                                    <input
-                                        type="text"
-                                        value={disposalData.notes}
-                                        onChange={(e) => setDisposalData({ ...disposalData, notes: e.target.value })}
-                                        placeholder="Add notes..."
-                                        autoComplete="off"
-                                    />
-                                </div>
-                            </div>
-
-                            {totalToDispose > 0 && (
-                                <div className={`pd-total-disposal ${isOverLimit ? 'pd-total-disposal-error' : ''}`}>
-                                    <div className="pd-total-disposal-row">
-                                        <span><FaTrash /> Disposing:</span>
-                                        <strong>
-                                            {isBottles
-                                                ? `${totalToDispose} Pieces`
-                                                : (() => {
-                                                    const kg = parseFloat(disposalData.kg) || 0;
-                                                    const grams = parseFloat(disposalData.grams) || 0;
-                                                    if (kg > 0 && grams > 0) {
-                                                        return `${kg} KG ${grams} Grams (${totalToDispose.toFixed(3)} KG)`;
-                                                    } else if (kg > 0) {
-                                                        return `${kg} KG`;
-                                                    } else {
-                                                        return `${grams} Grams (${(grams / 1000).toFixed(3)} KG)`;
-                                                    }
-                                                })()}
-                                        </strong>
-                                    </div>
-                                    <div className="pd-total-disposal-row">
-                                        <span>Remaining Stock After:</span>
-                                        <strong className={isOverLimit ? 'pd-remaining-negative' : 'pd-remaining-ok'}>
-                                            {isOverLimit ? (
-                                                <><FaExclamationTriangle /> Exceeds available stock</>
-                                            ) : (
-                                                `${remainingStock.toFixed(isBottles ? 0 : 3)} ${selectedProduct.unit}`
-                                            )}
-                                        </strong>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                    <div className="pd-modal-footer">
-                        <button className="pd-btn-cancel" onClick={() => setShowDisposalModal(false)}>
-                            Cancel
-                        </button>
-                        <button
-                            className="pd-btn-danger"
-                            onClick={handleDisposalSubmit}
-                            disabled={isSubmitting || isOverLimit || totalToDispose <= 0 || !disposalData.reason}
-                        >
-                            {isSubmitting ? "Processing..." : <><FaTrash /> Dispose</>}
-                        </button>
-                    </div>
-                </div>
-            </div>
-        );
+    const getRowStockClass = (quantity) => {
+        if (quantity <= 0) return 'pd-row-zero-stock';
+        if (quantity <= 5) return 'pd-row-low-stock';
+        return '';
     };
 
     // ============================================
@@ -562,40 +628,40 @@ const ProductDisposal = () => {
                 {/* Page Header */}
                 <div className="pd-page-header">
                     <h2>Product Disposal</h2>
-                    <p className="pd-page-subtitle">Select an inventory type below to dispose damaged, expired, or returned stock</p>
+                    <div className="pd-right-section">
+                        <div className="pd-inventory-select">
+                            <label>Select Inventory:</label>
+                            <select value={inventoryType} onChange={handleTypeChange}>
+                                <option value="">Select Inventory</option>
+                                <option value="xp">XP Inventory</option>
+                                <option value="dispenser">Dispenser Inventory</option>
+                                <option value="bottles">Bottles Inventory</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
 
-                {/* Inventory Type Pills */}
-                <div className="pd-type-selector">
-                    {INVENTORY_TYPES.map(type => (
-                        <button
-                            key={type.value}
-                            className={`pd-type-pill ${inventoryType === type.value ? 'pd-type-pill-active' : ''}`}
-                            onClick={() => handleTypeChange(type.value)}
-                        >
-                            <span className="pd-type-pill-icon">{type.icon}</span>
-                            {type.label}
-                        </button>
-                    ))}
-                </div>
+                {/* No inventory selected yet — friendly prompt instead of blank page */}
+                {!inventoryType && (
+                    <div className="pd-select-prompt">
+                        <FaBox className="pd-select-prompt-icon" />
+                        <h3>Choose an inventory to get started</h3>
+                        <p>Select XP, Dispenser, or Bottles inventory above to view products and manage disposals.</p>
+                    </div>
+                )}
 
                 {/* Product List */}
                 {inventoryType && (
                     <div className="pd-product-list">
-                        <div className="pd-list-header">
-                            <div className="pd-search-container">
-                                <FaSearch className="pd-search-icon" />
-                                <input
-                                    type="text"
-                                    placeholder="Search products..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    autoComplete="off"
-                                />
-                            </div>
-                            {!isLoading && (
-                                <span className="pd-result-count">{filteredProducts.length} products</span>
-                            )}
+                        <div className="pd-search-container">
+                            <FaSearch className="pd-search-icon" />
+                            <input
+                                type="text"
+                                placeholder="Search products..."
+                                value={searchTerm}
+                                onChange={(e) => handleSearch(e.target.value)}
+                                autoComplete="off"
+                            />
                         </div>
 
                         {isLoading ? (
@@ -606,71 +672,134 @@ const ProductDisposal = () => {
                         ) : filteredProducts.length === 0 ? (
                             <div className="pd-empty-state">
                                 <FaBox className="pd-empty-icon" />
-                                <p>No products found in this inventory</p>
+                                <p>
+                                    {searchTerm.trim()
+                                        ? "No products match your search"
+                                        : "No products found in this inventory"}
+                                </p>
                             </div>
                         ) : (
-                            <div className="pd-table-wrap">
-                                <table>
-                                    <thead>
-                                        <tr>
-                                            <th>Product Name</th>
-                                            <th>ML</th>
-                                            <th>Item Type</th>
-                                            <th>Available Stock</th>
-                                            <th>Unit</th>
-                                            <th>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {filteredProducts.map((product) => (
-                                            <tr key={product.id}>
-                                                <td className="pd-name-cell">{product.name}</td>
-                                                <td className="pd-ml-cell">{product.ml || '-'}</td>
-                                                <td className="pd-item-cell">{product.itemType || '-'}</td>
-                                                <td className="pd-stock-cell">
-                                                    <span className={`pd-stock-pill ${getStockLevelClass(product.quantity)}`}>
-                                                        {product.quantity}
-                                                    </span>
-                                                </td>
-                                                <td className="pd-unit-cell">{product.unit}</td>
-                                                <td className="pd-actions-cell">
-                                                    <div className="pd-row-actions">
-                                                        <button
-                                                            className="pd-dispose-btn"
-                                                            onClick={() => handleProductSelect(product)}
-                                                            disabled={product.quantity <= 0}
-                                                            title={product.quantity <= 0 ? "No stock to dispose" : "Dispose product"}
-                                                        >
-                                                            <FaTrash /> Dispose
-                                                        </button>
-                                                        <button
-                                                            className="pd-history-btn"
-                                                            onClick={() => fetchDisposalHistory(product.id)}
-                                                            title="View disposal history"
-                                                        >
-                                                            <FaHistory />
-                                                        </button>
-                                                    </div>
-                                                </td>
+                            <>
+                                <div className="pd-table-wrap">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Product Name</th>
+                                                <th>ML</th>
+                                                <th>Item Type</th>
+                                                <th>Available Stock</th>
+                                                <th>Unit</th>
+                                                <th>Actions</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
+                                        </thead>
+                                        <tbody>
+                                            {filteredProducts.map((product) => (
+                                                <tr key={product.id} className={getRowStockClass(product.quantity)}>
+                                                    <td className="pd-name-cell">{product.name}</td>
+                                                    <td className="pd-ml-cell">{product.ml || '-'}</td>
+                                                    <td className="pd-item-cell">{product.itemType || '-'}</td>
+                                                    <td className="pd-stock-cell">{product.quantity}</td>
+                                                    <td className="pd-unit-cell">{product.unit}</td>
+                                                    <td>
+                                                        <div className="pd-actions-cell">
+                                                            <button
+                                                                className="pd-dispose-btn"
+                                                                onClick={() => handleProductSelect(product)}
+                                                                disabled={product.quantity <= 0}
+                                                                title={product.quantity <= 0 ? "No stock to dispose" : "Dispose product"}
+                                                            >
+                                                                <FaTrash /> Dispose
+                                                            </button>
+                                                            <button
+                                                                className="pd-history-btn"
+                                                                onClick={() => fetchDisposalHistory(product.id)}
+                                                                title="View disposal history"
+                                                            >
+                                                                <FaHistory />
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                {/* ✅ PAGINATION */}
+                                {pagination.totalPages > 0 && (
+                                    <div className="pd-pagination">
+                                        <div className="pd-pagination-info">
+                                            Showing {((pagination.page - 1) * pagination.limit) + 1} - {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} products
+                                        </div>
+                                        <div className="pd-pagination-controls">
+                                            <button
+                                                className="pd-pagination-btn"
+                                                onClick={() => handlePageChange(pagination.page - 1)}
+                                                disabled={!pagination.hasPrevPage}
+                                            >
+                                                <FaChevronLeft />
+                                            </button>
+
+                                            <div className="pd-pagination-pages">
+                                                {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                                                    let pageNum;
+                                                    if (pagination.totalPages <= 5) {
+                                                        pageNum = i + 1;
+                                                    } else if (pagination.page <= 3) {
+                                                        pageNum = i + 1;
+                                                    } else if (pagination.page >= pagination.totalPages - 2) {
+                                                        pageNum = pagination.totalPages - 4 + i;
+                                                    } else {
+                                                        pageNum = pagination.page - 2 + i;
+                                                    }
+
+                                                    return (
+                                                        <button
+                                                            key={pageNum}
+                                                            className={`pd-pagination-page ${pagination.page === pageNum ? 'pd-pagination-active' : ''}`}
+                                                            onClick={() => handlePageChange(pageNum)}
+                                                        >
+                                                            {pageNum}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+
+                                            <button
+                                                className="pd-pagination-btn"
+                                                onClick={() => handlePageChange(pagination.page + 1)}
+                                                disabled={!pagination.hasNextPage}
+                                            >
+                                                <FaChevronRight />
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </>
                         )}
                     </div>
                 )}
 
-                {!inventoryType && (
-                    <div className="pd-no-type-selected">
-                        <FaFilter className="pd-no-type-icon" />
-                        <p>Choose an inventory type above to view its products</p>
-                    </div>
-                )}
-
                 {/* Modals */}
-                <DisposalModal />
-                <HistoryModal />
+                <DisposalModal
+                    show={showDisposalModal}
+                    onClose={() => setShowDisposalModal(false)}
+                    product={selectedProduct}
+                    inventoryType={inventoryType}
+                    disposalData={disposalData}
+                    setDisposalData={setDisposalData}
+                    isSubmitting={isSubmitting}
+                    onSubmit={handleDisposalSubmit}
+                />
+
+                <HistoryModal
+                    show={showHistoryModal}
+                    onClose={() => setShowHistoryModal(false)}
+                    history={selectedHistory}
+                    isLoading={isLoadingHistory}
+                    inventoryType={inventoryType}
+                    formatDate={formatDate}
+                />
 
             </div>
         </Navbar>

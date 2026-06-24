@@ -6,7 +6,7 @@ import {
   FaTimes, FaBell,
   FaCheckCircle, FaTimesCircle, FaMoneyBillWave,
   FaChevronDown, FaChevronUp, FaHistory, FaUser, FaCalendarAlt, FaArrowUp,
-  FaChevronLeft, FaChevronRight
+  FaChevronLeft, FaChevronRight, FaTag, FaClock, FaInfoCircle, FaTrashAlt
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../../../Components/Navbar/Navbar";
@@ -105,7 +105,7 @@ const AddProductModal = ({
 };
 
 // ============================================
-// ADD STOCK MODAL (UPDATED with Searchable Dropdown)
+// ADD STOCK MODAL
 // ============================================
 const AddStockModal = ({
   show, onClose, products, addStockData, setAddStockData,
@@ -115,14 +115,12 @@ const AddStockModal = ({
 
   const selectedProduct = products.find(p => p.dispenserId === addStockData.dispenserId);
 
-  // Convert products to react-select format
   const productOptions = products.map(p => ({
     value: p.dispenserId,
     label: `${p.productName} - ${p.ml}ml`,
     product: p
   }));
 
-  // Handle selection change
   const handleProductSelect = (selectedOption) => {
     if (selectedOption) {
       const product = selectedOption.product;
@@ -146,12 +144,10 @@ const AddStockModal = ({
     }
   };
 
-  // Find current selected option
   const currentSelectedOption = productOptions.find(
     opt => opt.value === addStockData.dispenserId
   );
 
-  // Custom styles to match your design system
   const customSelectStyles = {
     control: (provided, state) => ({
       ...provided,
@@ -769,80 +765,210 @@ const DeleteConfirmModal = ({ show, onClose, product, onConfirm, isDeleting }) =
 };
 
 // ============================================
-// TRANSACTION HISTORY ROW
+// DISPOSAL HISTORY PANEL - SINGLE ROW
 // ============================================
-const TransactionHistoryRow = ({ colSpan, isLoading, transactions }) => {
+const DisposalHistoryPanel = ({ disposals, isLoading, onClose }) => {
+  const formatDateTime = (dateString) => {
+    const date = new Date(dateString);
+    return {
+      date: date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+      time: date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+    };
+  };
+
+  if (isLoading) {
+    return (
+      <div className="di-disposal-panel">
+        <div className="di-disposal-loading">
+          <div className="di-loading-spinner tiny"></div>
+          Loading disposal history...
+        </div>
+      </div>
+    );
+  }
+
+  if (!disposals || disposals.length === 0) {
+    return (
+      <div className="di-disposal-panel">
+        <div className="di-disposal-header">
+          <h5><FaTrashAlt /> Disposal History</h5>
+          <button className="di-disposal-close-btn" onClick={onClose}>
+            <FaTimes />
+          </button>
+        </div>
+        <div className="di-disposal-empty">No disposal records found for this product.</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="di-disposal-panel">
+      <div className="di-disposal-header">
+        <h5><FaTrashAlt /> Disposal History ({disposals.length})</h5>
+        <button className="di-disposal-close-btn" onClick={onClose}>
+          <FaTimes />
+        </button>
+      </div>
+      <div className="di-disposal-list">
+        {disposals.map((d, idx) => {
+          const { date, time } = formatDateTime(d.disposedAt);
+          return (
+            <div key={d.disposalEntryId || idx} className="di-disposal-item">
+              {/* SINGLE ROW - ALL FIELDS */}
+              <div className="di-disposal-row">
+                <span className="di-disposal-label"><FaUser /> Disposed By:</span>
+                <span className="di-disposal-value">{d.performedBy?.userName || 'Unknown'}</span>
+
+                <span className="di-disposal-separator">|</span>
+
+                <span className="di-disposal-label"><FaTag /> Reason:</span>
+                <span className="di-disposal-value di-disposal-reason">{d.reason || 'N/A'}</span>
+
+                <span className="di-disposal-separator">|</span>
+
+                <span className="di-disposal-label"><FaCalendarAlt /> Date:</span>
+                <span className="di-disposal-value">{date}</span>
+
+                <span className="di-disposal-separator">|</span>
+
+                <span className="di-disposal-label"><FaClock /> Time:</span>
+                <span className="di-disposal-value">{time}</span>
+
+                <span className="di-disposal-separator">|</span>
+
+                <span className="di-disposal-label"><FaTrashAlt /> Quantity:</span>
+                <span className="di-disposal-value di-disposal-qty">-{d.disposedQuantity} KG</span>
+
+                {d.notes && (
+                  <>
+                    <span className="di-disposal-separator">|</span>
+                    <span className="di-disposal-label"><FaInfoCircle /> Notes:</span>
+                    <span className="di-disposal-value">{d.notes}</span>
+                  </>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// ============================================
+// TRANSACTION HISTORY ROW - SINGLE ROW UPDATED
+// ============================================
+const TransactionHistoryRow = ({ colSpan, isLoading, transactions, onViewDisposal, hasDisposal }) => {
   const formatDateTime = (dateString) => {
     if (!dateString) return "-";
     const d = new Date(dateString);
-    return d.toLocaleString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    return {
+      date: d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+      time: d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+    };
   };
+
+  // Only show IN transactions
+  const inTransactions = transactions?.filter(t => t.transactionType === 'IN') || [];
+
+  if (isLoading) {
+    return (
+      <tr className="di-expand-row">
+        <td colSpan={colSpan}>
+          <div className="di-expand-content">
+            <div className="di-expand-loading">
+              <div className="di-loading-spinner small"></div>
+              <span>Loading transaction history...</span>
+            </div>
+          </div>
+        </td>
+      </tr>
+    );
+  }
+
+  if (inTransactions.length === 0) {
+    return (
+      <tr className="di-expand-row">
+        <td colSpan={colSpan}>
+          <div className="di-expand-content">
+            <div className="di-expand-title">
+              <FaHistory /> Stock Added History (IN Transactions)
+              {hasDisposal && (
+                <button className="di-view-disposal-btn" onClick={onViewDisposal}>
+                  <FaTrashAlt /> View Disposals
+                </button>
+              )}
+            </div>
+            <div className="di-expand-empty">
+              <FaHistory className="di-expand-empty-icon" />
+              <p>No stock has been added for this product yet</p>
+            </div>
+          </div>
+        </td>
+      </tr>
+    );
+  }
 
   return (
     <tr className="di-expand-row">
       <td colSpan={colSpan}>
         <div className="di-expand-content">
-          <h4 className="di-expand-title">
-            <FaHistory /> Stock Added History (IN Transactions)
-          </h4>
+          <div className="di-expand-title">
+            <FaHistory /> Stock Added History (IN Transactions) - {inTransactions.length}
+            {hasDisposal && (
+              <button className="di-view-disposal-btn" onClick={onViewDisposal}>
+                <FaTrashAlt /> View Disposals
+              </button>
+            )}
+          </div>
 
-          {isLoading ? (
-            <div className="di-expand-loading">
-              <div className="di-loading-spinner small"></div>
-              <span>Loading transaction history...</span>
-            </div>
-          ) : !transactions || transactions.length === 0 ? (
-            <div className="di-expand-empty">
-              <FaHistory className="di-expand-empty-icon" />
-              <p>No stock has been added for this product yet</p>
-            </div>
-          ) : (
-            <div className="di-transaction-table-wrap">
-              <table className="di-transaction-table">
-                <thead>
-                  <tr>
-                    <th><FaCalendarAlt /> Date &amp; Time</th>
-                    <th><FaArrowUp /> Quantity Added</th>
-                    <th><FaMoneyBillWave /> Purchase Price</th>
-                    <th>Stock Before → After</th>
-                    <th><FaUser /> Added By</th>
-                    <th>Notes</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {transactions
-                    .filter(t => t.transactionType === 'IN')
-                    .map((t, idx) => (
-                      <tr key={t.transactionId || idx}>
-                        <td className="di-txn-date-cell">{formatDateTime(t.createdAt)}</td>
-                        <td className="di-txn-qty-cell">
-                          <span className="di-txn-qty-pill">
-                            <FaArrowUp /> +{t.quantity} KG
-                          </span>
-                        </td>
-                        <td className="di-txn-price-cell">₹{t.purchasePrice?.toFixed(2) || '0.00'}/KG</td>
-                        <td className="di-txn-stock-cell">
-                          {t.previousStock} KG <span className="di-txn-arrow">→</span> <strong>{t.newStock} KG</strong>
-                        </td>
-                        <td className="di-txn-user-cell">
-                          {t.performedBy?.userName || '-'}
-                          {t.performedBy?.userEmail && (
-                            <div className="di-txn-user-email">{t.performedBy.userEmail}</div>
-                          )}
-                        </td>
-                        <td className="di-txn-notes-cell">{t.notes || '-'}</td>
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <div className="di-transaction-list">
+            {inTransactions.map((t, idx) => {
+              const { date, time } = formatDateTime(t.createdAt);
+              return (
+                <div key={t.transactionId || idx} className="di-transaction-item">
+                  {/* SINGLE ROW - ALL FIELDS */}
+                  <div className="di-transaction-row">
+                    <span className="di-txn-label"><FaUser /> Name:</span>
+                    <span className="di-txn-value">{t.performedBy?.userName || 'Unknown'}</span>
+
+                    <span className="di-txn-separator">|</span>
+
+                    <span className="di-txn-label"><FaTag /> Reason:</span>
+                    <span className="di-txn-value">{t.reason || 'Purchase'}</span>
+
+                    <span className="di-txn-separator">|</span>
+
+                    <span className="di-txn-label"><FaCalendarAlt /> Date:</span>
+                    <span className="di-txn-value">{date}</span>
+
+                    <span className="di-txn-separator">|</span>
+
+                    <span className="di-txn-label"><FaClock /> Time:</span>
+                    <span className="di-txn-value">{time}</span>
+
+                    <span className="di-txn-separator">|</span>
+
+                    <span className="di-txn-label"><FaArrowUp /> Quantity:</span>
+                    <span className="di-txn-value di-txn-qty">+{t.quantity} KG</span>
+
+                    <span className="di-txn-separator">|</span>
+
+                    <span className="di-txn-label"><FaMoneyBillWave /> Price:</span>
+                    <span className="di-txn-value di-txn-price">₹{t.purchasePrice?.toFixed(2) || '0.00'}/KG</span>
+
+                    {t.notes && (
+                      <>
+                        <span className="di-txn-separator">|</span>
+                        <span className="di-txn-label"><FaInfoCircle /> Notes:</span>
+                        <span className="di-txn-value">{t.notes}</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </td>
     </tr>
@@ -911,6 +1037,12 @@ const DispenserInventory = () => {
   const [expandedRowId, setExpandedRowId] = useState(null);
   const [transactionCache, setTransactionCache] = useState({});
   const [loadingTransactionsFor, setLoadingTransactionsFor] = useState(null);
+
+  // Disposal states
+  const [showDisposalPanel, setShowDisposalPanel] = useState(false);
+  const [disposalData, setDisposalData] = useState(null);
+  const [loadingDisposal, setLoadingDisposal] = useState(false);
+  const [currentDisposalDispenserId, setCurrentDisposalDispenserId] = useState(null);
 
   const fileInputRef = useRef(null);
 
@@ -1029,16 +1161,66 @@ const DispenserInventory = () => {
   };
 
   // ============================================
+  // FETCH DISPOSAL HISTORY
+  // ============================================
+  const fetchDisposalHistory = async (dispenserId) => {
+    try {
+      setLoadingDisposal(true);
+      setCurrentDisposalDispenserId(dispenserId);
+
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/disposal/get-by-product/${dispenserId}`,
+        { credentials: 'include' }
+      );
+
+      if (!response.ok) throw new Error('Failed to fetch disposal history');
+
+      const data = await response.json();
+      setDisposalData(data.data);
+      setShowDisposalPanel(true);
+    } catch (error) {
+      console.error("Error fetching disposal history:", error);
+      toast.error("Failed to load disposal history");
+      setDisposalData(null);
+    } finally {
+      setLoadingDisposal(false);
+    }
+  };
+
+  // ============================================
+  // CHECK IF PRODUCT HAS DISPOSAL HISTORY
+  // ============================================
+  const checkHasDisposal = async (dispenserId) => {
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/disposal/get-by-product/${dispenserId}`,
+        { credentials: 'include' }
+      );
+      if (!response.ok) return false;
+      const data = await response.json();
+      return data.data && data.data.disposals && data.data.disposals.length > 0;
+    } catch (error) {
+      return false;
+    }
+  };
+
+  // ============================================
   // TOGGLE ROW EXPAND
   // ============================================
-  const handleToggleRow = (dispenserId) => {
+  const handleToggleRow = async (dispenserId) => {
     if (expandedRowId === dispenserId) {
       setExpandedRowId(null);
+      setShowDisposalPanel(false);
+      setDisposalData(null);
       return;
     }
 
     setExpandedRowId(dispenserId);
-    fetchTransactionsForProduct(dispenserId);
+
+    // Fetch transactions
+    if (!transactionCache[dispenserId]) {
+      await fetchTransactionsForProduct(dispenserId);
+    }
   };
 
   // ============================================
@@ -1270,6 +1452,8 @@ const DispenserInventory = () => {
 
       if (expandedRowId === selectedProduct.dispenserId) {
         setExpandedRowId(null);
+        setShowDisposalPanel(false);
+        setDisposalData(null);
       }
 
       setShowDeleteModal(false);
@@ -1553,6 +1737,7 @@ const DispenserInventory = () => {
                   filteredInventory.map((item) => {
                     const status = getStockStatus(item.quantity, item.minStock);
                     const isExpanded = expandedRowId === item.dispenserId;
+
                     return (
                       <React.Fragment key={item.dispenserId}>
                         <tr
@@ -1599,11 +1784,33 @@ const DispenserInventory = () => {
                         </tr>
 
                         {isExpanded && (
-                          <TransactionHistoryRow
-                            colSpan={9}
-                            isLoading={loadingTransactionsFor === item.dispenserId}
-                            transactions={transactionCache[item.dispenserId]}
-                          />
+                          <>
+                            {/* Transaction History Row */}
+                            <TransactionHistoryRow
+                              colSpan={9}
+                              isLoading={loadingTransactionsFor === item.dispenserId}
+                              transactions={transactionCache[item.dispenserId]}
+                              onViewDisposal={() => fetchDisposalHistory(item.dispenserId)}
+                              hasDisposal={true}
+                            />
+
+                            {/* Disposal Panel - shown when disposal data is loaded */}
+                            {showDisposalPanel && currentDisposalDispenserId === item.dispenserId && (
+                              <tr className="di-expand-row">
+                                <td colSpan={9}>
+                                  <DisposalHistoryPanel
+                                    disposals={disposalData?.disposals || []}
+                                    isLoading={loadingDisposal}
+                                    onClose={() => {
+                                      setShowDisposalPanel(false);
+                                      setDisposalData(null);
+                                      setCurrentDisposalDispenserId(null);
+                                    }}
+                                  />
+                                </td>
+                              </tr>
+                            )}
+                          </>
                         )}
                       </React.Fragment>
                     );
