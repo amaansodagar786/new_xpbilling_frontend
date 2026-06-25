@@ -7,7 +7,8 @@ import {
   FaChevronRight, FaHistory, FaArrowUp, FaArrowDown,
   FaChevronLeft, FaChevronRight as FaChevronRightIcon,
   FaUser, FaCalendarAlt, FaClock, FaMoneyBillWave,
-  FaTag, FaInfoCircle, FaTrashAlt
+  FaTag, FaInfoCircle, FaTrashAlt, FaToggleOn, FaToggleOff,
+  FaWeightHanging, FaFlask
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../../../Components/Navbar/Navbar";
@@ -17,7 +18,7 @@ import * as XLSX from 'xlsx';
 import Select from 'react-select';
 
 // ============================================
-// ADD PRODUCT MODAL (UPDATED - NO ML)
+// ADD PRODUCT MODAL
 // ============================================
 const AddProductModal = ({
   show, onClose, newProduct, setNewProduct,
@@ -68,7 +69,7 @@ const AddProductModal = ({
 };
 
 // ============================================
-// ADD STOCK MODAL (UPDATED - NO ML)
+// ADD STOCK MODAL
 // ============================================
 const AddStockModal = ({
   show, onClose, products, addStockData, setAddStockData,
@@ -217,7 +218,7 @@ const AddStockModal = ({
 
           {selectedProduct && (
             <div className="xp-current-stock-info">
-              <span>Current Stock: <strong>{selectedProduct.quantity} KG</strong></span>
+              <span>Current Stock: <strong>{selectedProduct.quantity?.toFixed(2)} KG</strong></span>
               <span>Avg Price: <strong>₹{selectedProduct.avgPurchasePrice?.toFixed(2) || '0.00'}/KG</strong></span>
             </div>
           )}
@@ -283,7 +284,7 @@ const AddStockModal = ({
 };
 
 // ============================================
-// EDIT PRODUCT MODAL (UPDATED - NO ML)
+// EDIT PRODUCT MODAL
 // ============================================
 const EditProductModal = ({
   show, onClose, editData, setEditData,
@@ -334,7 +335,7 @@ const EditProductModal = ({
 };
 
 // ============================================
-// BULK UPLOAD MODAL (UPDATED - NO ML)
+// BULK UPLOAD MODAL
 // ============================================
 const BulkUploadModal = ({
   show, onClose, fileInputRef, selectedFile, onFileChange,
@@ -416,7 +417,7 @@ const BulkUploadModal = ({
 };
 
 // ============================================
-// ERROR MODAL (UPDATED - NO ML)
+// ERROR MODAL
 // ============================================
 const ErrorModal = ({
   show, onClose, bulkSuccessCount, bulkErrorCount,
@@ -549,7 +550,7 @@ const ErrorModal = ({
 };
 
 // ============================================
-// ALERT MODAL (UPDATED - NO ML)
+// ALERT MODAL
 // ============================================
 const AlertModal = ({ show, onClose, alerts }) => {
   if (!show) return null;
@@ -616,7 +617,7 @@ const AlertModal = ({ show, onClose, alerts }) => {
 };
 
 // ============================================
-// DELETE CONFIRMATION MODAL (UPDATED - NO ML)
+// DELETE CONFIRMATION MODAL
 // ============================================
 const DeleteConfirmModal = ({ show, onClose, product, onConfirm, isDeleting }) => {
   if (!show || !product) return null;
@@ -664,7 +665,7 @@ const DeleteConfirmModal = ({ show, onClose, product, onConfirm, isDeleting }) =
 };
 
 // ============================================
-// DISPOSAL HISTORY PANEL (UPDATED - NO ML)
+// DISPOSAL HISTORY PANEL
 // ============================================
 const DisposalHistoryPanel = ({ disposals, isLoading, onClose }) => {
   const formatDateTime = (dateString) => {
@@ -754,7 +755,7 @@ const DisposalHistoryPanel = ({ disposals, isLoading, onClose }) => {
 };
 
 // ============================================
-// TRANSACTION HISTORY PANEL (UPDATED - NO ML)
+// TRANSACTION HISTORY PANEL
 // ============================================
 const TransactionPanel = ({ transactions, isLoading, onViewDisposal, hasDisposal }) => {
   const formatDateTime = (dateString) => {
@@ -821,7 +822,7 @@ const TransactionPanel = ({ transactions, isLoading, onViewDisposal, hasDisposal
                 <span className="xp-txn-separator">|</span>
 
                 <span className="xp-txn-label"><FaBox /> Stock:</span>
-                <span className="xp-txn-value">{t.previousStock} → <strong>{t.newStock}</strong></span>
+                <span className="xp-txn-value">{t.previousStock?.toFixed(2)} → <strong>{t.newStock?.toFixed(2)}</strong></span>
 
                 <span className="xp-txn-separator">|</span>
 
@@ -850,7 +851,7 @@ const TransactionPanel = ({ transactions, isLoading, onViewDisposal, hasDisposal
 };
 
 // ============================================
-// MAIN COMPONENT (UPDATED - NO ML)
+// MAIN COMPONENT
 // ============================================
 const XPInventory = () => {
   const [inventory, setInventory] = useState([]);
@@ -860,6 +861,9 @@ const XPInventory = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // ✅ New state for Grams/ML toggle
+  const [showGrams, setShowGrams] = useState(true); // true = Grams, false = ML
 
   const [currentPage, setCurrentPage] = useState(1);
   const [pagination, setPagination] = useState({
@@ -1063,7 +1067,7 @@ const XPInventory = () => {
   };
 
   // ============================================
-  // CREATE PRODUCT (UPDATED - NO ML)
+  // CREATE PRODUCT
   // ============================================
   const handleCreateProduct = async () => {
     try {
@@ -1108,7 +1112,7 @@ const XPInventory = () => {
   };
 
   // ============================================
-  // ADD STOCK (UPDATED - NO ML)
+  // ADD STOCK
   // ============================================
   const handleAddStock = async () => {
     try {
@@ -1184,7 +1188,7 @@ const XPInventory = () => {
   };
 
   // ============================================
-  // UPDATE PRODUCT (UPDATED - NO ML)
+  // UPDATE PRODUCT
   // ============================================
   const handleUpdateProduct = async () => {
     try {
@@ -1229,7 +1233,7 @@ const XPInventory = () => {
   };
 
   // ============================================
-  // DELETE PRODUCT (UPDATED - NO ML)
+  // DELETE PRODUCT
   // ============================================
   const handleDeleteProduct = async () => {
     if (!selectedProduct) return;
@@ -1355,7 +1359,7 @@ const XPInventory = () => {
   };
 
   // ============================================
-  // DOWNLOAD ERROR EXCEL (UPDATED - NO ML)
+  // DOWNLOAD ERROR EXCEL
   // ============================================
   const handleDownloadErrorExcel = () => {
     try {
@@ -1451,6 +1455,23 @@ const XPInventory = () => {
     return { status: 'healthy', label: 'In Stock' };
   };
 
+  // ✅ Helpers
+  const getStockInGrams = (quantity) => {
+    return quantity * 1000;  // Always 1000 Grams per KG
+  };
+
+  const getStockInML = (quantity, density) => {
+    return quantity * density;  // Uses density
+  };
+
+  const getStockDisplay = (quantity, density, showGrams) => {
+    if (showGrams) {
+      return { value: getStockInGrams(quantity), unit: 'g' };
+    } else {
+      return { value: getStockInML(quantity, density), unit: 'ml' };
+    }
+  };
+
   const openEditModal = (product) => {
     setSelectedProduct(product);
     setEditData({
@@ -1539,7 +1560,26 @@ const XPInventory = () => {
                 <tr>
                   <th>Product Name</th>
                   <th>Quantity (KG)</th>
-                  <th>Min Stock</th>
+                  <th>
+                    <div className="xp-stock-toggle-header">
+                      <span>Stock</span>
+                      <button
+                        className="xp-stock-toggle-btn"
+                        onClick={() => setShowGrams(!showGrams)}
+                        title={showGrams ? "Switch to ML" : "Switch to Grams"}
+                      >
+                        {showGrams ? (
+                          <>
+                            <FaToggleOn /> Grams
+                          </>
+                        ) : (
+                          <>
+                            <FaToggleOff /> ML
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </th>
                   <th>Status</th>
                   <th>Actions</th>
                 </tr>
@@ -1558,6 +1598,13 @@ const XPInventory = () => {
                   filteredInventory.map((item) => {
                     const status = getStockStatus(item.quantity, item.minStock);
                     const isExpanded = expandedRowId === item.xpId;
+                    const density = item.density || 1000;
+                    const { value: stockDisplayValue, unit: stockDisplayUnit } = getStockDisplay(
+                      item.quantity,
+                      density,
+                      showGrams
+                    );
+                    const isFragranceBase = item.productName?.toUpperCase().trim() === "FRAGRANCE BASE";
 
                     return (
                       <React.Fragment key={item.xpId}>
@@ -1569,10 +1616,20 @@ const XPInventory = () => {
                             <span className="xp-name-cell-content">
                               <FaChevronRight className={`xp-expand-chevron ${isExpanded ? 'xp-chevron-open' : ''}`} />
                               {item.productName}
+                              {isFragranceBase && (
+                                <span className="xp-density-badge">Density: 820</span>
+                              )}
                             </span>
                           </td>
-                          <td className="xp-qty-cell">{item.quantity}</td>
-                          <td className="xp-min-cell">{item.minStock}</td>
+                          <td className="xp-qty-cell">{item.quantity?.toFixed(2)}</td>
+                          <td className="xp-stock-cell">
+                            {stockDisplayValue.toFixed(2)} {stockDisplayUnit}
+                            {isFragranceBase && (
+                              <span className="xp-density-hint">
+                                (1KG = {showGrams ? '1000g' : '820ml'})
+                              </span>
+                            )}
+                          </td>
                           <td>
                             <span className={`xp-status-badge xp-status-${status.status}`}>
                               <span className="xp-status-dot"></span>

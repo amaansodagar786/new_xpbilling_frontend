@@ -196,7 +196,7 @@ const Packages = () => {
             }
 
             if (parseFloat(alcoholQty) < 0) {
-                toast.error("Alcohol quantity cannot be negative");
+                toast.error("Fragrance Base quantity cannot be negative");
                 return;
             }
 
@@ -353,7 +353,7 @@ const Packages = () => {
                                 <div>Bottle ML: <strong>{pkg?.bottleML}ml</strong></div>
                                 <div>Filling Level: <strong>{pkg?.fillingLevel}g</strong></div>
                                 <div>Fragrance: <strong>{pkg?.fragranceQty}g</strong></div>
-                                <div>Alcohol: <strong>{pkg?.alcoholQty}g</strong></div>
+                                <div>Fragrance Base: <strong>{pkg?.alcoholQty}g</strong></div>
                             </div>
                         </div>
 
@@ -512,7 +512,7 @@ const Packages = () => {
                                 <small className="pk-field-hint">30% of filling level (editable)</small>
                             </div>
                             <div className="pk-form-field">
-                                <label><FaPercentage /> Alcohol (g) *</label>
+                                <label><FaPercentage /> Fragrance Base (g) *</label>
                                 <input
                                     type="number"
                                     min="0"
@@ -575,7 +575,7 @@ const Packages = () => {
                                     <th>Bottle ML</th>
                                     <th>Filling (g)</th>
                                     <th>Fragrance (g)</th>
-                                    <th>Alcohol (g)</th>
+                                    <th>Fragrance Base (g)</th>
                                     <th>Discount</th>
                                     <th>Status</th>
                                     <th>Actions</th>

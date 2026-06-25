@@ -3,7 +3,7 @@ import { toast, ToastContainer } from "react-toastify";
 import {
     FaBox, FaSearch, FaTimes,
     FaTrash, FaHistory, FaExclamationTriangle,
-    FaChevronLeft, FaChevronRight
+    FaChevronLeft, FaChevronRight, FaToggleOn, FaToggleOff
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../../Components/Navbar/Navbar";
@@ -11,13 +11,10 @@ import "./ProductDisposal.scss";
 import "react-toastify/dist/ReactToastify.css";
 
 // ============================================
-// REASON OPTIONS (shared constant)
+// REASON OPTIONS
 // ============================================
 const REASON_OPTIONS = ["Damage", "Expired", "Broken", "Return", "Other"];
 
-// ============================================
-// DISPOSAL MODAL (top-level — stable identity, no focus loss)
-// ============================================
 const DisposalModal = ({
     show, onClose, product, inventoryType,
     disposalData, setDisposalData,
@@ -26,22 +23,37 @@ const DisposalModal = ({
     if (!show || !product) return null;
 
     const isBottles = inventoryType === 'bottles';
+    const isXP = inventoryType === 'xp';
+    const isDispenser = inventoryType === 'dispenser';
 
-    const kg = parseFloat(disposalData.kg) || 0;
-    const grams = parseFloat(disposalData.grams) || 0;
-    const totalDisposalKg = kg + grams / 1000;
-    const totalDisposalUnits = isBottles ? (parseInt(disposalData.kg) || 0) : totalDisposalKg;
+    // ✅ CORRECT: Convert everything to KG for stock check
+    let totalInKG = 0;
+    let totalDisplay = 0;
 
-    const exceedsStock = totalDisposalUnits > product.quantity;
-    const hasEnteredQuantity = isBottles ? disposalData.kg !== "" : (disposalData.kg !== "" || disposalData.grams !== "");
-    const remainingStock = Math.max(0, product.quantity - totalDisposalUnits);
+    if (isBottles) {
+        totalInKG = parseFloat(disposalData.kg) || 0;
+        totalDisplay = totalInKG;
+    } else {
+        const mlInput = parseFloat(disposalData.ml) || 0;
+        totalDisplay = mlInput;
+        const density = product.density || 1000;
+        totalInKG = mlInput / density;  // Convert ML to KG
+    }
+
+    const stockInKG = product.quantity || 0;
+    const exceedsStock = totalInKG > stockInKG;
+    const hasEnteredQuantity = isBottles ? disposalData.kg !== "" : disposalData.ml !== "";
+    const remainingStock = Math.max(0, stockInKG - totalInKG);
 
     const formatTotalLabel = () => {
         if (isBottles) return `${disposalData.kg || 0} Pieces`;
-        if (kg > 0 && grams > 0) return `${kg} KG ${grams} g  (${totalDisposalKg.toFixed(3)} KG)`;
-        if (kg > 0) return `${kg} KG`;
-        if (grams > 0) return `${grams} g  (${totalDisposalKg.toFixed(3)} KG)`;
-        return `0 ${isBottles ? 'Pieces' : 'KG'}`;
+        if (isXP || isDispenser) return `${totalDisplay} ML`;
+        return `0 ${isBottles ? 'Pieces' : 'ML'}`;
+    };
+
+    const getUnitLabel = () => {
+        if (isBottles) return 'Pieces';
+        return 'ML';
     };
 
     return (
@@ -62,7 +74,7 @@ const DisposalModal = ({
                             <strong>Product:</strong> {product.name}
                         </div>
                         <div className="pd-product-detail">
-                            <strong>Available Stock:</strong> {product.quantity} {product.unit}
+                            <strong>Available Stock:</strong> {stockInKG} KG
                         </div>
                         {product.ml && (
                             <div className="pd-product-detail">
@@ -72,6 +84,16 @@ const DisposalModal = ({
                         {product.itemType && (
                             <div className="pd-product-detail">
                                 <strong>Item Type:</strong> {product.itemType}
+                            </div>
+                        )}
+                        {isXP && product.density && (
+                            <div className="pd-product-detail">
+                                <strong>Density:</strong> {product.density} ML/KG
+                                {product.isFragranceBase && (
+                                    <span style={{ marginLeft: '8px', fontSize: '12px', color: '#856404' }}>
+                                        (1 KG = 820 ML)
+                                    </span>
+                                )}
                             </div>
                         )}
                     </div>
@@ -97,30 +119,22 @@ const DisposalModal = ({
                         ) : (
                             <div className="pd-form-row">
                                 <div className="pd-form-field">
-                                    <label>KG</label>
+                                    <label>Quantity (ML) *</label>
                                     <input
                                         type="number"
-                                        min="0"
+                                        min="1"
                                         step="0.01"
-                                        value={disposalData.kg}
-                                        onChange={(e) => setDisposalData({ ...disposalData, kg: e.target.value })}
-                                        placeholder="Enter KG"
+                                        value={disposalData.ml}
+                                        onChange={(e) => setDisposalData({ ...disposalData, ml: e.target.value })}
+                                        placeholder={`Enter quantity in ML (max ${(stockInKG * (product.density || 1000)).toFixed(0)} ML)`}
                                         autoComplete="off"
                                         className={exceedsStock ? 'pd-input-error' : ''}
                                     />
-                                </div>
-                                <div className="pd-form-field">
-                                    <label>Grams</label>
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        max="999"
-                                        value={disposalData.grams}
-                                        onChange={(e) => setDisposalData({ ...disposalData, grams: e.target.value })}
-                                        placeholder="Enter grams"
-                                        autoComplete="off"
-                                        className={exceedsStock ? 'pd-input-error' : ''}
-                                    />
+                                    <small className="pd-field-hint">
+                                        {isXP && product.isFragranceBase
+                                            ? "1 KG = 820 ML"
+                                            : "1 KG = 1000 ML"}
+                                    </small>
                                 </div>
                             </div>
                         )}
@@ -128,7 +142,7 @@ const DisposalModal = ({
                         {exceedsStock && hasEnteredQuantity && (
                             <div className="pd-error-text">
                                 <FaExclamationTriangle />
-                                Cannot dispose more than available stock ({product.quantity} {product.unit})
+                                Cannot dispose more than available stock ({stockInKG} KG)
                             </div>
                         )}
 
@@ -157,16 +171,16 @@ const DisposalModal = ({
                             </div>
                         </div>
 
-                        {hasEnteredQuantity && totalDisposalUnits > 0 && (
+                        {hasEnteredQuantity && totalInKG > 0 && (
                             <>
                                 <div className="pd-total-disposal">
-                                    <strong>Total to Dispose:</strong> {formatTotalLabel()}
+                                    <strong>Total to Dispose:</strong> {formatTotalLabel()} ({totalInKG.toFixed(4)} KG)
                                 </div>
 
                                 <div className="pd-stock-preview">
                                     <span className="pd-stock-preview-label">Stock remaining after disposal</span>
                                     <span className={`pd-stock-preview-value ${exceedsStock ? 'pd-stock-preview-warning' : 'pd-stock-preview-ok'}`}>
-                                        {exceedsStock ? '—' : `${remainingStock} ${product.unit}`}
+                                        {exceedsStock ? '—' : `${remainingStock.toFixed(4)} KG`}
                                     </span>
                                 </div>
                             </>
@@ -181,7 +195,7 @@ const DisposalModal = ({
                     <button
                         className="pd-btn-danger"
                         onClick={onSubmit}
-                        disabled={isSubmitting || exceedsStock || !hasEnteredQuantity || totalDisposalUnits <= 0 || !disposalData.reason}
+                        disabled={isSubmitting || exceedsStock || !hasEnteredQuantity || totalInKG <= 0 || !disposalData.reason}
                     >
                         {isSubmitting ? "Processing..." : "Dispose"}
                     </button>
@@ -192,15 +206,14 @@ const DisposalModal = ({
 };
 
 // ============================================
-// HISTORY MODAL (top-level — stable identity)
+// HISTORY MODAL
 // ============================================
 const HistoryModal = ({ show, onClose, history, isLoading, inventoryType, formatDate }) => {
     if (!show) return null;
 
-    // ✅ Handle both formats: data directly OR data.data
     const historyData = history?.data || history;
     const disposals = historyData?.disposals || [];
-    const unitLabel = inventoryType === 'bottles' ? 'Pieces' : 'KG';
+    const unitLabel = inventoryType === 'bottles' ? 'Pieces' : 'ML';
 
     return (
         <div className="pd-modal-overlay" onClick={onClose}>
@@ -292,7 +305,9 @@ const ProductDisposal = () => {
     const [selectedHistory, setSelectedHistory] = useState(null);
     const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
-    // ✅ PAGINATION STATES
+    // ✅ Toggle state for Grams/ML
+    const [showGrams, setShowGrams] = useState(true);
+
     const [currentPage, setCurrentPage] = useState(1);
     const [pagination, setPagination] = useState({
         total: 0,
@@ -303,10 +318,9 @@ const ProductDisposal = () => {
         hasPrevPage: false
     });
 
-    // Disposal form states
     const [disposalData, setDisposalData] = useState({
+        ml: "",
         kg: "",
-        grams: "",
         reason: "",
         notes: ""
     });
@@ -334,7 +348,6 @@ const ProductDisposal = () => {
         try {
             setIsLoading(true);
 
-            // Build query params with pagination
             const queryParams = new URLSearchParams({
                 page: page,
                 limit: 20,
@@ -359,7 +372,6 @@ const ProductDisposal = () => {
 
             const data = await response.json();
 
-            // ✅ Extract products array and pagination
             let productsArray;
             let paginationData;
 
@@ -415,21 +427,26 @@ const ProductDisposal = () => {
                 };
             }
 
-            // ✅ Format products based on inventory type (NO ML for XP)
+            // Format products - show KG + Grams/ML toggle
             let formattedProducts = productsArray.map(p => {
-                // XP products don't have ML anymore
-                let mlValue = '';
-                if (type === 'dispenser' || type === 'bottles') {
-                    mlValue = p.ml || p.mlSize || '';
-                }
+                let unit = 'KG';
+                let displayQuantity = p.quantity || 0;
+                let density = p.density || 1000;
+                let isFragranceBase = p.productName?.toUpperCase().trim() === "FRAGRANCE BASE";
 
                 return {
                     id: p.xpId || p.dispenserId || p.bottleItemId || p._id,
                     name: p.productName || `${p.mlSize || ''} ${p.itemType || ''}`.trim(),
-                    ml: mlValue,
+                    ml: p.ml || p.mlSize || '',
                     itemType: p.itemType || '',
-                    quantity: p.quantity || 0,
-                    unit: type === 'bottles' ? 'Pieces' : 'KG'
+                    quantity: displayQuantity, // In KG
+                    unit: 'KG',
+                    density: density,
+                    isFragranceBase: isFragranceBase,
+                    // For toggle display
+                    toggleValue: 0,
+                    toggleUnit: '',
+                    toggleDisplay: ''
                 };
             });
 
@@ -457,7 +474,7 @@ const ProductDisposal = () => {
     };
 
     // ============================================
-    // FETCH DISPOSAL HISTORY FOR PRODUCT
+    // FETCH DISPOSAL HISTORY
     // ============================================
     const fetchDisposalHistory = async (productId) => {
         try {
@@ -494,7 +511,7 @@ const ProductDisposal = () => {
         setSelectedProduct(null);
         setSearchTerm("");
         setCurrentPage(1);
-        setDisposalData({ kg: "", grams: "", reason: "", notes: "" });
+        setDisposalData({ ml: "", kg: "", reason: "", notes: "" });
         fetchProducts(type, 1, "");
     };
 
@@ -521,7 +538,7 @@ const ProductDisposal = () => {
     // ============================================
     const handleProductSelect = (product) => {
         setSelectedProduct(product);
-        setDisposalData({ kg: "", grams: "", reason: "", notes: "" });
+        setDisposalData({ ml: "", kg: "", reason: "", notes: "" });
         setShowDisposalModal(true);
     };
 
@@ -530,26 +547,45 @@ const ProductDisposal = () => {
     // ============================================
     const handleDisposalSubmit = async () => {
         try {
-            const kg = parseFloat(disposalData.kg) || 0;
-            const grams = parseFloat(disposalData.grams) || 0;
-            const totalQuantity = kg + grams / 1000;
+            const isBottles = inventoryType === 'bottles';
+            const isXP = inventoryType === 'xp';
+            const isDispenser = inventoryType === 'dispenser';
 
-            if (inventoryType === 'bottles') {
+            let totalQuantity = 0;
+
+            if (isBottles) {
                 if (!disposalData.kg || parseInt(disposalData.kg) <= 0) {
                     toast.error("Please enter valid quantity");
                     return;
                 }
-                if (parseInt(disposalData.kg) > selectedProduct.quantity) {
-                    toast.error(`Cannot dispose more than available stock (${selectedProduct.quantity})`);
+                totalQuantity = parseInt(disposalData.kg);
+            } else if (isXP || isDispenser) {
+                if (!disposalData.ml || parseFloat(disposalData.ml) <= 0) {
+                    toast.error("Please enter valid quantity in ML");
                     return;
                 }
-            } else {
-                if (totalQuantity <= 0) {
-                    toast.error("Please enter valid quantity");
+                totalQuantity = parseFloat(disposalData.ml);
+            }
+
+            // Check stock in KG for validation
+            let stockInKG = selectedProduct.quantity;
+
+            if (isDispenser) {
+                const mlToKG = totalQuantity / 1000;
+                if (mlToKG > stockInKG) {
+                    toast.error(`Cannot dispose more than available stock (${stockInKG} KG)`);
                     return;
                 }
-                if (totalQuantity > selectedProduct.quantity) {
-                    toast.error(`Cannot dispose more than available stock (${selectedProduct.quantity} KG)`);
+            } else if (isXP) {
+                const density = selectedProduct.density || 1000;
+                const mlToKG = totalQuantity / density;
+                if (mlToKG > stockInKG) {
+                    toast.error(`Cannot dispose more than available stock (${stockInKG} KG)`);
+                    return;
+                }
+            } else if (isBottles) {
+                if (totalQuantity > stockInKG) {
+                    toast.error(`Cannot dispose more than available stock (${stockInKG} Pieces)`);
                     return;
                 }
             }
@@ -564,7 +600,7 @@ const ProductDisposal = () => {
             const payload = {
                 inventoryType,
                 inventoryItemId: selectedProduct.id,
-                disposedQuantity: inventoryType === 'bottles' ? parseInt(disposalData.kg) : totalQuantity,
+                disposedQuantity: totalQuantity,
                 reason: disposalData.reason,
                 notes: disposalData.notes || ''
             };
@@ -587,10 +623,9 @@ const ProductDisposal = () => {
             const result = await response.json();
             toast.success(result.message);
 
-            // ✅ Refresh current page after disposal
             await fetchProducts(inventoryType, currentPage, searchTerm);
 
-            setDisposalData({ kg: "", grams: "", reason: "", notes: "" });
+            setDisposalData({ ml: "", kg: "", reason: "", notes: "" });
             setShowDisposalModal(false);
             setSelectedProduct(null);
 
@@ -617,7 +652,7 @@ const ProductDisposal = () => {
     };
 
     // ============================================
-    // ROW STOCK STATE (visual cue helper)
+    // ROW STOCK STATE
     // ============================================
     const getRowStockClass = (quantity) => {
         if (quantity <= 0) return 'pd-row-zero-stock';
@@ -649,7 +684,6 @@ const ProductDisposal = () => {
                     </div>
                 </div>
 
-                {/* No inventory selected yet — friendly prompt instead of blank page */}
                 {!inventoryType && (
                     <div className="pd-select-prompt">
                         <FaBox className="pd-select-prompt-icon" />
@@ -658,7 +692,6 @@ const ProductDisposal = () => {
                     </div>
                 )}
 
-                {/* Product List */}
                 {inventoryType && (
                     <div className="pd-product-list">
                         <div className="pd-search-container">
@@ -693,9 +726,29 @@ const ProductDisposal = () => {
                                         <thead>
                                             <tr>
                                                 <th>Product Name</th>
-                                                <th>ML</th>
-                                                <th>Item Type</th>
-                                                <th>Available Stock</th>
+                                                <th>Stock (KG)</th>
+                                                <th>
+                                                    <div className="pd-stock-toggle-header">
+                                                        <span>Stock</span>
+                                                        {inventoryType !== 'bottles' && (
+                                                            <button
+                                                                className="pd-stock-toggle-btn"
+                                                                onClick={() => setShowGrams(!showGrams)}
+                                                                title={showGrams ? "Switch to ML" : "Switch to Grams"}
+                                                            >
+                                                                {showGrams ? (
+                                                                    <>
+                                                                        <FaToggleOn /> Grams
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <FaToggleOff /> ML
+                                                                    </>
+                                                                )}
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </th>
                                                 <th>Unit</th>
                                                 <th>Actions</th>
                                             </tr>
@@ -703,13 +756,45 @@ const ProductDisposal = () => {
                                         <tbody>
                                             {filteredProducts.map((product) => (
                                                 <tr key={product.id} className={getRowStockClass(product.quantity)}>
-                                                    <td className="pd-name-cell">{product.name}</td>
-                                                    <td className="pd-ml-cell">
-                                                        {inventoryType === 'xp' ? '-' : (product.ml || '-')}
+                                                    <td className="pd-name-cell">
+                                                        {product.name}
+                                                        {product.isFragranceBase && (
+                                                            <span className="pd-density-badge">FRAGRANCE BASE</span>
+                                                        )}
                                                     </td>
-                                                    <td className="pd-item-cell">{product.itemType || '-'}</td>
-                                                    <td className="pd-stock-cell">{product.quantity}</td>
-                                                    <td className="pd-unit-cell">{product.unit}</td>
+                                                    <td className="pd-kg-cell">{product.quantity?.toFixed(2)} KG</td>
+                                                    <td className="pd-stock-cell">
+                                                        {inventoryType === 'bottles' ? (
+                                                            product.quantity
+                                                        ) : (
+                                                            <>
+                                                                {showGrams ? (
+                                                                    <>
+                                                                        {(product.quantity * 1000).toFixed(2)} g
+                                                                        {product.isFragranceBase && (
+                                                                            <span className="pd-stock-hint">(1KG = 1000g)</span>
+                                                                        )}
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        {product.isFragranceBase ? (
+                                                                            <>
+                                                                                {(product.quantity * 820).toFixed(2)} ml
+                                                                                <span className="pd-stock-hint">(1KG = 820ml)</span>
+                                                                            </>
+                                                                        ) : (
+                                                                            <>
+                                                                                {(product.quantity * 1000).toFixed(2)} ml
+                                                                            </>
+                                                                        )}
+                                                                    </>
+                                                                )}
+                                                            </>
+                                                        )}
+                                                    </td>
+                                                    <td className="pd-unit-cell">
+                                                        {inventoryType === 'bottles' ? 'Pieces' : (showGrams ? 'g' : 'ml')}
+                                                    </td>
                                                     <td>
                                                         <div className="pd-actions-cell">
                                                             <button
@@ -735,7 +820,6 @@ const ProductDisposal = () => {
                                     </table>
                                 </div>
 
-                                {/* ✅ PAGINATION */}
                                 {pagination.totalPages > 0 && (
                                     <div className="pd-pagination">
                                         <div className="pd-pagination-info">
@@ -790,7 +874,6 @@ const ProductDisposal = () => {
                     </div>
                 )}
 
-                {/* Modals */}
                 <DisposalModal
                     show={showDisposalModal}
                     onClose={() => setShowDisposalModal(false)}

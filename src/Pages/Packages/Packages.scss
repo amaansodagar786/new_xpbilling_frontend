@@ -914,3 +914,45 @@ $border-radius-sm: 8px;
         }
     }
 }
+
+// ============================================
+// DENSITY BADGE & HINT
+// ============================================
+.pd-density-badge {
+    display: inline-block;
+    margin-left: 10px;
+    padding: 2px 10px;
+    background: #fff3cd;
+    color: #856404;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 600;
+    font-family: 'Roboto', sans-serif;
+    border: 1px solid #ffeaa7;
+}
+
+.pd-density-hint {
+    display: inline-block;
+    margin-left: 6px;
+    font-size: 11px;
+    font-weight: 400;
+    color: #aab0bc;
+    font-family: 'Open Sans', sans-serif;
+}
+
+.pd-density-cell {
+    font-family: 'Roboto', sans-serif;
+    font-weight: 500;
+    color: #2d2d50;
+}
+
+// ============================================
+// FIELD HINT
+// ============================================
+.pd-field-hint {
+    display: block;
+    color: #aab0bc;
+    font-family: 'Open Sans', sans-serif;
+    font-size: 12px;
+    margin-top: 6px;
+}
