@@ -47,31 +47,34 @@ const AddProductModal = ({
                 autoComplete="off"
               />
             </div>
-            <div className="di-form-field">
-              <label>ML *</label>
-              <select
-                value={newProduct.ml}
-                onChange={(e) => setNewProduct({ ...newProduct, ml: e.target.value })}
-              >
-                <option value="">Select ML</option>
-                <option value="3">3 ml</option>
-                <option value="6">6 ml</option>
-              </select>
-            </div>
           </div>
           <div className="di-form-row">
             <div className="di-form-field">
-              <label>Selling Price (₹/KG) *</label>
+              <label>Selling Price 3ml (₹/KG) *</label>
               <input
                 type="number"
                 min="1"
                 step="0.01"
-                value={newProduct.sellingPrice}
-                onChange={(e) => setNewProduct({ ...newProduct, sellingPrice: e.target.value })}
-                placeholder="Enter selling price per KG"
+                value={newProduct.sellingPrice3ml}
+                onChange={(e) => setNewProduct({ ...newProduct, sellingPrice3ml: e.target.value })}
+                placeholder="Enter selling price for 3ml"
                 autoComplete="off"
               />
             </div>
+            <div className="di-form-field">
+              <label>Selling Price 6ml (₹/KG) *</label>
+              <input
+                type="number"
+                min="1"
+                step="0.01"
+                value={newProduct.sellingPrice6ml}
+                onChange={(e) => setNewProduct({ ...newProduct, sellingPrice6ml: e.target.value })}
+                placeholder="Enter selling price for 6ml"
+                autoComplete="off"
+              />
+            </div>
+          </div>
+          <div className="di-form-row">
             <div className="di-form-field">
               <label>Discount (%)</label>
               <input
@@ -94,7 +97,7 @@ const AddProductModal = ({
           <button
             className="di-btn-primary"
             onClick={onSubmit}
-            disabled={isSubmitting || !newProduct.productName.trim() || !newProduct.ml || !newProduct.sellingPrice}
+            disabled={isSubmitting || !newProduct.productName.trim() || !newProduct.sellingPrice3ml || !newProduct.sellingPrice6ml}
           >
             {isSubmitting ? "Adding..." : "Add Product"}
           </button>
@@ -117,7 +120,7 @@ const AddStockModal = ({
 
   const productOptions = products.map(p => ({
     value: p.dispenserId,
-    label: `${p.productName} - ${p.ml}ml`,
+    label: `${p.productName}`,
     product: p
   }));
 
@@ -128,8 +131,8 @@ const AddStockModal = ({
         ...addStockData,
         dispenserId: product.dispenserId,
         productName: product.productName,
-        ml: product.ml,
-        sellingPrice: product.sellingPrice || '',
+        sellingPrice3ml: product.sellingPrice3ml || '',
+        sellingPrice6ml: product.sellingPrice6ml || '',
         discount: product.discount || ''
       });
     } else {
@@ -137,8 +140,8 @@ const AddStockModal = ({
         ...addStockData,
         dispenserId: "",
         productName: "",
-        ml: "",
-        sellingPrice: "",
+        sellingPrice3ml: "",
+        sellingPrice6ml: "",
         discount: ""
       });
     }
@@ -262,7 +265,8 @@ const AddStockModal = ({
             <div className="di-current-stock-info">
               <span>Current Stock: <strong>{selectedProduct.quantity} KG</strong></span>
               <span>Avg Price: <strong>₹{selectedProduct.avgPurchasePrice?.toFixed(2) || '0.00'}/KG</strong></span>
-              <span>Selling Price: <strong>₹{selectedProduct.sellingPrice}/KG</strong></span>
+              <span>Selling Price 3ml: <strong>₹{selectedProduct.sellingPrice3ml}/KG</strong></span>
+              <span>Selling Price 6ml: <strong>₹{selectedProduct.sellingPrice6ml}/KG</strong></span>
               <span>Discount: <strong>{selectedProduct.discount || 0}%</strong></span>
             </div>
           )}
@@ -359,31 +363,34 @@ const EditProductModal = ({
                 autoComplete="off"
               />
             </div>
-            <div className="di-form-field">
-              <label>ML *</label>
-              <select
-                value={editData.ml}
-                onChange={(e) => setEditData({ ...editData, ml: e.target.value })}
-              >
-                <option value="">Select ML</option>
-                <option value="3">3 ml</option>
-                <option value="6">6 ml</option>
-              </select>
-            </div>
           </div>
           <div className="di-form-row">
             <div className="di-form-field">
-              <label>Selling Price (₹/KG) *</label>
+              <label>Selling Price 3ml (₹/KG) *</label>
               <input
                 type="number"
                 min="1"
                 step="0.01"
-                value={editData.sellingPrice}
-                onChange={(e) => setEditData({ ...editData, sellingPrice: e.target.value })}
-                placeholder="Enter selling price per KG"
+                value={editData.sellingPrice3ml}
+                onChange={(e) => setEditData({ ...editData, sellingPrice3ml: e.target.value })}
+                placeholder="Enter selling price for 3ml"
                 autoComplete="off"
               />
             </div>
+            <div className="di-form-field">
+              <label>Selling Price 6ml (₹/KG) *</label>
+              <input
+                type="number"
+                min="1"
+                step="0.01"
+                value={editData.sellingPrice6ml}
+                onChange={(e) => setEditData({ ...editData, sellingPrice6ml: e.target.value })}
+                placeholder="Enter selling price for 6ml"
+                autoComplete="off"
+              />
+            </div>
+          </div>
+          <div className="di-form-row">
             <div className="di-form-field">
               <label>Discount (%)</label>
               <input
@@ -406,7 +413,7 @@ const EditProductModal = ({
           <button
             className="di-btn-primary"
             onClick={onSubmit}
-            disabled={isSubmitting || !editData.productName.trim() || !editData.ml || !editData.sellingPrice}
+            disabled={isSubmitting || !editData.productName.trim() || !editData.sellingPrice3ml || !editData.sellingPrice6ml}
           >
             {isSubmitting ? "Updating..." : "Update Product"}
           </button>
@@ -446,16 +453,16 @@ const BulkUploadModal = ({
                   value={uploadType}
                   onChange={(e) => setUploadType(e.target.value)}
                 >
-                  <option value="products">Products (Name + ML + Selling Price + Discount)</option>
-                  <option value="inventory">Inventory (Name + ML + Qty + Purchase Price)</option>
+                  <option value="products">Products (Name + Selling Prices + Discount)</option>
+                  <option value="inventory">Inventory (Name + Qty + Purchase Price)</option>
                 </select>
               </div>
             </div>
 
             <p className="di-upload-hint">
               {uploadType === 'products'
-                ? 'File should have columns: Product Name, ML, Selling Price, Discount (optional)'
-                : 'File should have columns: Product Name, ML, Quantity, Purchase Price'}
+                ? 'File should have columns: Product Name, Selling Price 3ml, Selling Price 6ml, Discount (optional)'
+                : 'File should have columns: Product Name, Quantity, Purchase Price'}
             </p>
 
             <div className="di-file-drop">
@@ -540,7 +547,6 @@ const ErrorModal = ({
                     <tr>
                       <th>Row</th>
                       <th>Product Name</th>
-                      <th>ML</th>
                       {bulkSuccessDetails[0]?.quantity !== undefined ? (
                         <>
                           <th>Quantity</th>
@@ -549,7 +555,8 @@ const ErrorModal = ({
                         </>
                       ) : (
                         <>
-                          <th>Selling Price</th>
+                          <th>Selling Price 3ml</th>
+                          <th>Selling Price 6ml</th>
                           <th>Discount</th>
                         </>
                       )}
@@ -560,7 +567,6 @@ const ErrorModal = ({
                       <tr key={index}>
                         <td>{item.row}</td>
                         <td>{item.productName}</td>
-                        <td>{item.ml}ml</td>
                         {item.quantity !== undefined ? (
                           <>
                             <td>{item.quantity} KG</td>
@@ -569,7 +575,8 @@ const ErrorModal = ({
                           </>
                         ) : (
                           <>
-                            <td className="di-success-cell">₹{item.sellingPrice}/KG</td>
+                            <td className="di-success-cell">₹{item.sellingPrice3ml}/KG</td>
+                            <td className="di-success-cell">₹{item.sellingPrice6ml}/KG</td>
                             <td className="di-success-cell">{item.discount || 0}%</td>
                           </>
                         )}
@@ -592,7 +599,6 @@ const ErrorModal = ({
                     <tr>
                       <th>Row</th>
                       <th>Product Name</th>
-                      <th>ML</th>
                       {bulkErrors[0]?.quantity !== undefined ? (
                         <>
                           <th>Quantity</th>
@@ -600,7 +606,8 @@ const ErrorModal = ({
                         </>
                       ) : (
                         <>
-                          <th>Selling Price</th>
+                          <th>Selling Price 3ml</th>
+                          <th>Selling Price 6ml</th>
                           <th>Discount</th>
                         </>
                       )}
@@ -612,7 +619,6 @@ const ErrorModal = ({
                       <tr key={index}>
                         <td>{err.row}</td>
                         <td>{err.productName || '-'}</td>
-                        <td>{err.ml || '-'}</td>
                         {err.quantity !== undefined ? (
                           <>
                             <td>{err.quantity || '-'}</td>
@@ -620,7 +626,8 @@ const ErrorModal = ({
                           </>
                         ) : (
                           <>
-                            <td>{err.sellingPrice || '-'}</td>
+                            <td>{err.sellingPrice3ml || '-'}</td>
+                            <td>{err.sellingPrice6ml || '-'}</td>
                             <td>{err.discount !== undefined ? err.discount : '-'}</td>
                           </>
                         )}
@@ -683,7 +690,7 @@ const AlertModal = ({ show, onClose, alerts }) => {
                   <div className="di-alert-list">
                     {emptyItems.map((item, index) => (
                       <div key={index} className="di-alert-item di-alert-empty">
-                        <span>{item.productName} - {item.ml}ml</span>
+                        <span>{item.productName}</span>
                         <span>Quantity: {item.quantity} KG</span>
                       </div>
                     ))}
@@ -696,7 +703,7 @@ const AlertModal = ({ show, onClose, alerts }) => {
                   <div className="di-alert-list">
                     {lowStockItems.map((item, index) => (
                       <div key={index} className="di-alert-item di-alert-low">
-                        <span>{item.productName} - {item.ml}ml</span>
+                        <span>{item.productName}</span>
                         <span>Quantity: {item.quantity} KG / Min: {item.minStock} KG</span>
                       </div>
                     ))}
@@ -740,7 +747,7 @@ const DeleteConfirmModal = ({ show, onClose, product, onConfirm, isDeleting }) =
             </div>
             <h3>Are you sure?</h3>
             <p>
-              You are about to delete <strong>"{product.productName} - {product.ml}ml"</strong>.
+              You are about to delete <strong>"{product.productName}"</strong>.
               This will also delete all stock and transaction history for this product.
               <br /><br />
               <strong style={{ color: '#dc3545' }}>This action cannot be undone!</strong>
@@ -765,7 +772,7 @@ const DeleteConfirmModal = ({ show, onClose, product, onConfirm, isDeleting }) =
 };
 
 // ============================================
-// DISPOSAL HISTORY PANEL - SINGLE ROW
+// DISPOSAL HISTORY PANEL
 // ============================================
 const DisposalHistoryPanel = ({ disposals, isLoading, onClose }) => {
   const formatDateTime = (dateString) => {
@@ -814,7 +821,6 @@ const DisposalHistoryPanel = ({ disposals, isLoading, onClose }) => {
           const { date, time } = formatDateTime(d.disposedAt);
           return (
             <div key={d.disposalEntryId || idx} className="di-disposal-item">
-              {/* SINGLE ROW - ALL FIELDS */}
               <div className="di-disposal-row">
                 <span className="di-disposal-label"><FaUser /> Disposed By:</span>
                 <span className="di-disposal-value">{d.performedBy?.userName || 'Unknown'}</span>
@@ -856,7 +862,7 @@ const DisposalHistoryPanel = ({ disposals, isLoading, onClose }) => {
 };
 
 // ============================================
-// TRANSACTION HISTORY ROW - SINGLE ROW UPDATED
+// TRANSACTION HISTORY ROW
 // ============================================
 const TransactionHistoryRow = ({ colSpan, isLoading, transactions, onViewDisposal, hasDisposal }) => {
   const formatDateTime = (dateString) => {
@@ -868,7 +874,6 @@ const TransactionHistoryRow = ({ colSpan, isLoading, transactions, onViewDisposa
     };
   };
 
-  // Only show IN transactions
   const inTransactions = transactions?.filter(t => t.transactionType === 'IN') || [];
 
   if (isLoading) {
@@ -927,28 +932,7 @@ const TransactionHistoryRow = ({ colSpan, isLoading, transactions, onViewDisposa
               const { date, time } = formatDateTime(t.createdAt);
               return (
                 <div key={t.transactionId || idx} className="di-transaction-item">
-                  {/* SINGLE ROW - ALL FIELDS */}
                   <div className="di-transaction-row">
-                    <span className="di-txn-label"><FaUser /> Name:</span>
-                    <span className="di-txn-value">{t.performedBy?.userName || 'Unknown'}</span>
-
-                    <span className="di-txn-separator">|</span>
-
-                    <span className="di-txn-label"><FaTag /> Reason:</span>
-                    <span className="di-txn-value">{t.reason || 'Purchase'}</span>
-
-                    <span className="di-txn-separator">|</span>
-
-                    <span className="di-txn-label"><FaCalendarAlt /> Date:</span>
-                    <span className="di-txn-value">{date}</span>
-
-                    <span className="di-txn-separator">|</span>
-
-                    <span className="di-txn-label"><FaClock /> Time:</span>
-                    <span className="di-txn-value">{time}</span>
-
-                    <span className="di-txn-separator">|</span>
-
                     <span className="di-txn-label"><FaArrowUp /> Quantity:</span>
                     <span className="di-txn-value di-txn-qty">+{t.quantity} KG</span>
 
@@ -956,6 +940,21 @@ const TransactionHistoryRow = ({ colSpan, isLoading, transactions, onViewDisposa
 
                     <span className="di-txn-label"><FaMoneyBillWave /> Price:</span>
                     <span className="di-txn-value di-txn-price">₹{t.purchasePrice?.toFixed(2) || '0.00'}/KG</span>
+
+                    <span className="di-txn-separator">|</span>
+
+                    <span className="di-txn-label"><FaBox /> Stock:</span>
+                    <span className="di-txn-value di-txn-stock">{t.previousStock} → <strong>{t.newStock}</strong> KG</span>
+
+                    <span className="di-txn-separator">|</span>
+
+                    <span className="di-txn-label"><FaUser /> Name:</span>
+                    <span className="di-txn-value">{t.performedBy?.userName || 'Unknown'}</span>
+
+                    <span className="di-txn-separator">|</span>
+
+                    <span className="di-txn-label"><FaCalendarAlt /> Date:</span>
+                    <span className="di-txn-value">{date} - {time}</span>
 
                     {t.notes && (
                       <>
@@ -987,7 +986,6 @@ const DispenserInventory = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [pagination, setPagination] = useState({
     total: 0,
@@ -1000,7 +998,6 @@ const DispenserInventory = () => {
 
   const navigate = useNavigate();
 
-  // Modal states
   const [showAddProductModal, setShowAddProductModal] = useState(false);
   const [showAddStockModal, setShowAddStockModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -1010,21 +1007,19 @@ const DispenserInventory = () => {
   const [showAlertModal, setShowAlertModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
 
-  // Form states
-  const [newProduct, setNewProduct] = useState({ productName: "", ml: "", sellingPrice: "", discount: "0" });
-  const [editData, setEditData] = useState({ dispenserId: "", productName: "", ml: "", sellingPrice: "", discount: "0" });
+  const [newProduct, setNewProduct] = useState({ productName: "", sellingPrice3ml: "", sellingPrice6ml: "", discount: "0" });
+  const [editData, setEditData] = useState({ dispenserId: "", productName: "", sellingPrice3ml: "", sellingPrice6ml: "", discount: "0" });
   const [addStockData, setAddStockData] = useState({
     dispenserId: "",
     productName: "",
-    ml: "",
-    sellingPrice: "",
+    sellingPrice3ml: "",
+    sellingPrice6ml: "",
     discount: "",
     quantity: "",
     purchasePrice: "",
     notes: ""
   });
 
-  // Bulk upload states
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploadType, setUploadType] = useState("products");
   const [bulkErrors, setBulkErrors] = useState([]);
@@ -1033,12 +1028,10 @@ const DispenserInventory = () => {
   const [bulkSuccessDetails, setBulkSuccessDetails] = useState([]);
   const [bulkUploadId, setBulkUploadId] = useState("");
 
-  // Expandable row states
   const [expandedRowId, setExpandedRowId] = useState(null);
   const [transactionCache, setTransactionCache] = useState({});
   const [loadingTransactionsFor, setLoadingTransactionsFor] = useState(null);
 
-  // Disposal states
   const [showDisposalPanel, setShowDisposalPanel] = useState(false);
   const [disposalData, setDisposalData] = useState(null);
   const [loadingDisposal, setLoadingDisposal] = useState(false);
@@ -1046,9 +1039,6 @@ const DispenserInventory = () => {
 
   const fileInputRef = useRef(null);
 
-  // ============================================
-  // FETCH DATA WITH PAGINATION
-  // ============================================
   const fetchInventory = async (page = 1, search = '') => {
     try {
       setIsLoading(true);
@@ -1111,26 +1101,17 @@ const DispenserInventory = () => {
     fetchAlerts();
   }, []);
 
-  // ============================================
-  // HANDLE SEARCH
-  // ============================================
   const handleSearch = (term) => {
     setSearchTerm(term);
     fetchInventory(1, term);
   };
 
-  // ============================================
-  // HANDLE PAGE CHANGE
-  // ============================================
   const handlePageChange = (newPage) => {
     if (newPage < 1 || newPage > pagination.totalPages) return;
     setCurrentPage(newPage);
     fetchInventory(newPage, searchTerm);
   };
 
-  // ============================================
-  // FETCH TRANSACTIONS FOR A PRODUCT
-  // ============================================
   const fetchTransactionsForProduct = async (dispenserId) => {
     try {
       setLoadingTransactionsFor(dispenserId);
@@ -1160,9 +1141,6 @@ const DispenserInventory = () => {
     }
   };
 
-  // ============================================
-  // FETCH DISPOSAL HISTORY
-  // ============================================
   const fetchDisposalHistory = async (dispenserId) => {
     try {
       setLoadingDisposal(true);
@@ -1187,9 +1165,6 @@ const DispenserInventory = () => {
     }
   };
 
-  // ============================================
-  // CHECK IF PRODUCT HAS DISPOSAL HISTORY
-  // ============================================
   const checkHasDisposal = async (dispenserId) => {
     try {
       const response = await fetch(
@@ -1204,9 +1179,6 @@ const DispenserInventory = () => {
     }
   };
 
-  // ============================================
-  // TOGGLE ROW EXPAND
-  // ============================================
   const handleToggleRow = async (dispenserId) => {
     if (expandedRowId === dispenserId) {
       setExpandedRowId(null);
@@ -1217,7 +1189,6 @@ const DispenserInventory = () => {
 
     setExpandedRowId(dispenserId);
 
-    // Fetch transactions
     if (!transactionCache[dispenserId]) {
       await fetchTransactionsForProduct(dispenserId);
     }
@@ -1233,13 +1204,13 @@ const DispenserInventory = () => {
         return;
       }
 
-      if (!newProduct.ml) {
-        toast.error("Please select ML");
+      if (!newProduct.sellingPrice3ml || parseFloat(newProduct.sellingPrice3ml) <= 0) {
+        toast.error("Please enter valid 3ml selling price");
         return;
       }
 
-      if (!newProduct.sellingPrice || parseFloat(newProduct.sellingPrice) <= 0) {
-        toast.error("Please enter valid selling price");
+      if (!newProduct.sellingPrice6ml || parseFloat(newProduct.sellingPrice6ml) <= 0) {
+        toast.error("Please enter valid 6ml selling price");
         return;
       }
 
@@ -1259,8 +1230,8 @@ const DispenserInventory = () => {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             productName: newProduct.productName.trim(),
-            ml: parseInt(newProduct.ml),
-            sellingPrice: parseFloat(newProduct.sellingPrice),
+            sellingPrice3ml: parseFloat(newProduct.sellingPrice3ml),
+            sellingPrice6ml: parseFloat(newProduct.sellingPrice6ml),
             discount: discountValue
           })
         }
@@ -1274,7 +1245,7 @@ const DispenserInventory = () => {
       const result = await response.json();
       toast.success(result.message);
 
-      setNewProduct({ productName: "", ml: "", sellingPrice: "", discount: "0" });
+      setNewProduct({ productName: "", sellingPrice3ml: "", sellingPrice6ml: "", discount: "0" });
       setShowAddProductModal(false);
       await fetchInventory(currentPage, searchTerm);
       await fetchAlerts();
@@ -1317,7 +1288,6 @@ const DispenserInventory = () => {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             productName: addStockData.productName,
-            ml: parseInt(addStockData.ml),
             quantity: parseFloat(addStockData.quantity),
             purchasePrice: parseFloat(addStockData.purchasePrice),
             notes: addStockData.notes || ''
@@ -1338,8 +1308,8 @@ const DispenserInventory = () => {
       setAddStockData({
         dispenserId: "",
         productName: "",
-        ml: "",
-        sellingPrice: "",
+        sellingPrice3ml: "",
+        sellingPrice6ml: "",
         discount: "",
         quantity: "",
         purchasePrice: "",
@@ -1371,13 +1341,13 @@ const DispenserInventory = () => {
         return;
       }
 
-      if (!editData.ml) {
-        toast.error("Please select ML");
+      if (!editData.sellingPrice3ml || parseFloat(editData.sellingPrice3ml) <= 0) {
+        toast.error("Please enter valid 3ml selling price");
         return;
       }
 
-      if (!editData.sellingPrice || parseFloat(editData.sellingPrice) <= 0) {
-        toast.error("Please enter valid selling price");
+      if (!editData.sellingPrice6ml || parseFloat(editData.sellingPrice6ml) <= 0) {
+        toast.error("Please enter valid 6ml selling price");
         return;
       }
 
@@ -1397,8 +1367,8 @@ const DispenserInventory = () => {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             productName: editData.productName.trim(),
-            ml: parseInt(editData.ml),
-            sellingPrice: parseFloat(editData.sellingPrice),
+            sellingPrice3ml: parseFloat(editData.sellingPrice3ml),
+            sellingPrice6ml: parseFloat(editData.sellingPrice6ml),
             discount: discountValue
           })
         }
@@ -1412,7 +1382,7 @@ const DispenserInventory = () => {
       const result = await response.json();
       toast.success(result.message);
 
-      setEditData({ dispenserId: "", productName: "", ml: "", sellingPrice: "", discount: "0" });
+      setEditData({ dispenserId: "", productName: "", sellingPrice3ml: "", sellingPrice6ml: "", discount: "0" });
       setShowEditModal(false);
       setSelectedProduct(null);
       await fetchInventory(currentPage, searchTerm);
@@ -1553,19 +1523,19 @@ const DispenserInventory = () => {
       const errorData = bulkErrors.map(err => ({
         'Row': err.row || '',
         'Product Name': err.productName || '',
-        'ML': err.ml || '',
-        'Selling Price': err.sellingPrice || '',
+        'Selling Price 3ml': err.sellingPrice3ml || '',
+        'Selling Price 6ml': err.sellingPrice6ml || '',
         'Discount (%)': err.discount || '',
         'Error Reason': err.error || 'Unknown error'
       }));
 
       const worksheetData = [
-        ['Row', 'Product Name', 'ML', 'Selling Price', 'Discount (%)', 'Error Reason'],
+        ['Row', 'Product Name', 'Selling Price 3ml', 'Selling Price 6ml', 'Discount (%)', 'Error Reason'],
         ...errorData.map(item => [
           item['Row'],
           item['Product Name'],
-          item['ML'],
-          item['Selling Price'],
+          item['Selling Price 3ml'],
+          item['Selling Price 6ml'],
           item['Discount (%)'],
           item['Error Reason']
         ])
@@ -1576,7 +1546,7 @@ const DispenserInventory = () => {
       ws['!cols'] = [
         { wch: 8 },
         { wch: 35 },
-        { wch: 10 },
+        { wch: 15 },
         { wch: 15 },
         { wch: 12 },
         { wch: 50 }
@@ -1631,9 +1601,6 @@ const DispenserInventory = () => {
     }
   };
 
-  // ============================================
-  // HELPERS
-  // ============================================
   const getStockStatus = (quantity, minStock) => {
     if (quantity <= 0) return { status: 'empty', label: 'Empty' };
     if (quantity <= minStock) return { status: 'low', label: 'Low Stock' };
@@ -1645,8 +1612,8 @@ const DispenserInventory = () => {
     setEditData({
       dispenserId: product.dispenserId,
       productName: product.productName,
-      ml: product.ml.toString(),
-      sellingPrice: product.sellingPrice?.toString() || '',
+      sellingPrice3ml: product.sellingPrice3ml?.toString() || '',
+      sellingPrice6ml: product.sellingPrice6ml?.toString() || '',
       discount: product.discount?.toString() || '0'
     });
     setShowEditModal(true);
@@ -1714,9 +1681,9 @@ const DispenserInventory = () => {
                 <tr>
                   <th style={{ width: '34px' }}></th>
                   <th>Product Name</th>
-                  <th>ML</th>
                   <th>Quantity (KG)</th>
-                  <th>Selling Price (₹/KG)</th>
+                  <th>Selling Price 3ml (₹/KG)</th>
+                  <th>Selling Price 6ml (₹/KG)</th>
                   <th>Discount (%)</th>
                   <th>Min Stock</th>
                   <th>Status</th>
@@ -1748,10 +1715,12 @@ const DispenserInventory = () => {
                             {isExpanded ? <FaChevronUp /> : <FaChevronDown />}
                           </td>
                           <td className="di-name-cell">{item.productName}</td>
-                          <td className="di-ml-cell">{item.ml}ml</td>
                           <td className="di-qty-cell">{item.quantity}</td>
                           <td className="di-selling-price-cell">
-                            ₹{item.sellingPrice?.toFixed(2) || '0.00'}
+                            ₹{item.sellingPrice3ml?.toFixed(2) || '0.00'}
+                          </td>
+                          <td className="di-selling-price-cell">
+                            ₹{item.sellingPrice6ml?.toFixed(2) || '0.00'}
                           </td>
                           <td className="di-discount-cell">
                             {item.discount || 0}%
@@ -1785,7 +1754,6 @@ const DispenserInventory = () => {
 
                         {isExpanded && (
                           <>
-                            {/* Transaction History Row */}
                             <TransactionHistoryRow
                               colSpan={9}
                               isLoading={loadingTransactionsFor === item.dispenserId}
@@ -1794,7 +1762,6 @@ const DispenserInventory = () => {
                               hasDisposal={true}
                             />
 
-                            {/* Disposal Panel - shown when disposal data is loaded */}
                             {showDisposalPanel && currentDisposalDispenserId === item.dispenserId && (
                               <tr className="di-expand-row">
                                 <td colSpan={9}>

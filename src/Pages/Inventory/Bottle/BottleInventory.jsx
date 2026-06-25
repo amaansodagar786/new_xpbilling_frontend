@@ -2,11 +2,11 @@ import React, { useState, useEffect, useRef } from "react";
 import { toast, ToastContainer } from "react-toastify";
 import {
     FaBox, FaPlus, FaSearch, FaFileExcel,
-    FaUpload, FaDownload, FaEdit, FaTrash,
-    FaTimes, FaEye, FaFilter, FaBell,
-    FaCheckCircle, FaTimesCircle, FaChevronLeft, FaChevronRight
+    FaUpload, FaDownload, FaTimes, FaBell,
+    FaCheckCircle, FaTimesCircle, FaChevronLeft, FaChevronRight,
+    FaChevronRight as FaExpandChevron, FaHistory, FaArrowUp, FaArrowDown,
+    FaUser, FaCalendarAlt, FaClock, FaTag, FaInfoCircle, FaTrashAlt
 } from "react-icons/fa";
-
 import { useNavigate } from "react-router-dom";
 import Navbar from "../../../Components/Navbar/Navbar";
 import "./BottleInventory.scss";
@@ -251,7 +251,7 @@ const BulkUploadModal = ({
 };
 
 // ============================================
-// ERROR MODAL (UPDATED - Shows Both Success & Error)
+// ERROR MODAL
 // ============================================
 const ErrorModal = ({
     show,
@@ -279,19 +279,17 @@ const ErrorModal = ({
                     </button>
                 </div>
                 <div className="bi-modal-body">
-                    {/* Summary */}
                     <div className="bi-upload-summary">
                         <div className="bi-summary-success">
-                            <FaCheckCircle style={{ color: '#28a745' }} />
+                            <FaCheckCircle />
                             <strong>Success:</strong> {bulkSuccessCount} items added
                         </div>
                         <div className={`bi-summary-error ${hasErrors ? 'has-errors' : 'no-errors'}`}>
-                            <FaTimesCircle style={{ color: hasErrors ? '#dc3545' : '#95a5a6' }} />
+                            <FaTimesCircle />
                             <strong>Failed:</strong> {bulkErrorCount} items
                         </div>
                     </div>
 
-                    {/* Success Details Table */}
                     {hasSuccess && bulkSuccessDetails && bulkSuccessDetails.length > 0 && (
                         <div className="bi-result-section">
                             <h4 className="bi-result-heading bi-result-success">
@@ -324,7 +322,6 @@ const ErrorModal = ({
                         </div>
                     )}
 
-                    {/* Error Details Table */}
                     {hasErrors && (
                         <div className="bi-result-section">
                             <h4 className="bi-result-heading bi-result-error">
@@ -357,7 +354,6 @@ const ErrorModal = ({
                         </div>
                     )}
 
-                    {/* Download Button */}
                     {hasErrors && (
                         <button className="bi-btn-download-error" onClick={onDownloadErrorExcel}>
                             <FaDownload /> Download Error Report
@@ -442,6 +438,202 @@ const AlertModal = ({ show, onClose, alerts }) => {
 };
 
 // ============================================
+// DISPOSAL HISTORY PANEL - SINGLE ROW
+// ============================================
+const DisposalHistoryPanel = ({ disposals, isLoading, onClose }) => {
+    const formatDateTime = (dateString) => {
+        const date = new Date(dateString);
+        return {
+            date: date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+            time: date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+        };
+    };
+
+    if (isLoading) {
+        return (
+            <div className="bi-disposal-panel">
+                <div className="bi-disposal-loading">
+                    <div className="bi-loading-spinner tiny"></div>
+                    Loading disposal history...
+                </div>
+            </div>
+        );
+    }
+
+    if (!disposals || disposals.length === 0) {
+        return (
+            <div className="bi-disposal-panel">
+                <div className="bi-disposal-header">
+                    <h5><FaTrashAlt /> Disposal History</h5>
+                    <button className="bi-disposal-close-btn" onClick={onClose}>
+                        <FaTimes />
+                    </button>
+                </div>
+                <div className="bi-disposal-empty">No disposal records found for this item.</div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="bi-disposal-panel">
+            <div className="bi-disposal-header">
+                <h5><FaTrashAlt /> Disposal History ({disposals.length})</h5>
+                <button className="bi-disposal-close-btn" onClick={onClose}>
+                    <FaTimes />
+                </button>
+            </div>
+            <div className="bi-disposal-list">
+                {disposals.map((d, idx) => {
+                    const { date, time } = formatDateTime(d.disposedAt);
+                    return (
+                        <div key={d.disposalEntryId || idx} className="bi-disposal-item">
+                            {/* SINGLE ROW - ALL FIELDS */}
+                            <div className="bi-disposal-row">
+                                <span className="bi-disposal-label"><FaUser /> Disposed By:</span>
+                                <span className="bi-disposal-value">{d.performedBy?.userName || 'Unknown'}</span>
+
+                                <span className="bi-disposal-separator">|</span>
+
+                                <span className="bi-disposal-label"><FaTag /> Reason:</span>
+                                <span className="bi-disposal-value bi-disposal-reason">{d.reason || 'N/A'}</span>
+
+                                <span className="bi-disposal-separator">|</span>
+
+                                <span className="bi-disposal-label"><FaCalendarAlt /> Date:</span>
+                                <span className="bi-disposal-value">{date}</span>
+
+                                <span className="bi-disposal-separator">|</span>
+
+                                <span className="bi-disposal-label"><FaClock /> Time:</span>
+                                <span className="bi-disposal-value">{time}</span>
+
+                                <span className="bi-disposal-separator">|</span>
+
+                                <span className="bi-disposal-label"><FaTrashAlt /> Quantity:</span>
+                                <span className="bi-disposal-value bi-disposal-qty">-{d.disposedQuantity}</span>
+
+                                {d.notes && (
+                                    <>
+                                        <span className="bi-disposal-separator">|</span>
+                                        <span className="bi-disposal-label"><FaInfoCircle /> Notes:</span>
+                                        <span className="bi-disposal-value">{d.notes}</span>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+};
+
+// ============================================
+// TRANSACTION PANEL - SINGLE ROW UPDATED
+// ============================================
+const TransactionPanel = ({ transactions, isLoading, onViewDisposal, hasDisposal }) => {
+    const formatDateTime = (dateString) => {
+        const date = new Date(dateString);
+        return {
+            date: date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+            time: date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+        };
+    };
+
+    // ✅ FILTER: Only show IN transactions
+    const inTransactions = transactions?.filter(t => t.transactionType === 'IN') || [];
+
+    if (isLoading) {
+        return (
+            <div className="bi-transaction-panel">
+                <div className="bi-transaction-loading">
+                    <div className="bi-loading-spinner tiny"></div>
+                    Loading transaction history...
+                </div>
+            </div>
+        );
+    }
+
+    if (inTransactions.length === 0) {
+        return (
+            <div className="bi-transaction-panel">
+                <div className="bi-transaction-panel-header">
+                    <h5><FaHistory /> Transaction History</h5>
+                    {hasDisposal && (
+                        <button className="bi-view-disposal-btn" onClick={onViewDisposal}>
+                            <FaTrashAlt /> View Disposals
+                        </button>
+                    )}
+                </div>
+                <div className="bi-transaction-empty">No stock IN transactions recorded yet for this item.</div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="bi-transaction-panel">
+            <div className="bi-transaction-panel-header">
+                <h5><FaHistory /> Transaction History ({inTransactions.length})</h5>
+                {hasDisposal && (
+                    <button className="bi-view-disposal-btn" onClick={onViewDisposal}>
+                        <FaTrashAlt /> View Disposals
+                    </button>
+                )}
+            </div>
+            <div className="bi-transaction-list">
+                {inTransactions.map((t, idx) => {
+                    const { date, time } = formatDateTime(t.createdAt);
+                    return (
+                        <div key={t.transactionId || idx} className="bi-transaction-item">
+                            {/* SINGLE ROW - ALL FIELDS */}
+                            <div className="bi-transaction-row">
+                                <span className="bi-txn-label"><FaUser /> Name:</span>
+                                <span className="bi-txn-value">{t.performedBy?.userName || 'Unknown'}</span>
+
+                                <span className="bi-txn-separator">|</span>
+
+                                <span className="bi-txn-label"><FaTag /> Reason:</span>
+                                <span className="bi-txn-value">{t.reason || 'Purchase'}</span>
+
+                                <span className="bi-txn-separator">|</span>
+
+                                <span className="bi-txn-label"><FaCalendarAlt /> Date:</span>
+                                <span className="bi-txn-value">{date}</span>
+
+                                <span className="bi-txn-separator">|</span>
+
+                                <span className="bi-txn-label"><FaClock /> Time:</span>
+                                <span className="bi-txn-value">{time}</span>
+
+                                <span className="bi-txn-separator">|</span>
+
+                                <span className="bi-txn-label"><FaArrowUp /> Quantity:</span>
+                                <span className="bi-txn-value bi-txn-qty">+{t.quantity}</span>
+
+                                <span className="bi-txn-separator">|</span>
+
+                                <span className="bi-txn-label"><FaBox /> Stock:</span>
+                                <span className="bi-txn-value bi-txn-stock">
+                                    {t.previousStock} → <strong>{t.newStock}</strong>
+                                </span>
+
+                                {t.notes && (
+                                    <>
+                                        <span className="bi-txn-separator">|</span>
+                                        <span className="bi-txn-label"><FaInfoCircle /> Notes:</span>
+                                        <span className="bi-txn-value">{t.notes}</span>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+};
+
+// ============================================
 // MAIN COMPONENT
 // ============================================
 const BottleInventory = () => {
@@ -489,8 +681,24 @@ const BottleInventory = () => {
     const [bulkUploadId, setBulkUploadId] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    // Row expansion / transaction history states
+    const [expandedRowKey, setExpandedRowKey] = useState(null);
+    const [transactionsByRowKey, setTransactionsByRowKey] = useState({});
+    const [loadingTransactionsKey, setLoadingTransactionsKey] = useState(null);
+
+    // Disposal states
+    const [showDisposalPanel, setShowDisposalPanel] = useState(false);
+    const [disposalData, setDisposalData] = useState(null);
+    const [loadingDisposal, setLoadingDisposal] = useState(false);
+    const [currentDisposalRowKey, setCurrentDisposalRowKey] = useState(null);
+
     const fileInputRef = useRef(null);
     const navigate = useNavigate();
+
+    // ============================================
+    // ROW KEY HELPER
+    // ============================================
+    const getRowKey = (item) => `${item.mlSize}__${item.itemType}`;
 
     // ============================================
     // FETCH DATA WITH PAGINATION
@@ -616,6 +824,116 @@ const BottleInventory = () => {
     };
 
     // ============================================
+    // FETCH TRANSACTIONS FOR ROW
+    // ============================================
+    const fetchTransactionsForRow = async (item) => {
+        const rowKey = getRowKey(item);
+        try {
+            setLoadingTransactionsKey(rowKey);
+            const queryParams = new URLSearchParams({
+                mlSize: item.mlSize,
+                itemType: item.itemType,
+                limit: 100,
+                page: 1
+            });
+
+            const response = await fetch(
+                `${import.meta.env.VITE_API_URL}/bottles/get-transactions?${queryParams}`,
+                { credentials: 'include' }
+            );
+            if (!response.ok) throw new Error('Failed to fetch transaction history');
+            const data = await response.json();
+
+            const sorted = [...(data.transactions || [])].sort(
+                (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+            );
+
+            setTransactionsByRowKey(prev => ({ ...prev, [rowKey]: sorted }));
+        } catch (error) {
+            console.error("Error fetching transactions:", error);
+            toast.error("Failed to load transaction history");
+            setTransactionsByRowKey(prev => ({ ...prev, [rowKey]: [] }));
+        } finally {
+            setLoadingTransactionsKey(null);
+        }
+    };
+
+    // ============================================
+    // FETCH DISPOSAL HISTORY
+    // ============================================
+    const fetchDisposalHistory = async (item) => {
+        const rowKey = getRowKey(item);
+        try {
+            setLoadingDisposal(true);
+            setCurrentDisposalRowKey(rowKey);
+
+            // For bottles, we need to fetch disposal by inventoryItemId
+            // Since bottles don't have a single ID, we need to use the bottleItemId
+            const bottleItemId = item.bottleItemId;
+
+            if (!bottleItemId) {
+                toast.error("Cannot fetch disposal history: No item ID found");
+                setDisposalData(null);
+                return;
+            }
+
+            const response = await fetch(
+                `${import.meta.env.VITE_API_URL}/disposal/get-by-product/${bottleItemId}`,
+                { credentials: 'include' }
+            );
+
+            if (!response.ok) throw new Error('Failed to fetch disposal history');
+
+            const data = await response.json();
+            setDisposalData(data.data);
+            setShowDisposalPanel(true);
+        } catch (error) {
+            console.error("Error fetching disposal history:", error);
+            toast.error("Failed to load disposal history");
+            setDisposalData(null);
+        } finally {
+            setLoadingDisposal(false);
+        }
+    };
+
+    // ============================================
+    // CHECK IF ITEM HAS DISPOSAL HISTORY
+    // ============================================
+    const checkHasDisposal = async (item) => {
+        try {
+            const bottleItemId = item.bottleItemId;
+            if (!bottleItemId) return false;
+
+            const response = await fetch(
+                `${import.meta.env.VITE_API_URL}/disposal/get-by-product/${bottleItemId}`,
+                { credentials: 'include' }
+            );
+            if (!response.ok) return false;
+            const data = await response.json();
+            return data.data && data.data.disposals && data.data.disposals.length > 0;
+        } catch (error) {
+            return false;
+        }
+    };
+
+    const handleRowClick = async (item) => {
+        const rowKey = getRowKey(item);
+
+        if (expandedRowKey === rowKey) {
+            setExpandedRowKey(null);
+            setShowDisposalPanel(false);
+            setDisposalData(null);
+            return;
+        }
+
+        setExpandedRowKey(rowKey);
+
+        if (!transactionsByRowKey[rowKey]) {
+            await fetchTransactionsForRow(item);
+        }
+    };
+
+    // ============================================
     // ADD STOCK
     // ============================================
     const handleAddStock = async () => {
@@ -658,10 +976,25 @@ const BottleInventory = () => {
             const result = await response.json();
             toast.success(result.message);
 
+            const updatedRowKey = `${addStockData.mlSize}__${addStockData.itemType}`;
+
             setAddStockData({ mlSize: "", itemType: "", quantity: "", reason: "Purchase" });
             setShowAddStockModal(false);
             await fetchInventory(currentPage, searchTerm, selectedML, selectedItemType);
             await fetchAlerts();
+
+            if (expandedRowKey === updatedRowKey) {
+                const updatedItem = inventory.find(
+                    inv => inv.mlSize === addStockData.mlSize && inv.itemType === addStockData.itemType
+                ) || { mlSize: addStockData.mlSize, itemType: addStockData.itemType };
+                fetchTransactionsForRow(updatedItem);
+            } else {
+                setTransactionsByRowKey(prev => {
+                    const next = { ...prev };
+                    delete next[updatedRowKey];
+                    return next;
+                });
+            }
 
         } catch (error) {
             console.error("Error adding stock:", error);
@@ -818,6 +1151,12 @@ const BottleInventory = () => {
             await fetchInventory(currentPage, searchTerm, selectedML, selectedItemType);
             await fetchAlerts();
 
+            setTransactionsByRowKey({});
+            if (expandedRowKey) {
+                const [mlSize, itemType] = expandedRowKey.split('__');
+                fetchTransactionsForRow({ mlSize, itemType });
+            }
+
         } catch (error) {
             console.error("Error in bulk upload:", error);
             toast.error(error.message);
@@ -826,9 +1165,6 @@ const BottleInventory = () => {
         }
     };
 
-    // ============================================
-    // DOWNLOAD ERROR EXCEL - DIRECTLY FROM FRONTEND
-    // ============================================
     const handleDownloadErrorExcel = () => {
         try {
             if (!bulkErrors || bulkErrors.length === 0) {
@@ -911,15 +1247,6 @@ const BottleInventory = () => {
         if (quantity <= 0) return { status: 'empty', label: 'Empty' };
         if (quantity <= minStock) return { status: 'low', label: 'Low Stock' };
         return { status: 'healthy', label: 'In Stock' };
-    };
-
-    const getItemIcon = (itemType) => {
-        const type = itemType?.toLowerCase() || '';
-        if (type.includes('bottle')) return <FaBox />;
-        if (type.includes('cap')) return <FaBox />;
-        if (type.includes('pump')) return <FaBox />;
-        if (type.includes('box')) return <FaBox />;
-        return <FaBox />;
     };
 
     // ============================================
@@ -1028,22 +1355,68 @@ const BottleInventory = () => {
                                 ) : (
                                     filteredInventory.map((item) => {
                                         const status = getStockStatus(item.quantity, item.minStock);
+                                        const rowKey = getRowKey(item);
+                                        const isExpanded = expandedRowKey === rowKey;
+
                                         return (
-                                            <tr key={item._id}>
-                                                <td className="bi-ml-cell">{item.mlSize}</td>
-                                                <td className="bi-item-cell">
-                                                    <span className="bi-item-icon">{getItemIcon(item.itemType)}</span>
-                                                    {item.itemType}
-                                                </td>
-                                                <td className="bi-qty-cell">{item.quantity}</td>
-                                                <td className="bi-min-cell">{item.minStock}</td>
-                                                <td>
-                                                    <span className={`bi-status-badge bi-status-${status.status}`}>
-                                                        <span className="bi-status-dot"></span>
-                                                        {status.label}
-                                                    </span>
-                                                </td>
-                                            </tr>
+                                            <React.Fragment key={item._id || rowKey}>
+                                                <tr
+                                                    className={`bi-product-row ${isExpanded ? 'bi-row-expanded' : ''}`}
+                                                    onClick={() => handleRowClick(item)}
+                                                >
+                                                    <td className="bi-ml-cell">
+                                                        <span className="bi-ml-cell-content">
+                                                            <FaExpandChevron className={`bi-expand-chevron ${isExpanded ? 'bi-chevron-open' : ''}`} />
+                                                            {item.mlSize}
+                                                        </span>
+                                                    </td>
+                                                    <td className="bi-item-cell">
+                                                        <span className="bi-item-icon"><FaBox /></span>
+                                                        {item.itemType}
+                                                    </td>
+                                                    <td className="bi-qty-cell">{item.quantity}</td>
+                                                    <td className="bi-min-cell">{item.minStock}</td>
+                                                    <td>
+                                                        <span className={`bi-status-badge bi-status-${status.status}`}>
+                                                            <span className="bi-status-dot"></span>
+                                                            {status.label}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+
+                                                {isExpanded && (
+                                                    <>
+                                                        {/* Transaction Panel */}
+                                                        <tr className="bi-transaction-row">
+                                                            <td colSpan="5">
+                                                                <TransactionPanel
+                                                                    transactions={transactionsByRowKey[rowKey]}
+                                                                    isLoading={loadingTransactionsKey === rowKey}
+                                                                    onViewDisposal={() => fetchDisposalHistory(item)}
+                                                                    hasDisposal={true}
+                                                                />
+                                                            </td>
+                                                        </tr>
+
+                                                        {/* Disposal Panel */}
+                                                        {showDisposalPanel && currentDisposalRowKey === rowKey && (
+                                                            <tr className="bi-transaction-row">
+                                                                <td colSpan="5">
+                                                                    <DisposalHistoryPanel
+                                                                        disposals={disposalData?.disposals || []}
+                                                                        isLoading={loadingDisposal}
+                                                                        onClose={() => {
+                                                                            setShowDisposalPanel(false);
+                                                                            setDisposalData(null);
+                                                                            setCurrentDisposalRowKey(null);
+                                                                        }}
+                                                                    />
+                                                                </td>
+                                                            </tr>
+                                                        )}
+                                                    </>
+                                                )}
+                                            </React.Fragment>
                                         );
                                     })
                                 )}

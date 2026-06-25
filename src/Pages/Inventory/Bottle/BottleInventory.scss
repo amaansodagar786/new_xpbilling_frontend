@@ -111,7 +111,7 @@ $border-radius-sm: 8px;
             color: $white;
             padding: 9px 16px;
             font-family: 'Roboto', sans-serif;
-            font-size: 13px;
+            font-size: 12.5px;
             font-weight: 600;
             border: none;
             cursor: pointer;
@@ -251,7 +251,7 @@ $border-radius-sm: 8px;
 // ============================================
 .bi-data-table {
     max-width: 1200px;
-    margin: 0 auto 24px;
+    margin: 0 auto 18px;
     background: $white;
     border-radius: $border-radius;
     box-shadow: $shadow;
@@ -286,18 +286,6 @@ $border-radius-sm: 8px;
             border-bottom: 1px solid #f0f2f8;
         }
 
-        tr {
-            transition: background-color 0.15s;
-
-            &:last-child td {
-                border-bottom: none;
-            }
-
-            &:hover td {
-                background-color: #f5f6fb;
-            }
-        }
-
         td.bi-ml-cell {
             font-family: 'Roboto', sans-serif;
             font-weight: 700;
@@ -324,6 +312,358 @@ $border-radius-sm: 8px;
 
         td.bi-min-cell {
             color: #888;
+        }
+    }
+}
+
+// ── Clickable row (expand toggle) ──
+.bi-product-row {
+    cursor: pointer;
+    transition: background-color 0.15s;
+
+    &:hover td {
+        background-color: #f5f6fb;
+    }
+
+    &.bi-row-expanded td {
+        background-color: #f0f0fb;
+        border-bottom-color: transparent;
+    }
+}
+
+.bi-expand-chevron {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    color: #aab0bc;
+    transition: transform 0.25s ease, color 0.2s;
+    margin-right: 6px;
+    flex-shrink: 0;
+
+    &.bi-chevron-open {
+        transform: rotate(90deg);
+        color: $primary-color;
+    }
+}
+
+.bi-ml-cell-content {
+    display: flex;
+    align-items: center;
+}
+
+// ── Expanded transaction panel row ──
+.bi-transaction-row {
+    td {
+        padding: 0;
+        border-bottom: 1px solid #f0f2f8;
+    }
+}
+
+.bi-transaction-panel {
+    background: #fafaff;
+    padding: 18px 24px 20px 50px;
+    animation: bi-expandIn 0.2s ease-out;
+
+    @keyframes bi-expandIn {
+        from {
+            opacity: 0;
+            transform: translateY(-6px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+}
+
+.bi-transaction-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+
+    h5 {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0;
+        font-family: 'Roboto', sans-serif;
+        font-size: 13.5px;
+        font-weight: 700;
+        color: $primary-dark;
+    }
+}
+
+.bi-transaction-loading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 0;
+    font-family: 'Open Sans', sans-serif;
+    font-size: 13px;
+    color: #888;
+}
+
+.bi-transaction-empty {
+    padding: 16px 0;
+    font-family: 'Open Sans', sans-serif;
+    font-size: 13px;
+    color: #aab0bc;
+    text-align: center;
+}
+
+// ============================================
+// TRANSACTION LIST - SINGLE ROW
+// ============================================
+.bi-transaction-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 400px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.bi-transaction-item {
+    background: $white;
+    border: 1px solid #eceef6;
+    border-radius: $border-radius-sm;
+    padding: 8px 16px;
+    transition: all 0.2s;
+
+    &:hover {
+        border-color: $primary-light;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    }
+
+    .bi-transaction-row {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 2px 12px;
+        padding: 0;
+
+        .bi-txn-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            font-family: 'Roboto', sans-serif;
+            font-size: 11px;
+            font-weight: 600;
+            color: #888;
+            white-space: nowrap;
+
+            svg {
+                font-size: 10px;
+                color: $primary-light;
+            }
+        }
+
+        .bi-txn-value {
+            font-family: 'Open Sans', sans-serif;
+            font-size: 12.5px;
+            color: #3a3a5c;
+            white-space: nowrap;
+
+            &.bi-txn-qty {
+                color: $success-color;
+                font-weight: 700;
+            }
+
+            &.bi-txn-stock {
+                color: #555;
+                font-weight: 500;
+
+                strong {
+                    color: $primary-color;
+                    font-weight: 700;
+                }
+            }
+        }
+
+        .bi-txn-separator {
+            color: #dde1ed;
+            font-weight: 300;
+            font-size: 13px;
+        }
+    }
+}
+
+// ============================================
+// VIEW DISPOSAL BUTTON
+// ============================================
+.bi-view-disposal-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 14px;
+    background: linear-gradient(135deg, #dc3545, #e74c3c);
+    color: $white;
+    border: none;
+    border-radius: 50px;
+    font-family: 'Roboto', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-left: 12px;
+    flex-shrink: 0;
+
+    &:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+    }
+
+    svg {
+        font-size: 11px;
+    }
+}
+
+// ============================================
+// DISPOSAL PANEL
+// ============================================
+.bi-disposal-panel {
+    background: #fafaff;
+    padding: 14px 24px 18px;
+    border-top: 2px solid #f8d7da;
+    animation: bi-expandIn 0.2s ease-out;
+
+    .bi-disposal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 10px;
+
+        h5 {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 0;
+            font-family: 'Roboto', sans-serif;
+            font-size: 13px;
+            font-weight: 700;
+            color: #721c24;
+
+            svg {
+                color: $danger-color;
+            }
+        }
+
+        .bi-disposal-close-btn {
+            background: #f5f6fa;
+            border: none;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            font-size: 11px;
+            cursor: pointer;
+            color: #888;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+
+            &:hover {
+                background: #ffe8e8;
+                color: $danger-color;
+            }
+        }
+    }
+
+    .bi-disposal-loading {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 0;
+        font-family: 'Open Sans', sans-serif;
+        font-size: 13px;
+        color: #888;
+    }
+
+    .bi-disposal-empty {
+        padding: 12px 0;
+        font-family: 'Open Sans', sans-serif;
+        font-size: 13px;
+        color: #aab0bc;
+        text-align: center;
+    }
+
+    .bi-disposal-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        max-height: 300px;
+        overflow-y: auto;
+        padding-right: 4px;
+    }
+}
+
+// ============================================
+// DISPOSAL ITEM - SINGLE ROW
+// ============================================
+.bi-disposal-item {
+    background: #fff8f8;
+    border: 1px solid #f5d0d0;
+    border-radius: $border-radius-sm;
+    padding: 8px 16px;
+    transition: all 0.2s;
+
+    &:hover {
+        border-color: $danger-color;
+        box-shadow: 0 2px 8px rgba(220, 53, 69, 0.08);
+    }
+
+    .bi-disposal-row {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 2px 12px;
+        padding: 0;
+
+        .bi-disposal-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            font-family: 'Roboto', sans-serif;
+            font-size: 11px;
+            font-weight: 600;
+            color: #888;
+            white-space: nowrap;
+
+            svg {
+                font-size: 10px;
+                color: $danger-color;
+            }
+        }
+
+        .bi-disposal-value {
+            font-family: 'Open Sans', sans-serif;
+            font-size: 12.5px;
+            color: #3a3a5c;
+            white-space: nowrap;
+
+            &.bi-disposal-reason {
+                background: #fff3cd;
+                color: #856404;
+                padding: 1px 10px;
+                border-radius: 20px;
+                font-weight: 600;
+                font-size: 11px;
+            }
+
+            &.bi-disposal-qty {
+                color: $danger-color;
+                font-weight: 700;
+            }
+        }
+
+        .bi-disposal-separator {
+            color: #dde1ed;
+            font-weight: 300;
+            font-size: 13px;
         }
     }
 }
@@ -437,6 +777,12 @@ $border-radius-sm: 8px;
         height: 16px;
         border-width: 2px;
     }
+
+    &.tiny {
+        width: 14px;
+        height: 14px;
+        border-width: 2px;
+    }
 }
 
 @keyframes bi-spin {
@@ -446,6 +792,96 @@ $border-radius-sm: 8px;
 
     100% {
         transform: rotate(360deg);
+    }
+}
+
+// ============================================
+// PAGINATION
+// ============================================
+.bi-pagination {
+    max-width: 1200px;
+    margin: 0 auto 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 14px;
+    padding: 14px 22px;
+    background: $white;
+    border-radius: $border-radius-sm;
+    box-shadow: $shadow;
+
+    .bi-pagination-info {
+        font-family: 'Open Sans', sans-serif;
+        font-size: 13px;
+        color: #888;
+    }
+
+    .bi-pagination-controls {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .bi-pagination-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border: 1.5px solid #e3e8f0;
+        border-radius: 50%;
+        background: $white;
+        color: $primary-color;
+        cursor: pointer;
+        font-size: 12px;
+        transition: all 0.2s;
+
+        &:hover:not(:disabled) {
+            background: $primary-color;
+            color: $white;
+            border-color: $primary-color;
+        }
+
+        &:disabled {
+            color: #ccd2e0;
+            cursor: not-allowed;
+            border-color: #f0f2f8;
+        }
+    }
+
+    .bi-pagination-pages {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin: 0 4px;
+    }
+
+    .bi-pagination-page {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border: none;
+        border-radius: 50%;
+        background: transparent;
+        color: #555;
+        cursor: pointer;
+        font-family: 'Roboto', sans-serif;
+        font-size: 13px;
+        font-weight: 600;
+        transition: all 0.2s;
+
+        &:hover {
+            background: #f0f2f8;
+        }
+
+        &.bi-pagination-active {
+            background: linear-gradient(135deg, $primary-color, $primary-light);
+            color: $white;
+            box-shadow: 0 2px 6px rgba(63, 63, 145, 0.3);
+        }
     }
 }
 
@@ -608,7 +1044,7 @@ $border-radius-sm: 8px;
     }
 }
 
-// ── Modal form fields (shared across all 6 modals) ──
+// ── Modal form fields ──
 .bi-form-row {
     display: flex;
     gap: 18px;
@@ -755,7 +1191,7 @@ $border-radius-sm: 8px;
     }
 }
 
-// ── Error modal (bulk upload results) ──
+// ── Error/Results modal ──
 .bi-upload-summary {
     display: flex;
     gap: 14px;
@@ -764,6 +1200,9 @@ $border-radius-sm: 8px;
 
     div {
         flex: 1;
+        display: flex;
+        align-items: center;
+        gap: 9px;
         padding: 12px 16px;
         border-radius: $border-radius-sm;
         font-family: 'Open Sans', sans-serif;
@@ -772,6 +1211,11 @@ $border-radius-sm: 8px;
         strong {
             font-family: 'Roboto', sans-serif;
             font-weight: 700;
+        }
+
+        svg {
+            font-size: 16px;
+            flex-shrink: 0;
         }
     }
 }
@@ -782,18 +1226,51 @@ $border-radius-sm: 8px;
 }
 
 .bi-summary-error {
-    background: #f8d7da;
-    color: #721c24;
+    &.has-errors {
+        background: #f8d7da;
+        color: #721c24;
+    }
+
+    &.no-errors {
+        background: #f0f2f8;
+        color: #888;
+    }
 }
 
-.bi-error-table-wrap {
+.bi-result-section {
+    margin-bottom: 22px;
+
+    &:last-child {
+        margin-bottom: 0;
+    }
+}
+
+.bi-result-heading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Roboto', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    margin: 0 0 12px;
+
+    &.bi-result-success {
+        color: $success-color;
+    }
+
+    &.bi-result-error {
+        color: $danger-color;
+    }
+}
+
+.bi-result-table-wrap {
     max-height: 280px;
     overflow-y: auto;
     border: 1px solid #f0f2f8;
     border-radius: $border-radius-sm;
 }
 
-.bi-error-table {
+.bi-result-table {
     width: 100%;
     border-collapse: collapse;
 
@@ -820,6 +1297,11 @@ $border-radius-sm: 8px;
         font-size: 13px;
         color: #3a3a5c;
         border-bottom: 1px solid #f0f2f8;
+
+        &.bi-success-cell {
+            color: $success-color;
+            font-weight: 600;
+        }
 
         &.bi-error-cell {
             color: $danger-color;
@@ -983,6 +1465,16 @@ $border-radius-sm: 8px;
         }
     }
 
+    .bi-transaction-panel {
+        padding: 16px;
+    }
+
+    .bi-pagination {
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+    }
+
     .bi-form-row {
         flex-direction: column;
         gap: 14px;
@@ -994,12 +1486,27 @@ $border-radius-sm: 8px;
     }
 
     .bi-modal-overlay {
-        // align-items: flex-end;
-        padding: 5px;
+        align-items: flex-end;
+        padding: 0;
     }
 
     .bi-upload-summary {
         flex-direction: column;
+    }
+
+    .bi-transaction-item .bi-transaction-row,
+    .bi-disposal-item .bi-disposal-row {
+        gap: 2px 8px;
+
+        .bi-txn-label,
+        .bi-disposal-label {
+            font-size: 10px;
+        }
+
+        .bi-txn-value,
+        .bi-disposal-value {
+            font-size: 11.5px;
+        }
     }
 }
 
@@ -1015,273 +1522,7 @@ $border-radius-sm: 8px;
     .bi-modal-footer {
         padding: 12px 16px;
     }
-}
 
-// ============================================
-// RESULT MODAL STYLES
-// ============================================
-.bi-upload-summary {
-    display: flex;
-    gap: 20px;
-    padding: 15px;
-    background: #f8f9fa;
-    border-radius: 8px;
-    margin-bottom: 20px;
-
-    .bi-summary-success {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        color: #28a745;
-        font-size: 14px;
-    }
-
-    .bi-summary-error {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 14px;
-
-        &.has-errors {
-            color: #dc3545;
-        }
-
-        &.no-errors {
-            color: #95a5a6;
-        }
-    }
-}
-
-.bi-result-section {
-    margin-bottom: 20px;
-
-    .bi-result-heading {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 15px;
-        font-weight: 600;
-        margin-bottom: 10px;
-        padding: 8px 12px;
-        border-radius: 6px;
-
-        &.bi-result-success {
-            color: #155724;
-            background: #d4edda;
-        }
-
-        &.bi-result-error {
-            color: #721c24;
-            background: #f8d7da;
-        }
-    }
-}
-
-.bi-result-table-wrap {
-    overflow-x: auto;
-    max-height: 200px;
-    overflow-y: auto;
-    border: 1px solid #e8eaf0;
-    border-radius: 6px;
-
-    .bi-result-table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 13px;
-
-        thead {
-            position: sticky;
-            top: 0;
-            z-index: 10;
-
-            th {
-                padding: 8px 12px;
-                text-align: left;
-                background: #f5f6fa;
-                font-weight: 600;
-                color: #555;
-                border-bottom: 1px solid #e8eaf0;
-            }
-        }
-
-        tbody td {
-            padding: 8px 12px;
-            border-bottom: 1px solid #f0f2f8;
-            font-size: 13px;
-            color: #3a3a5c;
-        }
-
-        .bi-success-cell {
-            color: #28a745;
-            font-weight: 600;
-        }
-
-        .bi-error-cell {
-            color: #dc3545;
-            font-weight: 500;
-        }
-
-        &.bi-success-table tbody tr:hover {
-            background: #e8f5e9;
-        }
-
-        &.bi-error-table tbody tr:hover {
-            background: #fbe9eb;
-        }
-    }
-}
-
-.bi-btn-download-error {
-    background: #dc3545;
-    color: white;
-    padding: 8px 20px;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 14px;
-    font-weight: 500;
-    transition: all 0.2s;
-
-    &:hover {
-        background: #c82333;
-        transform: translateY(-1px);
-        box-shadow: 0 3px 10px rgba(220, 53, 69, 0.3);
-    }
-}
-
-// ============================================
-// PAGINATION STYLES
-// ============================================
-.bi-pagination {
-    max-width: 1200px;
-    margin: 0 auto 24px;
-    padding: 16px 24px;
-    background: $white;
-    border-radius: $border-radius;
-    box-shadow: $shadow;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 14px;
-
-    .bi-pagination-info {
-        font-family: 'Open Sans', sans-serif;
-        font-size: 13.5px;
-        color: #555;
-        font-weight: 500;
-    }
-
-    .bi-pagination-controls {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        flex-wrap: wrap;
-    }
-
-    .bi-pagination-btn {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 36px;
-        height: 36px;
-        border: 1.5px solid #e3e8f0;
-        border-radius: $border-radius-sm;
-        background: $white;
-        color: #555;
-        cursor: pointer;
-        transition: all 0.2s;
-        font-size: 13px;
-
-        &:hover:not(:disabled) {
-            border-color: $primary-color;
-            background: #f5f6fb;
-            color: $primary-color;
-        }
-
-        &:disabled {
-            opacity: 0.4;
-            cursor: not-allowed;
-        }
-    }
-
-    .bi-pagination-pages {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-    }
-
-    .bi-pagination-page {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        min-width: 36px;
-        height: 36px;
-        padding: 0 10px;
-        border: 1.5px solid transparent;
-        border-radius: $border-radius-sm;
-        background: transparent;
-        color: #555;
-        cursor: pointer;
-        transition: all 0.2s;
-        font-family: 'Roboto', sans-serif;
-        font-size: 13.5px;
-        font-weight: 600;
-
-        &:hover:not(.bi-pagination-active) {
-            background: #f5f6fb;
-            border-color: #e3e8f0;
-        }
-
-        &.bi-pagination-active {
-            background: $primary-color;
-            color: $white;
-            border-color: $primary-color;
-            box-shadow: 0 2px 8px rgba(63, 63, 145, 0.25);
-        }
-    }
-}
-
-// ============================================
-// RESPONSIVE PAGINATION
-// ============================================
-@media screen and (max-width: 768px) {
-    .bi-pagination {
-        flex-direction: column;
-        align-items: stretch;
-        text-align: center;
-
-        .bi-pagination-info {
-            text-align: center;
-        }
-
-        .bi-pagination-controls {
-            justify-content: center;
-        }
-
-        .bi-pagination-pages {
-            gap: 3px;
-        }
-
-        .bi-pagination-page {
-            min-width: 32px;
-            height: 32px;
-            font-size: 12px;
-            padding: 0 8px;
-        }
-
-        .bi-pagination-btn {
-            width: 32px;
-            height: 32px;
-            font-size: 12px;
-        }
-    }
-}
-
-@media (max-width: 480px) {
     .bi-pagination {
         padding: 12px 16px;
 
@@ -1290,16 +1531,35 @@ $border-radius-sm: 8px;
         }
 
         .bi-pagination-page {
-            min-width: 28px;
+            width: 28px;
             height: 28px;
             font-size: 11px;
-            padding: 0 6px;
         }
 
         .bi-pagination-btn {
             width: 28px;
             height: 28px;
             font-size: 11px;
+        }
+    }
+
+    .bi-transaction-item .bi-transaction-row,
+    .bi-disposal-item .bi-disposal-row {
+        gap: 2px 6px;
+
+        .bi-txn-label,
+        .bi-disposal-label {
+            font-size: 9px;
+        }
+
+        .bi-txn-value,
+        .bi-disposal-value {
+            font-size: 10.5px;
+        }
+
+        .bi-txn-separator,
+        .bi-disposal-separator {
+            font-size: 10px;
         }
     }
 }

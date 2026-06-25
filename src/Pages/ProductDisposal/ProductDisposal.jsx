@@ -415,15 +415,23 @@ const ProductDisposal = () => {
                 };
             }
 
-            // ✅ Format products based on inventory type
-            let formattedProducts = productsArray.map(p => ({
-                id: p.xpId || p.dispenserId || p.bottleItemId || p._id,
-                name: p.productName || `${p.mlSize || ''} ${p.itemType || ''}`.trim(),
-                ml: p.ml || p.mlSize || '',
-                itemType: p.itemType || '',
-                quantity: p.quantity || 0,
-                unit: type === 'bottles' ? 'Pieces' : 'KG'
-            }));
+            // ✅ Format products based on inventory type (NO ML for XP)
+            let formattedProducts = productsArray.map(p => {
+                // XP products don't have ML anymore
+                let mlValue = '';
+                if (type === 'dispenser' || type === 'bottles') {
+                    mlValue = p.ml || p.mlSize || '';
+                }
+
+                return {
+                    id: p.xpId || p.dispenserId || p.bottleItemId || p._id,
+                    name: p.productName || `${p.mlSize || ''} ${p.itemType || ''}`.trim(),
+                    ml: mlValue,
+                    itemType: p.itemType || '',
+                    quantity: p.quantity || 0,
+                    unit: type === 'bottles' ? 'Pieces' : 'KG'
+                };
+            });
 
             setProducts(formattedProducts);
             setFilteredProducts(formattedProducts);
@@ -696,7 +704,9 @@ const ProductDisposal = () => {
                                             {filteredProducts.map((product) => (
                                                 <tr key={product.id} className={getRowStockClass(product.quantity)}>
                                                     <td className="pd-name-cell">{product.name}</td>
-                                                    <td className="pd-ml-cell">{product.ml || '-'}</td>
+                                                    <td className="pd-ml-cell">
+                                                        {inventoryType === 'xp' ? '-' : (product.ml || '-')}
+                                                    </td>
                                                     <td className="pd-item-cell">{product.itemType || '-'}</td>
                                                     <td className="pd-stock-cell">{product.quantity}</td>
                                                     <td className="pd-unit-cell">{product.unit}</td>

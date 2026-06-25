@@ -364,7 +364,7 @@ $border-radius-sm: 8px;
 }
 
 // ============================================
-// TRANSACTION LIST - SINGLE ROW
+// TRANSACTION LIST - SINGLE ROW WITH STOCK
 // ============================================
 .di-transaction-list {
     display: flex;
@@ -424,6 +424,16 @@ $border-radius-sm: 8px;
             &.di-txn-price {
                 color: $primary-color;
                 font-weight: 600;
+            }
+
+            &.di-txn-stock {
+                color: #555;
+                font-weight: 500;
+
+                strong {
+                    color: $primary-color;
+                    font-weight: 700;
+                }
             }
         }
 

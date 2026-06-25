@@ -17,7 +17,7 @@ import * as XLSX from 'xlsx';
 import Select from 'react-select';
 
 // ============================================
-// ADD PRODUCT MODAL
+// ADD PRODUCT MODAL (UPDATED - NO ML)
 // ============================================
 const AddProductModal = ({
   show, onClose, newProduct, setNewProduct,
@@ -48,18 +48,6 @@ const AddProductModal = ({
                 autoComplete="off"
               />
             </div>
-            <div className="xp-form-field">
-              <label>ML *</label>
-              <select
-                value={newProduct.ml}
-                onChange={(e) => setNewProduct({ ...newProduct, ml: e.target.value })}
-              >
-                <option value="">Select ML</option>
-                <option value="30">30 ml</option>
-                <option value="60">60 ml</option>
-                <option value="125">125 ml</option>
-              </select>
-            </div>
           </div>
         </div>
         <div className="xp-modal-footer">
@@ -69,7 +57,7 @@ const AddProductModal = ({
           <button
             className="xp-btn-primary"
             onClick={onSubmit}
-            disabled={isSubmitting || !newProduct.productName.trim() || !newProduct.ml}
+            disabled={isSubmitting || !newProduct.productName.trim()}
           >
             {isSubmitting ? "Adding..." : "Add Product"}
           </button>
@@ -80,7 +68,7 @@ const AddProductModal = ({
 };
 
 // ============================================
-// ADD STOCK MODAL
+// ADD STOCK MODAL (UPDATED - NO ML)
 // ============================================
 const AddStockModal = ({
   show, onClose, products, addStockData, setAddStockData,
@@ -92,7 +80,7 @@ const AddStockModal = ({
 
   const productOptions = products.map(p => ({
     value: p.xpId,
-    label: `${p.productName} - ${p.ml}ml`,
+    label: `${p.productName}`,
     product: p
   }));
 
@@ -102,15 +90,13 @@ const AddStockModal = ({
       setAddStockData({
         ...addStockData,
         xpId: product.xpId,
-        productName: product.productName,
-        ml: product.ml
+        productName: product.productName
       });
     } else {
       setAddStockData({
         ...addStockData,
         xpId: "",
-        productName: "",
-        ml: ""
+        productName: ""
       });
     }
   };
@@ -195,7 +181,7 @@ const AddStockModal = ({
     noOptionsMessage: (provided) => ({
       ...provided,
       fontFamily: "'Open Sans', sans-serif",
-      fontSize: '13px',
+      fontSize: "13px",
       color: '#aab0bc',
       padding: '12px 14px'
     })
@@ -297,7 +283,7 @@ const AddStockModal = ({
 };
 
 // ============================================
-// EDIT PRODUCT MODAL
+// EDIT PRODUCT MODAL (UPDATED - NO ML)
 // ============================================
 const EditProductModal = ({
   show, onClose, editData, setEditData,
@@ -328,18 +314,6 @@ const EditProductModal = ({
                 autoComplete="off"
               />
             </div>
-            <div className="xp-form-field">
-              <label>ML *</label>
-              <select
-                value={editData.ml}
-                onChange={(e) => setEditData({ ...editData, ml: e.target.value })}
-              >
-                <option value="">Select ML</option>
-                <option value="30">30 ml</option>
-                <option value="60">60 ml</option>
-                <option value="125">125 ml</option>
-              </select>
-            </div>
           </div>
         </div>
         <div className="xp-modal-footer">
@@ -349,7 +323,7 @@ const EditProductModal = ({
           <button
             className="xp-btn-primary"
             onClick={onSubmit}
-            disabled={isSubmitting || !editData.productName.trim() || !editData.ml}
+            disabled={isSubmitting || !editData.productName.trim()}
           >
             {isSubmitting ? "Updating..." : "Update Product"}
           </button>
@@ -360,7 +334,7 @@ const EditProductModal = ({
 };
 
 // ============================================
-// BULK UPLOAD MODAL
+// BULK UPLOAD MODAL (UPDATED - NO ML)
 // ============================================
 const BulkUploadModal = ({
   show, onClose, fileInputRef, selectedFile, onFileChange,
@@ -401,8 +375,8 @@ const BulkUploadModal = ({
 
             <p className="xp-upload-hint">
               {uploadType === 'products'
-                ? 'File should have columns: Product Name, ML'
-                : 'File should have columns: Product Name, ML, Quantity, Purchase Price'}
+                ? 'File should have columns: Product Name'
+                : 'File should have columns: Product Name, Quantity, Purchase Price'}
             </p>
 
             <div className="xp-file-drop">
@@ -442,7 +416,7 @@ const BulkUploadModal = ({
 };
 
 // ============================================
-// ERROR MODAL
+// ERROR MODAL (UPDATED - NO ML)
 // ============================================
 const ErrorModal = ({
   show, onClose, bulkSuccessCount, bulkErrorCount,
@@ -487,7 +461,6 @@ const ErrorModal = ({
                     <tr>
                       <th>Row</th>
                       <th>Product Name</th>
-                      <th>ML</th>
                       {bulkSuccessDetails[0]?.quantity !== undefined && (
                         <>
                           <th>Quantity</th>
@@ -503,7 +476,6 @@ const ErrorModal = ({
                       <tr key={index}>
                         <td>{item.row}</td>
                         <td>{item.productName}</td>
-                        <td>{item.ml}ml</td>
                         {item.quantity !== undefined && (
                           <>
                             <td>{item.quantity} KG</td>
@@ -531,7 +503,6 @@ const ErrorModal = ({
                     <tr>
                       <th>Row</th>
                       <th>Product Name</th>
-                      <th>ML</th>
                       {bulkErrors[0]?.quantity !== undefined && (
                         <>
                           <th>Quantity</th>
@@ -546,7 +517,6 @@ const ErrorModal = ({
                       <tr key={index}>
                         <td>{err.row}</td>
                         <td>{err.productName || '-'}</td>
-                        <td>{err.ml || '-'}</td>
                         {err.quantity !== undefined && (
                           <>
                             <td>{err.quantity || '-'}</td>
@@ -579,7 +549,7 @@ const ErrorModal = ({
 };
 
 // ============================================
-// ALERT MODAL
+// ALERT MODAL (UPDATED - NO ML)
 // ============================================
 const AlertModal = ({ show, onClose, alerts }) => {
   if (!show) return null;
@@ -612,7 +582,7 @@ const AlertModal = ({ show, onClose, alerts }) => {
                   <div className="xp-alert-list">
                     {emptyItems.map((item, index) => (
                       <div key={index} className="xp-alert-item xp-alert-empty">
-                        <span>{item.productName} - {item.ml}ml</span>
+                        <span>{item.productName}</span>
                         <span>Quantity: {item.quantity} KG</span>
                       </div>
                     ))}
@@ -625,7 +595,7 @@ const AlertModal = ({ show, onClose, alerts }) => {
                   <div className="xp-alert-list">
                     {lowStockItems.map((item, index) => (
                       <div key={index} className="xp-alert-item xp-alert-low">
-                        <span>{item.productName} - {item.ml}ml</span>
+                        <span>{item.productName}</span>
                         <span>Quantity: {item.quantity} KG / Min: {item.minStock} KG</span>
                       </div>
                     ))}
@@ -646,7 +616,7 @@ const AlertModal = ({ show, onClose, alerts }) => {
 };
 
 // ============================================
-// DELETE CONFIRMATION MODAL
+// DELETE CONFIRMATION MODAL (UPDATED - NO ML)
 // ============================================
 const DeleteConfirmModal = ({ show, onClose, product, onConfirm, isDeleting }) => {
   if (!show || !product) return null;
@@ -669,7 +639,7 @@ const DeleteConfirmModal = ({ show, onClose, product, onConfirm, isDeleting }) =
             </div>
             <h3>Are you sure?</h3>
             <p>
-              You are about to delete <strong>"{product.productName} - {product.ml}ml"</strong>.
+              You are about to delete <strong>"{product.productName}"</strong>.
               This will also delete all stock and transaction history for this product.
               <br /><br />
               <strong style={{ color: '#dc3545' }}>This action cannot be undone!</strong>
@@ -694,7 +664,7 @@ const DeleteConfirmModal = ({ show, onClose, product, onConfirm, isDeleting }) =
 };
 
 // ============================================
-// DISPOSAL HISTORY PANEL (UPDATED - SINGLE ROW)
+// DISPOSAL HISTORY PANEL (UPDATED - NO ML)
 // ============================================
 const DisposalHistoryPanel = ({ disposals, isLoading, onClose }) => {
   const formatDateTime = (dateString) => {
@@ -743,7 +713,6 @@ const DisposalHistoryPanel = ({ disposals, isLoading, onClose }) => {
           const { date, time } = formatDateTime(d.disposedAt);
           return (
             <div key={d.disposalEntryId || idx} className="xp-disposal-item">
-              {/* ✅ SINGLE ROW - ALL FIELDS IN ONE LINE */}
               <div className="xp-disposal-row">
                 <span className="xp-disposal-label"><FaUser /> Disposed By:</span>
                 <span className="xp-disposal-value">{d.performedBy?.userName || 'Unknown'}</span>
@@ -785,7 +754,7 @@ const DisposalHistoryPanel = ({ disposals, isLoading, onClose }) => {
 };
 
 // ============================================
-// TRANSACTION HISTORY PANEL (UPDATED - SINGLE ROW)
+// TRANSACTION HISTORY PANEL (UPDATED - NO ML)
 // ============================================
 const TransactionPanel = ({ transactions, isLoading, onViewDisposal, hasDisposal }) => {
   const formatDateTime = (dateString) => {
@@ -796,7 +765,6 @@ const TransactionPanel = ({ transactions, isLoading, onViewDisposal, hasDisposal
     };
   };
 
-  // ✅ FILTER: Only show IN transactions
   const inTransactions = transactions?.filter(t => t.transactionType === 'IN') || [];
 
   if (isLoading) {
@@ -841,9 +809,7 @@ const TransactionPanel = ({ transactions, isLoading, onViewDisposal, hasDisposal
           const { date, time } = formatDateTime(t.createdAt);
           return (
             <div key={t.transactionId || idx} className="xp-transaction-item">
-              {/* ✅ SINGLE ROW - ALL FIELDS IN ONE LINE */}
               <div className="xp-transaction-row">
-
                 <span className="xp-txn-label"><FaArrowUp /> Quantity:</span>
                 <span className="xp-txn-value xp-txn-qty">+{t.quantity} KG</span>
 
@@ -851,28 +817,21 @@ const TransactionPanel = ({ transactions, isLoading, onViewDisposal, hasDisposal
 
                 <span className="xp-txn-label"><FaMoneyBillWave /> Price:</span>
                 <span className="xp-txn-value xp-txn-price">₹{t.purchasePrice?.toFixed(2) || '0.00'}/KG</span>
-                                <span className="xp-txn-separator">|</span>
+
+                <span className="xp-txn-separator">|</span>
+
+                <span className="xp-txn-label"><FaBox /> Stock:</span>
+                <span className="xp-txn-value">{t.previousStock} → <strong>{t.newStock}</strong></span>
+
+                <span className="xp-txn-separator">|</span>
 
                 <span className="xp-txn-label"><FaUser /> Name:</span>
                 <span className="xp-txn-value">{t.performedBy?.userName || 'Unknown'}</span>
 
                 <span className="xp-txn-separator">|</span>
 
-                <span className="xp-txn-label"><FaTag /> Reason:</span>
-                <span className="xp-txn-value">{t.reason || 'Purchase'}</span>
-
-                <span className="xp-txn-separator">|</span>
-
                 <span className="xp-txn-label"><FaCalendarAlt /> Date:</span>
-                <span className="xp-txn-value">{date}</span>
-
-                <span className="xp-txn-separator">|</span>
-
-                <span className="xp-txn-label"><FaClock /> Time:</span>
-                <span className="xp-txn-value">{time}</span>
-
-
-
+                <span className="xp-txn-value">{date} - {time}</span>
 
                 {t.notes && (
                   <>
@@ -891,7 +850,7 @@ const TransactionPanel = ({ transactions, isLoading, onViewDisposal, hasDisposal
 };
 
 // ============================================
-// MAIN COMPONENT
+// MAIN COMPONENT (UPDATED - NO ML)
 // ============================================
 const XPInventory = () => {
   const [inventory, setInventory] = useState([]);
@@ -902,7 +861,6 @@ const XPInventory = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [pagination, setPagination] = useState({
     total: 0,
@@ -915,7 +873,6 @@ const XPInventory = () => {
 
   const navigate = useNavigate();
 
-  // Modal states
   const [showAddProductModal, setShowAddProductModal] = useState(false);
   const [showAddStockModal, setShowAddStockModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -925,19 +882,16 @@ const XPInventory = () => {
   const [showAlertModal, setShowAlertModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
 
-  // Form states
-  const [newProduct, setNewProduct] = useState({ productName: "", ml: "" });
-  const [editData, setEditData] = useState({ productName: "", ml: "" });
+  const [newProduct, setNewProduct] = useState({ productName: "" });
+  const [editData, setEditData] = useState({ xpId: "", productName: "" });
   const [addStockData, setAddStockData] = useState({
     xpId: "",
     productName: "",
-    ml: "",
     quantity: "",
     purchasePrice: "",
     notes: ""
   });
 
-  // Bulk upload states
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploadType, setUploadType] = useState("inventory");
   const [bulkErrors, setBulkErrors] = useState([]);
@@ -946,12 +900,10 @@ const XPInventory = () => {
   const [bulkSuccessDetails, setBulkSuccessDetails] = useState([]);
   const [bulkUploadId, setBulkUploadId] = useState("");
 
-  // Row expansion / transaction history states
   const [expandedRowId, setExpandedRowId] = useState(null);
   const [transactionsByXpId, setTransactionsByXpId] = useState({});
   const [loadingTransactionsId, setLoadingTransactionsId] = useState(null);
 
-  // Disposal states
   const [showDisposalPanel, setShowDisposalPanel] = useState(false);
   const [disposalData, setDisposalData] = useState(null);
   const [loadingDisposal, setLoadingDisposal] = useState(false);
@@ -1095,23 +1047,6 @@ const XPInventory = () => {
     }
   };
 
-  // ============================================
-  // CHECK IF PRODUCT HAS DISPOSAL HISTORY
-  // ============================================
-  const checkHasDisposal = async (xpId) => {
-    try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/disposal/get-by-product/${xpId}`,
-        { credentials: 'include' }
-      );
-      if (!response.ok) return false;
-      const data = await response.json();
-      return data.data && data.data.disposals && data.data.disposals.length > 0;
-    } catch (error) {
-      return false;
-    }
-  };
-
   const handleRowClick = (xpId) => {
     if (expandedRowId === xpId) {
       setExpandedRowId(null);
@@ -1128,17 +1063,12 @@ const XPInventory = () => {
   };
 
   // ============================================
-  // CREATE PRODUCT
+  // CREATE PRODUCT (UPDATED - NO ML)
   // ============================================
   const handleCreateProduct = async () => {
     try {
       if (!newProduct.productName.trim()) {
         toast.error("Product name is required");
-        return;
-      }
-
-      if (!newProduct.ml) {
-        toast.error("Please select ML");
         return;
       }
 
@@ -1151,8 +1081,7 @@ const XPInventory = () => {
           credentials: 'include',
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            productName: newProduct.productName.trim(),
-            ml: parseInt(newProduct.ml)
+            productName: newProduct.productName.trim()
           })
         }
       );
@@ -1165,7 +1094,7 @@ const XPInventory = () => {
       const result = await response.json();
       toast.success(result.message);
 
-      setNewProduct({ productName: "", ml: "" });
+      setNewProduct({ productName: "" });
       setShowAddProductModal(false);
       await fetchInventory(currentPage, searchTerm);
       await fetchAlerts();
@@ -1179,7 +1108,7 @@ const XPInventory = () => {
   };
 
   // ============================================
-  // ADD STOCK
+  // ADD STOCK (UPDATED - NO ML)
   // ============================================
   const handleAddStock = async () => {
     try {
@@ -1208,7 +1137,6 @@ const XPInventory = () => {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             productName: addStockData.productName,
-            ml: parseInt(addStockData.ml),
             quantity: parseFloat(addStockData.quantity),
             purchasePrice: parseFloat(addStockData.purchasePrice),
             notes: addStockData.notes || ''
@@ -1229,7 +1157,6 @@ const XPInventory = () => {
       setAddStockData({
         xpId: "",
         productName: "",
-        ml: "",
         quantity: "",
         purchasePrice: "",
         notes: ""
@@ -1257,17 +1184,12 @@ const XPInventory = () => {
   };
 
   // ============================================
-  // UPDATE PRODUCT
+  // UPDATE PRODUCT (UPDATED - NO ML)
   // ============================================
   const handleUpdateProduct = async () => {
     try {
       if (!editData.productName.trim()) {
         toast.error("Product name is required");
-        return;
-      }
-
-      if (!editData.ml) {
-        toast.error("Please select ML");
         return;
       }
 
@@ -1280,8 +1202,7 @@ const XPInventory = () => {
           credentials: 'include',
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            productName: editData.productName.trim(),
-            ml: parseInt(editData.ml)
+            productName: editData.productName.trim()
           })
         }
       );
@@ -1294,7 +1215,7 @@ const XPInventory = () => {
       const result = await response.json();
       toast.success(result.message);
 
-      setEditData({ xpId: "", productName: "", ml: "" });
+      setEditData({ xpId: "", productName: "" });
       setShowEditModal(false);
       setSelectedProduct(null);
       await fetchInventory(currentPage, searchTerm);
@@ -1308,7 +1229,7 @@ const XPInventory = () => {
   };
 
   // ============================================
-  // DELETE PRODUCT
+  // DELETE PRODUCT (UPDATED - NO ML)
   // ============================================
   const handleDeleteProduct = async () => {
     if (!selectedProduct) return;
@@ -1434,7 +1355,7 @@ const XPInventory = () => {
   };
 
   // ============================================
-  // DOWNLOAD ERROR EXCEL
+  // DOWNLOAD ERROR EXCEL (UPDATED - NO ML)
   // ============================================
   const handleDownloadErrorExcel = () => {
     try {
@@ -1446,18 +1367,16 @@ const XPInventory = () => {
       const errorData = bulkErrors.map(err => ({
         'Row': err.row || '',
         'Product Name': err.productName || '',
-        'ML': err.ml || '',
         'Quantity': err.quantity || '',
         'Purchase Price': err.purchasePrice || '',
         'Error Reason': err.error || 'Unknown error'
       }));
 
       const worksheetData = [
-        ['Row', 'Product Name', 'ML', 'Quantity', 'Purchase Price', 'Error Reason'],
+        ['Row', 'Product Name', 'Quantity', 'Purchase Price', 'Error Reason'],
         ...errorData.map(item => [
           item['Row'],
           item['Product Name'],
-          item['ML'],
           item['Quantity'],
           item['Purchase Price'],
           item['Error Reason']
@@ -1469,7 +1388,6 @@ const XPInventory = () => {
       ws['!cols'] = [
         { wch: 8 },
         { wch: 35 },
-        { wch: 10 },
         { wch: 12 },
         { wch: 18 },
         { wch: 50 }
@@ -1537,8 +1455,7 @@ const XPInventory = () => {
     setSelectedProduct(product);
     setEditData({
       xpId: product.xpId,
-      productName: product.productName,
-      ml: product.ml.toString()
+      productName: product.productName
     });
     setShowEditModal(true);
   };
@@ -1621,7 +1538,6 @@ const XPInventory = () => {
               <thead>
                 <tr>
                   <th>Product Name</th>
-                  <th>ML</th>
                   <th>Quantity (KG)</th>
                   <th>Min Stock</th>
                   <th>Status</th>
@@ -1631,7 +1547,7 @@ const XPInventory = () => {
               <tbody>
                 {filteredInventory.length === 0 ? (
                   <tr>
-                    <td colSpan="6">
+                    <td colSpan="5">
                       <div className="xp-empty-state">
                         <FaBox className="xp-empty-icon" />
                         <p>No products found</p>
@@ -1655,7 +1571,6 @@ const XPInventory = () => {
                               {item.productName}
                             </span>
                           </td>
-                          <td className="xp-ml-cell">{item.ml}ml</td>
                           <td className="xp-qty-cell">{item.quantity}</td>
                           <td className="xp-min-cell">{item.minStock}</td>
                           <td>
@@ -1686,8 +1601,7 @@ const XPInventory = () => {
 
                         {isExpanded && (
                           <tr className="xp-transaction-row">
-                            <td colSpan="6">
-                              {/* Transaction Panel */}
+                            <td colSpan="5">
                               <TransactionPanel
                                 transactions={transactionsByXpId[item.xpId]}
                                 isLoading={loadingTransactionsId === item.xpId}
@@ -1695,7 +1609,6 @@ const XPInventory = () => {
                                 hasDisposal={true}
                               />
 
-                              {/* Disposal Panel (shown when disposal data is loaded) */}
                               {showDisposalPanel && currentDisposalXpId === item.xpId && (
                                 <DisposalHistoryPanel
                                   disposals={disposalData?.disposals || []}
@@ -1853,6 +1766,5 @@ const XPInventory = () => {
     </Navbar>
   );
 };
-
 
 export default XPInventory;
