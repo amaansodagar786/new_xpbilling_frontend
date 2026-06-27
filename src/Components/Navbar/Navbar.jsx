@@ -134,7 +134,7 @@ const Navbar = ({
       case '/report':
         return 'Business Reports And Analytics';
       case '/':
-        return 'Invoice Creation & Dashboard';
+        return 'Invoice Creation & Management';
       default:
         return '';
     }
@@ -144,7 +144,7 @@ const Navbar = ({
 
   // Define all possible menu items with their required permissions - ALL WORKING ICONS
   const allMenuData = [
-    // { icon: <PiBasket />, title: "Invoice", path: "/", permission: "invoice" },
+    { icon: <TbPackage />, title: "Invoice", path: "/", permission: "invoice" },
     // { icon: <HiOutlineHome />, title: "Dashboard", path: "/dashboard", permission: "dashboard" },
     { icon: <TbUsers />, title: "Customer", path: "/customer", permission: "customer" },
     { icon: <TbUsers />, title: "Admin", path: "/admin", permission: "admin" },

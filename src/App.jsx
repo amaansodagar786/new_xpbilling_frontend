@@ -16,6 +16,7 @@ import BottleInventory from "./Pages/Inventory/Bottle/BottleInventory";
 import XPInventory from "./Pages/Inventory/Xp/XPInventory";
 import DispenserInventory from "./Pages/Inventory/Dispenser/DispenserInventory";
 import ProductDisposal from "./Pages/ProductDisposal/ProductDisposal";
+import Invoice from "./Pages/Invoice/Invoice";
 
 function App() {
   return (
@@ -37,7 +38,7 @@ function App() {
             <Route path="/" element={
               <ProtectedRoute>
                 <PermissionRoute requiredPermission="invoice">
-                  <Customer />
+                  <Invoice />
                 </PermissionRoute>
               </ProtectedRoute>
             } />
