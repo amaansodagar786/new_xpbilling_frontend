@@ -5,7 +5,8 @@ import {
     FaFlask, FaTag, FaMoneyBillWave, FaTrash,
     FaPlus, FaSave, FaList, FaTimes, FaEye,
     FaFileInvoice, FaSearch, FaBan, FaCalendarAlt,
-    FaCreditCard, FaPlusCircle
+    FaCreditCard, FaPlusCircle, FaCheck, FaWindowClose,
+    FaPercentage, FaEdit, FaUndo, FaHistory
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../../Components/Navbar/Navbar";
@@ -14,7 +15,7 @@ import "react-toastify/dist/ReactToastify.css";
 import Select from 'react-select';
 
 // ============================================
-// INVOICE DETAILS MODAL (the ONLY popup — per-record details)
+// INVOICE DETAILS MODAL
 // ============================================
 const InvoiceDetailsModal = ({
     show, onClose, invoice, isLoading, formatDate, getStatusClass
@@ -104,8 +105,20 @@ const InvoiceDetailsModal = ({
                                             <strong>{invoice.packageItem.packageName}</strong>
                                         </div>
                                         <div className="inv-details-item">
-                                            <span className="inv-details-label">Price</span>
+                                            <span className="inv-details-label">Original Price</span>
                                             <strong>₹{invoice.packageItem.pricing}</strong>
+                                        </div>
+                                        <div className="inv-details-item">
+                                            <span className="inv-details-label">Discount</span>
+                                            <strong>{invoice.packageItem.discount}%</strong>
+                                        </div>
+                                        <div className="inv-details-item">
+                                            <span className="inv-details-label">Discount Amount</span>
+                                            <strong className="inv-discount-amount">-₹{invoice.packageItem.discountAmount?.toFixed(2) || 0}</strong>
+                                        </div>
+                                        <div className="inv-details-item">
+                                            <span className="inv-details-label">Final Price</span>
+                                            <strong className="inv-final-price">₹{invoice.packageItem.finalPrice?.toFixed(2) || invoice.packageItem.pricing}</strong>
                                         </div>
                                         <div className="inv-details-item">
                                             <span className="inv-details-label">Bottle Size</span>
@@ -136,6 +149,8 @@ const InvoiceDetailsModal = ({
                                                     <th>ML</th>
                                                     <th>Qty</th>
                                                     <th>Total ML</th>
+                                                    <th>Discount</th>
+                                                    <th>Final Price</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -145,6 +160,8 @@ const InvoiceDetailsModal = ({
                                                         <td>{item.ml}ml</td>
                                                         <td>{item.quantity}</td>
                                                         <td>{item.totalML}ml</td>
+                                                        <td>{item.discount}%</td>
+                                                        <td>₹{item.finalPrice?.toFixed(2) || 0}</td>
                                                     </tr>
                                                 ))}
                                             </tbody>
@@ -165,6 +182,10 @@ const InvoiceDetailsModal = ({
                                             <span className="inv-details-label">Discount</span>
                                             <strong>{invoice.promoApplied.discount}%</strong>
                                         </div>
+                                        <div className="inv-details-item">
+                                            <span className="inv-details-label">Discount Amount</span>
+                                            <strong className="inv-discount-amount">-₹{invoice.promoApplied.discountAmount?.toFixed(2) || 0}</strong>
+                                        </div>
                                     </div>
                                 </div>
                             )}
@@ -177,15 +198,27 @@ const InvoiceDetailsModal = ({
                                         <strong>₹{invoice.subtotal?.toFixed(2)}</strong>
                                     </div>
                                     <div className="inv-details-totals-row inv-details-totals-sub">
-                                        <span>GST ({invoice.gstRate}%)</span>
-                                        <strong>₹{invoice.gstAmount?.toFixed(2)}</strong>
+                                        <span>Package Discount</span>
+                                        <strong className="inv-discount-amount">-₹{invoice.packageDiscountAmount?.toFixed(2) || 0}</strong>
+                                    </div>
+                                    <div className="inv-details-totals-row inv-details-totals-sub">
+                                        <span>Dispenser Discount</span>
+                                        <strong className="inv-discount-amount">-₹{invoice.dispenserDiscountAmount?.toFixed(2) || 0}</strong>
                                     </div>
                                     {invoice.hasPromo && (
                                         <div className="inv-details-totals-row inv-details-totals-sub inv-details-totals-promo">
                                             <span>Promo Discount</span>
-                                            <strong>-₹{invoice.promoDiscount?.toFixed(2)}</strong>
+                                            <strong className="inv-discount-amount">-₹{invoice.promoDiscount?.toFixed(2)}</strong>
                                         </div>
                                     )}
+                                    <div className="inv-details-totals-row inv-details-totals-sub">
+                                        <span>Total Discount</span>
+                                        <strong className="inv-discount-amount">-₹{invoice.totalDiscountAmount?.toFixed(2) || 0}</strong>
+                                    </div>
+                                    <div className="inv-details-totals-row inv-details-totals-sub">
+                                        <span>GST ({invoice.gstRate}%)</span>
+                                        <strong>₹{invoice.gstAmount?.toFixed(2)}</strong>
+                                    </div>
                                     <div className="inv-details-totals-row inv-details-totals-grand">
                                         <span>Grand Total</span>
                                         <strong>₹{invoice.grandTotal?.toFixed(2)}</strong>
@@ -220,12 +253,75 @@ const InvoiceDetailsModal = ({
     );
 };
 
+// ============================================
+// DELETE CONFIRMATION MODAL
+// ============================================
+const DeleteConfirmModal = ({ show, onClose, onConfirm, invoice, isDeleting }) => {
+    if (!show) return null;
+
+    return (
+        <div className="inv-modal-overlay" onClick={onClose}>
+            <div className="inv-modal-content" onClick={(e) => e.stopPropagation()}>
+                <div className="inv-modal-header">
+                    <div className="inv-modal-title">
+                        <FaTrash /> Confirm Deletion
+                    </div>
+                    <button className="inv-modal-close" onClick={onClose}>
+                        <FaTimes />
+                    </button>
+                </div>
+                <div className="inv-modal-body">
+                    <div className="inv-delete-warning">
+                        <FaTrash className="inv-delete-icon" />
+                        <h3>Are you sure you want to delete this invoice?</h3>
+                        <p>This action will:</p>
+                        <ul>
+                            <li>Return all inventory used in this invoice</li>
+                            <li>Remove the invoice from active records</li>
+                            <li>Save a copy for audit purposes</li>
+                            <li>This action <strong>CANNOT</strong> be undone easily</li>
+                        </ul>
+                        {invoice && (
+                            <div className="inv-delete-summary">
+                                <div><strong>Invoice:</strong> {invoice.invoiceNumber}</div>
+                                <div><strong>Customer:</strong> {invoice.customer?.customerName}</div>
+                                <div><strong>Total:</strong> ₹{invoice.grandTotal?.toFixed(2)}</div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+                <div className="inv-modal-footer">
+                    <button className="inv-modal-btn-cancel" onClick={onClose}>
+                        Cancel
+                    </button>
+                    <button
+                        className="inv-modal-btn-delete"
+                        onClick={onConfirm}
+                        disabled={isDeleting}
+                    >
+                        {isDeleting ? 'Deleting...' : 'Yes, Delete Invoice'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// ============================================
+// MAIN INVOICE COMPONENT
+// ============================================
 const Invoice = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isUpdating, setIsUpdating] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
     const navigate = useNavigate();
 
-    // ========== PAGE VIEW TOGGLE (replaces navigation — inline flow) ==========
-    const [activeView, setActiveView] = useState("create"); // "create" | "list"
+    // ========== PAGE VIEW TOGGLE ==========
+    const [activeView, setActiveView] = useState("create");
+
+    // ========== EDIT MODE ==========
+    const [isEditing, setIsEditing] = useState(false);
+    const [editingInvoiceId, setEditingInvoiceId] = useState(null);
 
     // ========== DATA STATES ==========
     const [customers, setCustomers] = useState([]);
@@ -246,6 +342,9 @@ const Invoice = () => {
     const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
     const [notes, setNotes] = useState("");
 
+    // ========== PACKAGE DISCOUNT (EDITABLE) ==========
+    const [packageDiscountInput, setPackageDiscountInput] = useState(0);
+
     // ========== DISPENSER ADD FORM ==========
     const [dispenserSelect, setDispenserSelect] = useState(null);
     const [dispenserML, setDispenserML] = useState("");
@@ -254,22 +353,35 @@ const Invoice = () => {
     // ========== RECENT WORKSHOP ==========
     const [recentWorkshop, setRecentWorkshop] = useState(null);
 
-    // ========== CALCULATIONS ==========
+    // ========== CALCULATIONS WITH DISCOUNTS ==========
+    const [packageOriginalPrice, setPackageOriginalPrice] = useState(0);
+    const [packageDiscountPercent, setPackageDiscountPercent] = useState(0);
+    const [packageDiscountAmount, setPackageDiscountAmount] = useState(0);
+    const [packageFinalPrice, setPackageFinalPrice] = useState(0);
+
+    const [dispenserOriginalTotal, setDispenserOriginalTotal] = useState(0);
+    const [dispenserDiscountTotal, setDispenserDiscountTotal] = useState(0);
+    const [dispenserFinalTotal, setDispenserFinalTotal] = useState(0);
+
     const [subtotal, setSubtotal] = useState(0);
+    const [subtotalWithoutGST, setSubtotalWithoutGST] = useState(0);
     const [gstAmount, setGstAmount] = useState(0);
     const [promoDiscount, setPromoDiscount] = useState(0);
+    const [totalDiscount, setTotalDiscount] = useState(0);
     const [grandTotal, setGrandTotal] = useState(0);
 
-    // ========== INVOICE LIST STATE (inline table, not a modal) ==========
+    // ========== INVOICE LIST STATE ==========
     const [allInvoices, setAllInvoices] = useState([]);
     const [isLoadingInvoices, setIsLoadingInvoices] = useState(false);
     const [invoiceSearchTerm, setInvoiceSearchTerm] = useState("");
     const [hasLoadedInvoicesOnce, setHasLoadedInvoicesOnce] = useState(false);
 
-    // ========== INVOICE DETAILS MODAL STATE (the only popup) ==========
+    // ========== MODAL STATES ==========
     const [showInvoiceDetailsModal, setShowInvoiceDetailsModal] = useState(false);
     const [viewingInvoice, setViewingInvoice] = useState(null);
     const [isLoadingInvoiceDetails, setIsLoadingInvoiceDetails] = useState(false);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [deletingInvoice, setDeletingInvoice] = useState(null);
 
     // ========== GST RATE ==========
     const GST_RATE = 18;
@@ -280,12 +392,19 @@ const Invoice = () => {
     const fetchCustomers = async () => {
         try {
             const response = await fetch(
-                `${import.meta.env.VITE_API_URL}/customer/get-customers`,
+                `${import.meta.env.VITE_API_URL}/customer/get-customers?limit=1000`,
                 { credentials: 'include' }
             );
             if (!response.ok) throw new Error('Failed to fetch customers');
             const data = await response.json();
-            setCustomers(data);
+
+            if (Array.isArray(data)) {
+                setCustomers(data);
+            } else if (data && data.data && Array.isArray(data.data)) {
+                setCustomers(data.data);
+            } else {
+                setCustomers([]);
+            }
         } catch (error) {
             console.error("Error fetching customers:", error);
             toast.error("Failed to fetch customers");
@@ -360,6 +479,9 @@ const Invoice = () => {
         fetchPromoCodes();
     }, []);
 
+    // ============================================
+    // FETCH WORKSHOPS FOR CUSTOMER
+    // ============================================
     useEffect(() => {
         const fetchWorkshopsForCustomer = async () => {
             if (!selectedCustomer) {
@@ -398,18 +520,15 @@ const Invoice = () => {
                         return currentDateTime > latestDateTime ? current : latestSoFar;
                     }, customerWorkshops[0]);
 
-                    // ✅ CHECK IF CUSTOMER ALREADY HAS INVOICE FOR THIS WORKSHOP
                     const customerInWorkshop = latest.customers.find(
                         c => c.customerId === selectedCustomer.value
                     );
 
-                    // ✅ If invoice already created for this workshop
                     if (customerInWorkshop && customerInWorkshop.invoiceCreated === true) {
                         toast.warning(`Latest workshop invoice already created for ${selectedCustomer.label}`);
                         setSelectedWorkshop(null);
                         setRecentWorkshop(null);
                     } else {
-                        // ✅ No invoice yet, auto-select normally
                         setSelectedWorkshop({
                             value: latest.workshopId,
                             label: `${new Date(latest.date).toLocaleDateString()} - ${latest.startTime}`,
@@ -447,44 +566,83 @@ const Invoice = () => {
                         label: foundPackage.packageName,
                         data: foundPackage
                     });
+                    setPackageDiscountInput(foundPackage.discount || 0);
                 }
             }
         }
     }, [recentWorkshop, selectedCustomer, packages]);
 
     // ============================================
-    // CALCULATE TOTALS
+    // CALCULATE TOTALS WITH DISCOUNTS
     // ============================================
     useEffect(() => {
-        let total = 0;
+        // 1. Calculate Package with Discount
+        let pkgOriginal = 0;
+        let pkgDiscountPercent = 0;
+        let pkgDiscountAmt = 0;
+        let pkgFinal = 0;
 
         if (selectedPackage) {
-            total += selectedPackage.data.pricing;
+            pkgOriginal = selectedPackage.data.pricing || 0;
+            pkgDiscountPercent = packageDiscountInput || selectedPackage.data.discount || 0;
+            pkgDiscountAmt = (pkgOriginal * pkgDiscountPercent) / 100;
+            pkgFinal = pkgOriginal - pkgDiscountAmt;
         }
+
+        setPackageOriginalPrice(pkgOriginal);
+        setPackageDiscountPercent(pkgDiscountPercent);
+        setPackageDiscountAmount(pkgDiscountAmt);
+        setPackageFinalPrice(pkgFinal);
+
+        // 2. Calculate Dispenser Items with Discounts
+        let dispOriginalTotal = 0;
+        let dispDiscountTotal = 0;
+        let dispFinalTotal = 0;
 
         dispenserItems.forEach(item => {
             const price = item.ml === 3 ? item.sellingPrice3ml : item.sellingPrice6ml;
-            total += price * item.totalML;
+            const itemOriginal = price * item.totalML;
+            const itemDiscountPercent = item.discount || 0;
+            const itemDiscountAmt = (itemOriginal * itemDiscountPercent) / 100;
+            const itemFinal = itemOriginal - itemDiscountAmt;
+
+            dispOriginalTotal += itemOriginal;
+            dispDiscountTotal += itemDiscountAmt;
+            dispFinalTotal += itemFinal;
         });
 
-        setSubtotal(total);
+        setDispenserOriginalTotal(dispOriginalTotal);
+        setDispenserDiscountTotal(dispDiscountTotal);
+        setDispenserFinalTotal(dispFinalTotal);
 
-        const subtotalWithoutGST = total / (1 + GST_RATE / 100);
-        let discount = 0;
+        // 3. Calculate Subtotal (WITH GST included)
+        const subtotalWithGST = pkgFinal + dispFinalTotal;
+        setSubtotal(subtotalWithGST);
 
+        // 4. Remove GST from subtotal
+        const subtotalWithoutGSTCalc = subtotalWithGST / (1 + GST_RATE / 100);
+        setSubtotalWithoutGST(subtotalWithoutGSTCalc);
+
+        // 5. Apply Promo Discount on subtotal WITHOUT GST
+        let promoDiscountAmt = 0;
         if (selectedPromo) {
-            discount = subtotalWithoutGST * (selectedPromo.discount / 100);
+            promoDiscountAmt = subtotalWithoutGSTCalc * (selectedPromo.discount / 100);
         }
+        setPromoDiscount(promoDiscountAmt);
 
-        const afterPromo = subtotalWithoutGST - discount;
+        // 6. Calculate total discount
+        const totalDiscountAmt = pkgDiscountAmt + dispDiscountTotal + promoDiscountAmt;
+        setTotalDiscount(totalDiscountAmt);
+
+        // 7. Calculate final amounts
+        const afterPromo = subtotalWithoutGSTCalc - promoDiscountAmt;
         const gst = afterPromo * (GST_RATE / 100);
         const grand = afterPromo + gst;
 
         setGstAmount(gst);
-        setPromoDiscount(discount);
         setGrandTotal(grand);
 
-    }, [selectedPackage, dispenserItems, selectedPromo]);
+    }, [selectedPackage, packageDiscountInput, dispenserItems, selectedPromo, GST_RATE]);
 
     // ============================================
     // HANDLE ADD DISPENSER ITEM
@@ -548,6 +706,39 @@ const Invoice = () => {
     };
 
     // ============================================
+    // HANDLE UPDATE DISPENSER DISCOUNT
+    // ============================================
+    const handleUpdateDispenserDiscount = (index, newDiscount) => {
+        const updatedItems = [...dispenserItems];
+        const discount = Math.min(100, Math.max(0, parseFloat(newDiscount) || 0));
+        updatedItems[index].discount = discount;
+        setDispenserItems(updatedItems);
+    };
+
+    // ============================================
+    // HANDLE ADD & CLOSE WORKSHOP/PACKAGE
+    // ============================================
+    const handleAddAndCloseWorkshop = () => {
+        setSelectedWorkshop(null);
+        setSelectedPackage(null);
+        setSelectedXPOil(null);
+        setRecentWorkshop(null);
+        setPackageDiscountInput(0);
+        toast.info("Workshop & Package selections cleared");
+    };
+
+    // ============================================
+    // HANDLE CLOSE DISPENSER
+    // ============================================
+    const handleCloseDispenser = () => {
+        setDispenserItems([]);
+        setDispenserSelect(null);
+        setDispenserML("");
+        setDispenserQty("");
+        toast.info("Dispenser items cleared");
+    };
+
+    // ============================================
     // HANDLE CREATE INVOICE
     // ============================================
     const handleCreateInvoice = async () => {
@@ -577,7 +768,8 @@ const Invoice = () => {
                 dispenserItems: dispenserItems.map(item => ({
                     dispenserId: item.dispenserId,
                     ml: item.ml,
-                    quantity: item.quantity
+                    quantity: item.quantity,
+                    discount: item.discount || 0
                 })),
                 promoCode: selectedPromo?.code || null,
                 paymentStatus: paymentStatus,
@@ -603,25 +795,8 @@ const Invoice = () => {
             const result = await response.json();
             toast.success(`Invoice ${result.invoice.invoiceNumber} created successfully!`);
 
-            setSelectedCustomer(null);
-            setSelectedWorkshop(null);
-            setSelectedPackage(null);
-            setSelectedXPOil(null);
-            setDispenserItems([]);
-            setSelectedPromo(null);
-            setPaymentStatus("Cash");
-            setNotes("");
-            setInvoiceDate(new Date().toISOString().split('T')[0]);
-
-            fetchCustomers();
-            fetchPackages();
-            fetchXPOils();
-            fetchDispenserOils();
-
-            // If the invoice list was already loaded once, refresh it silently in background
-            if (hasLoadedInvoicesOnce) {
-                fetchAllInvoices();
-            }
+            resetForm();
+            fetchAllInvoices();
 
         } catch (error) {
             console.error("Error creating invoice:", error);
@@ -632,7 +807,139 @@ const Invoice = () => {
     };
 
     // ============================================
-    // FETCH ALL INVOICES (inline table data)
+    // HANDLE UPDATE INVOICE
+    // ============================================
+    const handleUpdateInvoice = async () => {
+        try {
+            if (!editingInvoiceId) {
+                toast.error("No invoice to update");
+                return;
+            }
+
+            if (!selectedCustomer) {
+                toast.error("Please select a customer");
+                return;
+            }
+
+            if (!selectedPackage && dispenserItems.length === 0) {
+                toast.error("Please add a package or dispenser items");
+                return;
+            }
+
+            if (selectedPackage && !selectedXPOil) {
+                toast.error("Please select an XP oil for the package");
+                return;
+            }
+
+            setIsUpdating(true);
+
+            const payload = {
+                packageId: selectedPackage?.value || null,
+                xpOilId: selectedXPOil?.value || null,
+                packageDiscount: packageDiscountInput || 0,
+                dispenserItems: dispenserItems.map(item => ({
+                    dispenserId: item.dispenserId,
+                    ml: item.ml,
+                    quantity: item.quantity,
+                    discount: item.discount || 0
+                })),
+                promoCode: selectedPromo?.code || null,
+                paymentStatus: paymentStatus,
+                invoiceDate: invoiceDate,
+                notes: notes
+            };
+
+            const response = await fetch(
+                `${import.meta.env.VITE_API_URL}/invoice/update/${editingInvoiceId}`,
+                {
+                    method: "PUT",
+                    credentials: 'include',
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                }
+            );
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || "Failed to update invoice");
+            }
+
+            const result = await response.json();
+            toast.success(`Invoice ${result.invoice.invoiceNumber} updated successfully!`);
+
+            resetForm();
+            setIsEditing(false);
+            setEditingInvoiceId(null);
+            fetchAllInvoices();
+
+        } catch (error) {
+            console.error("Error updating invoice:", error);
+            toast.error(error.message);
+        } finally {
+            setIsUpdating(false);
+        }
+    };
+
+    // ============================================
+    // HANDLE DELETE INVOICE
+    // ============================================
+    const handleDeleteInvoice = async () => {
+        if (!deletingInvoice) return;
+
+        try {
+            setIsDeleting(true);
+
+            const response = await fetch(
+                `${import.meta.env.VITE_API_URL}/invoice/delete/${deletingInvoice}`,
+                {
+                    method: "DELETE",
+                    credentials: 'include',
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ deletionReason: 'Invoice deleted by user' })
+                }
+            );
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || "Failed to delete invoice");
+            }
+
+            const result = await response.json();
+            toast.success(`Invoice ${result.deletedInvoice.invoiceNumber} deleted successfully!`);
+
+            setShowDeleteModal(false);
+            setDeletingInvoice(null);
+            fetchAllInvoices();
+
+        } catch (error) {
+            console.error("Error deleting invoice:", error);
+            toast.error(error.message);
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
+    // ============================================
+    // RESET FORM
+    // ============================================
+    const resetForm = () => {
+        setSelectedCustomer(null);
+        setSelectedWorkshop(null);
+        setSelectedPackage(null);
+        setSelectedXPOil(null);
+        setDispenserItems([]);
+        setSelectedPromo(null);
+        setPaymentStatus("Cash");
+        setNotes("");
+        setInvoiceDate(new Date().toISOString().split('T')[0]);
+        setPackageDiscountInput(0);
+        setRecentWorkshop(null);
+        setIsEditing(false);
+        setEditingInvoiceId(null);
+    };
+
+    // ============================================
+    // FETCH ALL INVOICES
     // ============================================
     const fetchAllInvoices = async () => {
         try {
@@ -656,7 +963,121 @@ const Invoice = () => {
     };
 
     // ============================================
-    // SWITCH TO "VIEW INVOICES" TAB (inline, no modal/navigation)
+    // HANDLE EDIT INVOICE - Load data into form
+    // ============================================
+    const handleEditInvoice = async (invoiceId) => {
+        try {
+            setIsLoadingInvoiceDetails(true);
+
+            const response = await fetch(
+                `${import.meta.env.VITE_API_URL}/invoice/${invoiceId}`,
+                { credentials: 'include' }
+            );
+
+            if (!response.ok) throw new Error('Failed to fetch invoice details');
+
+            const invoice = await response.json();
+
+            // Set customer
+            setSelectedCustomer({
+                value: invoice.customer.customerId,
+                label: `${invoice.customer.customerName} - ${invoice.customer.contactNumber}`,
+                data: invoice.customer
+            });
+
+            // Set workshop if exists
+            if (invoice.hasWorkshop && invoice.workshop) {
+                setSelectedWorkshop({
+                    value: invoice.workshop.workshopId,
+                    label: `${new Date(invoice.workshop.date).toLocaleDateString()} - ${invoice.workshop.startTime}`,
+                    data: invoice.workshop
+                });
+                setRecentWorkshop(invoice.workshop);
+            }
+
+            // Set package if exists
+            if (invoice.hasPackage && invoice.packageItem) {
+                const pkg = invoice.packageItem;
+                setSelectedPackage({
+                    value: pkg.packageId,
+                    label: pkg.packageName,
+                    data: {
+                        packageId: pkg.packageId,
+                        packageName: pkg.packageName,
+                        pricing: pkg.pricing,
+                        oilCount: pkg.oilCount,
+                        discount: pkg.discount,
+                        bottleML: pkg.bottleML,
+                        fillingLevel: pkg.fillingLevel,
+                        fragranceQty: pkg.fragranceQty,
+                        alcoholQty: pkg.alcoholQty
+                    }
+                });
+                setPackageDiscountInput(pkg.discount || 0);
+
+                // Set XP Oil
+                if (pkg.xpOil && pkg.xpOil.xpId) {
+                    setSelectedXPOil({
+                        value: pkg.xpOil.xpId,
+                        label: pkg.xpOil.productName,
+                        data: {
+                            xpId: pkg.xpOil.xpId,
+                            productName: pkg.xpOil.productName,
+                            quantity: pkg.xpOil.quantity,
+                            density: pkg.xpOil.density
+                        }
+                    });
+                }
+            }
+
+            // Set dispenser items
+            if (invoice.hasDispenser && invoice.dispenserItems.length > 0) {
+                const items = invoice.dispenserItems.map(item => ({
+                    dispenserId: item.dispenserId,
+                    productName: item.productName,
+                    ml: item.ml,
+                    quantity: item.quantity,
+                    totalML: item.totalML,
+                    sellingPrice3ml: item.sellingPrice3ml || 0,
+                    sellingPrice6ml: item.sellingPrice6ml || 0,
+                    discount: item.discount || 0
+                }));
+                setDispenserItems(items);
+            }
+
+            // Set promo if exists
+            if (invoice.hasPromo && invoice.promoApplied) {
+                setSelectedPromo({
+                    value: invoice.promoApplied.promoId,
+                    label: `${invoice.promoApplied.code} - ${invoice.promoApplied.discount}%`,
+                    code: invoice.promoApplied.code,
+                    discount: invoice.promoApplied.discount,
+                    data: invoice.promoApplied
+                });
+            }
+
+            // Set payment status
+            setPaymentStatus(invoice.paymentStatus || 'Cash');
+            setInvoiceDate(invoice.invoiceDate ? new Date(invoice.invoiceDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
+            setNotes(invoice.notes || '');
+
+            // Switch to create view and enable edit mode
+            setActiveView("create");
+            setIsEditing(true);
+            setEditingInvoiceId(invoiceId);
+
+            toast.info(`Editing invoice ${invoice.invoiceNumber}`);
+
+        } catch (error) {
+            console.error("Error loading invoice for edit:", error);
+            toast.error("Failed to load invoice for editing");
+        } finally {
+            setIsLoadingInvoiceDetails(false);
+        }
+    };
+
+    // ============================================
+    // SWITCH VIEWS
     // ============================================
     const handleSwitchToListView = () => {
         setActiveView("list");
@@ -664,16 +1085,19 @@ const Invoice = () => {
         fetchAllInvoices();
     };
 
-    // ============================================
-    // SWITCH BACK TO "CREATE INVOICE" TAB
-    // ============================================
     const handleSwitchToCreateView = () => {
+        if (isEditing) {
+            if (window.confirm("You have unsaved changes. Are you sure you want to cancel editing?")) {
+                resetForm();
+            } else {
+                return;
+            }
+        }
         setActiveView("create");
     };
 
     // ============================================
     // FETCH SINGLE INVOICE & OPEN DETAILS MODAL
-    // (the only popup in this whole flow — per-record details)
     // ============================================
     const handleViewInvoice = async (invoiceId) => {
         try {
@@ -699,6 +1123,14 @@ const Invoice = () => {
     };
 
     // ============================================
+    // OPEN DELETE MODAL
+    // ============================================
+    const handleDeleteClick = (invoiceId) => {
+        setDeletingInvoice(invoiceId);
+        setShowDeleteModal(true);
+    };
+
+    // ============================================
     // HELPERS
     // ============================================
     const formatDate = (dateString) => {
@@ -718,7 +1150,7 @@ const Invoice = () => {
     };
 
     // ============================================
-    // FILTERED INVOICES (for inline list view search)
+    // FILTERED INVOICES
     // ============================================
     const filteredInvoices = !invoiceSearchTerm.trim()
         ? allInvoices
@@ -862,16 +1294,23 @@ const Invoice = () => {
             <ToastContainer position="top-center" autoClose={3000} />
             <div className="inv-main">
 
-                {/* Page Header with inline nav toggle (no navigation, no modal) */}
+                {/* Page Header */}
                 <div className="inv-page-header">
-                    <h2>{activeView === "create" ? "Create Invoice" : "All Invoices"}</h2>
+                    <h2>
+                        {isEditing ? "Edit Invoice" : activeView === "create" ? "Create Invoice" : "All Invoices"}
+                        {isEditing && editingInvoiceId && (
+                            <span className="inv-editing-badge">
+                                <FaEdit /> Editing
+                            </span>
+                        )}
+                    </h2>
                     <div className="inv-right-section">
                         <div className="inv-view-toggle">
                             <button
                                 className={`inv-toggle-btn ${activeView === "create" ? "inv-toggle-active" : ""}`}
                                 onClick={handleSwitchToCreateView}
                             >
-                                <FaPlusCircle /> Create Invoice
+                                <FaPlusCircle /> {isEditing ? "Edit Invoice" : "Create Invoice"}
                             </button>
                             <button
                                 className={`inv-toggle-btn ${activeView === "list" ? "inv-toggle-active" : ""}`}
@@ -884,15 +1323,15 @@ const Invoice = () => {
                 </div>
 
                 {/* ============================================ */}
-                {/* CREATE INVOICE VIEW (inline, default view)     */}
+                {/* CREATE/EDIT INVOICE VIEW */}
                 {/* ============================================ */}
                 {activeView === "create" && (
                     <div className="inv-form-container">
 
-                        {/* STEP 1: SELECT CUSTOMER */}
+                        {/* SECTION 1: SELECT CUSTOMER */}
                         <div className="inv-section">
                             <h3 className="inv-section-title">
-                                <FaUser /> Step 1: Select Customer
+                                <FaUser /> Select Customer
                             </h3>
                             <div className="inv-form-row">
                                 <div className="inv-form-field">
@@ -905,34 +1344,53 @@ const Invoice = () => {
                                         isClearable
                                         styles={customSelectStyles}
                                         noOptionsMessage={() => "No customers found"}
+                                        isDisabled={isEditing}
                                     />
+                                    {isEditing && selectedCustomer && (
+                                        <small className="inv-hint">Customer cannot be changed in edit mode</small>
+                                    )}
                                 </div>
                             </div>
                         </div>
 
-                        {/* STEP 2: WORKSHOP & PACKAGE */}
-                        <div className="inv-section">
-                            <h3 className="inv-section-title">
-                                <FaBoxOpen /> Step 2: Workshop &amp; Package
-                            </h3>
+                        {/* SECTION 2: WORKSHOP & PACKAGE */}
+                        <div className="inv-section inv-workshop-section">
+                            <div className="inv-section-header-with-actions">
+                                <h3 className="inv-section-title">
+                                    <FaBoxOpen /> Workshop &amp; Package
+                                </h3>
+                                <div className="inv-section-actions">
+                                    <button
+                                        className="inv-add-close-btn"
+                                        onClick={handleAddAndCloseWorkshop}
+                                        type="button"
+                                    >
+                                        <FaWindowClose /> Clear
+                                    </button>
+                                </div>
+                            </div>
 
                             {selectedCustomer && (
                                 <div className="inv-form-row">
                                     <div className="inv-form-field">
-                                        <label>Select Workshop (Optional)</label>
+                                        <label>Select Workshop</label>
                                         <Select
                                             options={workshopOptions}
                                             value={selectedWorkshop}
                                             onChange={setSelectedWorkshop}
-                                            placeholder="Select workshop or leave empty"
+                                            placeholder="Select workshop"
                                             isClearable
                                             styles={customSelectStyles}
                                             noOptionsMessage={() => "No workshops found for this customer"}
+                                            isDisabled={isEditing}
                                         />
-                                        {recentWorkshop && !selectedWorkshop && (
+                                        {recentWorkshop && !selectedWorkshop && !isEditing && (
                                             <small className="inv-hint">
                                                 Latest workshop auto-selected: {new Date(recentWorkshop.date).toLocaleDateString()} - {recentWorkshop.startTime}
                                             </small>
+                                        )}
+                                        {isEditing && (
+                                            <small className="inv-hint">Workshop cannot be changed in edit mode</small>
                                         )}
                                     </div>
                                 </div>
@@ -940,7 +1398,7 @@ const Invoice = () => {
 
                             <div className="inv-form-row">
                                 <div className="inv-form-field">
-                                    <label>Select Package (Optional)</label>
+                                    <label>Select Package</label>
                                     <Select
                                         options={packageOptions}
                                         value={selectedPackage}
@@ -952,14 +1410,32 @@ const Invoice = () => {
                                     />
                                     {selectedPackage && (
                                         <small className="inv-hint">
-                                            ML: {selectedPackage.data?.bottleML}ml | Oils: {selectedPackage.data?.oilCount} | Fragrance: {selectedPackage.data?.fragranceQty}g | Alcohol: {selectedPackage.data?.alcoholQty}ml
+                                            ML: {selectedPackage.data?.bottleML}ml | Oils: {selectedPackage.data?.oilCount} |
+                                            Fragrance: {selectedPackage.data?.fragranceQty}g | Alcohol: {selectedPackage.data?.alcoholQty}ml
                                         </small>
                                     )}
                                 </div>
                             </div>
 
+                            {/* Package Discount - EDITABLE */}
                             {selectedPackage && (
                                 <div className="inv-form-row">
+                                    <div className="inv-form-field">
+                                        <label><FaPercentage /> Package Discount (%)</label>
+                                        <div className="inv-discount-input-group">
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                max="100"
+                                                step="0.01"
+                                                value={packageDiscountInput}
+                                                onChange={(e) => setPackageDiscountInput(Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
+                                                className="inv-discount-input-full"
+                                            />
+                                            <span className="inv-discount-percent-label">%</span>
+                                        </div>
+                                        <small className="inv-hint">Enter discount percentage for this package</small>
+                                    </div>
                                     <div className="inv-form-field">
                                         <label>Select XP Oil *</label>
                                         <Select
@@ -981,11 +1457,22 @@ const Invoice = () => {
                             )}
                         </div>
 
-                        {/* STEP 3: DISPENSER ITEMS */}
-                        <div className="inv-section">
-                            <h3 className="inv-section-title">
-                                <FaFlask /> Step 3: Dispenser Items (Optional)
-                            </h3>
+                        {/* SECTION 3: DISPENSER ITEMS */}
+                        <div className="inv-section inv-dispenser-section">
+                            <div className="inv-section-header-with-actions">
+                                <h3 className="inv-section-title">
+                                    <FaFlask /> Dispenser Items
+                                </h3>
+                                <div className="inv-section-actions">
+                                    <button
+                                        className="inv-add-close-btn inv-close-dispenser-btn"
+                                        onClick={handleCloseDispenser}
+                                        type="button"
+                                    >
+                                        <FaWindowClose /> Clear All
+                                    </button>
+                                </div>
+                            </div>
 
                             <div className="inv-form-row inv-form-row-dispenser">
                                 <div className="inv-form-field">
@@ -1046,27 +1533,56 @@ const Invoice = () => {
                                                     <th>ML</th>
                                                     <th>Qty</th>
                                                     <th>Total ML</th>
+                                                    <th>Discount %</th>
+                                                    <th>Final Price</th>
                                                     <th>Action</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {dispenserItems.map((item, index) => (
-                                                    <tr key={index}>
-                                                        <td>{item.productName}</td>
-                                                        <td>{item.ml}ml</td>
-                                                        <td>{item.quantity}</td>
-                                                        <td>{item.totalML}ml</td>
-                                                        <td>
-                                                            <button
-                                                                className="inv-remove-btn"
-                                                                onClick={() => handleRemoveDispenser(index)}
-                                                                type="button"
-                                                            >
-                                                                <FaTrash />
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                ))}
+                                                {dispenserItems.map((item, index) => {
+                                                    const price = item.ml === 3 ? item.sellingPrice3ml : item.sellingPrice6ml;
+                                                    const originalPrice = price * item.totalML;
+                                                    const discountAmt = (originalPrice * (item.discount || 0)) / 100;
+                                                    const finalPrice = originalPrice - discountAmt;
+
+                                                    return (
+                                                        <tr key={index}>
+                                                            <td>{item.productName}</td>
+                                                            <td>{item.ml}ml</td>
+                                                            <td>{item.quantity}</td>
+                                                            <td>{item.totalML}ml</td>
+                                                            <td>
+                                                                <input
+                                                                    type="number"
+                                                                    min="0"
+                                                                    max="100"
+                                                                    step="0.01"
+                                                                    value={item.discount || 0}
+                                                                    onChange={(e) => handleUpdateDispenserDiscount(index, e.target.value)}
+                                                                    className="inv-discount-input"
+                                                                />
+                                                                <span className="inv-discount-percent">%</span>
+                                                            </td>
+                                                            <td className="inv-final-price-cell">
+                                                                ₹{finalPrice.toFixed(2)}
+                                                                {item.discount > 0 && (
+                                                                    <span className="inv-original-price-small">
+                                                                        (₹{originalPrice.toFixed(2)})
+                                                                    </span>
+                                                                )}
+                                                            </td>
+                                                            <td>
+                                                                <button
+                                                                    className="inv-remove-btn"
+                                                                    onClick={() => handleRemoveDispenser(index)}
+                                                                    type="button"
+                                                                >
+                                                                    <FaTrash />
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
                                             </tbody>
                                         </table>
                                     </div>
@@ -1074,20 +1590,20 @@ const Invoice = () => {
                             )}
                         </div>
 
-                        {/* STEP 4: PROMO CODE & PAYMENT */}
+                        {/* SECTION 4: PROMO CODE & PAYMENT */}
                         <div className="inv-section">
                             <h3 className="inv-section-title">
-                                <FaTag /> Step 4: Promo Code &amp; Payment
+                                <FaTag /> Promo Code &amp; Payment
                             </h3>
 
                             <div className="inv-form-row">
                                 <div className="inv-form-field">
-                                    <label>Promo Code (Optional)</label>
+                                    <label>Promo Code</label>
                                     <Select
                                         options={promoOptions}
                                         value={selectedPromo}
                                         onChange={setSelectedPromo}
-                                        placeholder="Select or enter promo code"
+                                        placeholder="Select promo code"
                                         isClearable
                                         styles={customSelectStyles}
                                         noOptionsMessage={() => "No active promo codes available"}
@@ -1122,7 +1638,7 @@ const Invoice = () => {
                                     />
                                 </div>
                                 <div className="inv-form-field">
-                                    <label>Notes (Optional)</label>
+                                    <label>Notes</label>
                                     <input
                                         type="text"
                                         value={notes}
@@ -1134,32 +1650,68 @@ const Invoice = () => {
                             </div>
                         </div>
 
-                        {/* STEP 5: SUMMARY & CALCULATION */}
+                        {/* SECTION 5: SUMMARY & CALCULATION */}
                         <div className="inv-section inv-summary-section">
                             <h3 className="inv-section-title">
                                 <FaMoneyBillWave /> Summary &amp; Calculation
                             </h3>
 
                             <div className="inv-summary-grid">
+                                {/* Package */}
                                 <div className="inv-summary-item">
                                     <span>Package Price</span>
                                     <span className="inv-summary-value">
-                                        {selectedPackage ? `₹${selectedPackage.data.pricing}` : '₹0'}
+                                        {selectedPackage ? `₹${packageOriginalPrice.toFixed(2)}` : '₹0'}
                                     </span>
                                 </div>
+                                {packageDiscountAmount > 0 && (
+                                    <div className="inv-summary-item inv-summary-detail inv-summary-discount">
+                                        <span>Package Discount ({packageDiscountPercent}%)</span>
+                                        <span className="inv-summary-value inv-discount-amount">
+                                            -₹{packageDiscountAmount.toFixed(2)}
+                                        </span>
+                                    </div>
+                                )}
                                 <div className="inv-summary-item">
-                                    <span>Dispenser Items</span>
-                                    <span className="inv-summary-value">
-                                        ₹{dispenserItems.reduce((sum, item) => {
-                                            const price = item.ml === 3 ? item.sellingPrice3ml : item.sellingPrice6ml;
-                                            return sum + (price * item.totalML);
-                                        }, 0).toFixed(2)}
+                                    <span>Package Final</span>
+                                    <span className="inv-summary-value inv-final-price">
+                                        ₹{packageFinalPrice.toFixed(2)}
                                     </span>
                                 </div>
+
+                                {/* Dispenser */}
+                                <div className="inv-summary-item">
+                                    <span>Dispenser Original</span>
+                                    <span className="inv-summary-value">₹{dispenserOriginalTotal.toFixed(2)}</span>
+                                </div>
+                                {dispenserDiscountTotal > 0 && (
+                                    <div className="inv-summary-item inv-summary-detail inv-summary-discount">
+                                        <span>Dispenser Discount</span>
+                                        <span className="inv-summary-value inv-discount-amount">
+                                            -₹{dispenserDiscountTotal.toFixed(2)}
+                                        </span>
+                                    </div>
+                                )}
+                                <div className="inv-summary-item">
+                                    <span>Dispenser Final</span>
+                                    <span className="inv-summary-value inv-final-price">
+                                        ₹{dispenserFinalTotal.toFixed(2)}
+                                    </span>
+                                </div>
+
+                                {/* Totals */}
                                 <div className="inv-summary-item inv-summary-total">
                                     <span>Subtotal (incl. GST)</span>
                                     <span className="inv-summary-value">₹{subtotal.toFixed(2)}</span>
                                 </div>
+                                {totalDiscount > 0 && (
+                                    <div className="inv-summary-item inv-summary-detail inv-summary-discount">
+                                        <span>Total Discount</span>
+                                        <span className="inv-summary-value inv-discount-amount">
+                                            -₹{totalDiscount.toFixed(2)}
+                                        </span>
+                                    </div>
+                                )}
                                 <div className="inv-summary-item inv-summary-detail">
                                     <span>GST ({GST_RATE}%)</span>
                                     <span className="inv-summary-value">₹{gstAmount.toFixed(2)}</span>
@@ -1167,7 +1719,9 @@ const Invoice = () => {
                                 {selectedPromo && (
                                     <div className="inv-summary-item inv-summary-detail inv-summary-promo">
                                         <span>Promo Discount ({selectedPromo.discount}%)</span>
-                                        <span className="inv-summary-value">-₹{promoDiscount.toFixed(2)}</span>
+                                        <span className="inv-summary-value inv-discount-amount">
+                                            -₹{promoDiscount.toFixed(2)}
+                                        </span>
                                     </div>
                                 )}
                                 <div className="inv-summary-item inv-summary-grand-total">
@@ -1177,30 +1731,51 @@ const Invoice = () => {
                             </div>
                         </div>
 
-                        {/* SUBMIT BUTTON */}
+                        {/* ACTION BUTTONS */}
                         <div className="inv-form-actions">
                             <button
                                 className="inv-cancel-btn"
-                                onClick={() => navigate('/')}
+                                onClick={() => {
+                                    if (isEditing) {
+                                        if (window.confirm("Cancel editing? Changes will be lost.")) {
+                                            resetForm();
+                                        }
+                                    } else {
+                                        navigate('/');
+                                    }
+                                }}
                                 type="button"
                             >
-                                Cancel
+                                {isEditing ? 'Cancel Edit' : 'Cancel'}
                             </button>
                             <button
-                                className="inv-submit-btn"
-                                onClick={handleCreateInvoice}
-                                disabled={isSubmitting || !selectedCustomer}
+                                className={isEditing ? "inv-update-btn" : "inv-submit-btn"}
+                                onClick={isEditing ? handleUpdateInvoice : handleCreateInvoice}
+                                disabled={isSubmitting || isUpdating || !selectedCustomer}
                                 type="button"
                             >
-                                {isSubmitting ? (
-                                    <>
-                                        <div className="inv-loading-spinner small"></div>
-                                        Creating...
-                                    </>
+                                {isEditing ? (
+                                    isUpdating ? (
+                                        <>
+                                            <div className="inv-loading-spinner small"></div>
+                                            Updating...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <FaSave /> Update Invoice
+                                        </>
+                                    )
                                 ) : (
-                                    <>
-                                        <FaSave /> Create Invoice
-                                    </>
+                                    isSubmitting ? (
+                                        <>
+                                            <div className="inv-loading-spinner small"></div>
+                                            Creating...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <FaSave /> Create Invoice
+                                        </>
+                                    )
                                 )}
                             </button>
                         </div>
@@ -1209,7 +1784,7 @@ const Invoice = () => {
                 )}
 
                 {/* ============================================ */}
-                {/* VIEW INVOICES — INLINE TABLE (NOT A MODAL)     */}
+                {/* VIEW INVOICES — INLINE TABLE */}
                 {/* ============================================ */}
                 {activeView === "list" && (
                     <div className="inv-list-container">
@@ -1250,7 +1825,7 @@ const Invoice = () => {
                                             <th>Payment</th>
                                             <th>Status</th>
                                             <th>Total</th>
-                                            <th>Action</th>
+                                            <th>Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -1272,12 +1847,29 @@ const Invoice = () => {
                                                 </td>
                                                 <td className="inv-list-total-cell">₹{inv.grandTotal?.toFixed(2)}</td>
                                                 <td>
-                                                    <button
-                                                        className="inv-list-view-btn"
-                                                        onClick={() => handleViewInvoice(inv.invoiceId)}
-                                                    >
-                                                        <FaEye /> View
-                                                    </button>
+                                                    <div className="inv-list-actions">
+                                                        <button
+                                                            className="inv-list-view-btn"
+                                                            onClick={() => handleViewInvoice(inv.invoiceId)}
+                                                            title="View Details"
+                                                        >
+                                                            <FaEye />
+                                                        </button>
+                                                        <button
+                                                            className="inv-list-edit-btn"
+                                                            onClick={() => handleEditInvoice(inv.invoiceId)}
+                                                            title="Edit Invoice"
+                                                        >
+                                                            <FaEdit />
+                                                        </button>
+                                                        <button
+                                                            className="inv-list-delete-btn"
+                                                            onClick={() => handleDeleteClick(inv.invoiceId)}
+                                                            title="Delete Invoice"
+                                                        >
+                                                            <FaTrash />
+                                                        </button>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))}
@@ -1288,7 +1880,7 @@ const Invoice = () => {
                     </div>
                 )}
 
-                {/* The only modal/popup in the whole flow — per-record details */}
+                {/* Invoice Details Modal */}
                 <InvoiceDetailsModal
                     show={showInvoiceDetailsModal}
                     onClose={() => {
@@ -1299,6 +1891,18 @@ const Invoice = () => {
                     isLoading={isLoadingInvoiceDetails}
                     formatDate={formatDate}
                     getStatusClass={getStatusClass}
+                />
+
+                {/* Delete Confirmation Modal */}
+                <DeleteConfirmModal
+                    show={showDeleteModal}
+                    onClose={() => {
+                        setShowDeleteModal(false);
+                        setDeletingInvoice(null);
+                    }}
+                    onConfirm={handleDeleteInvoice}
+                    invoice={allInvoices.find(inv => inv.invoiceId === deletingInvoice)}
+                    isDeleting={isDeleting}
                 />
 
             </div>

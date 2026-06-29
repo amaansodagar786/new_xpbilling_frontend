@@ -52,12 +52,45 @@ $border-radius-sm: 8px;
         font-weight: 700;
         color: $primary-dark;
         margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 12px;
     }
 
     .inv-right-section {
         display: flex;
         align-items: center;
         gap: 14px;
+    }
+
+    // ===== EDITING BADGE =====
+    .inv-editing-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: $warning-color;
+        color: $white;
+        font-size: 12px;
+        font-weight: 600;
+        padding: 4px 14px;
+        border-radius: 50px;
+        animation: inv-pulse 1.5s ease-in-out infinite;
+
+        svg {
+            font-size: 13px;
+        }
+    }
+
+    @keyframes inv-pulse {
+
+        0%,
+        100% {
+            opacity: 1;
+        }
+
+        50% {
+            opacity: 0.7;
+        }
     }
 }
 
@@ -143,11 +176,69 @@ $border-radius-sm: 8px;
     font-size: 15px;
     font-weight: 700;
     color: $primary-color;
-    margin: 0 0 18px;
+    margin: 0;
 
     svg {
         font-size: 14px;
         flex-shrink: 0;
+    }
+}
+
+// ── Section with header actions ──
+.inv-section-header-with-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 18px;
+
+    .inv-section-title {
+        margin: 0;
+    }
+
+    .inv-section-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-shrink: 0;
+    }
+}
+
+// ── Add & Close Button ──
+.inv-add-close-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(135deg, $primary-color, $primary-light);
+    color: $white;
+    border: none;
+    padding: 8px 18px;
+    border-radius: 50px;
+    font-family: 'Roboto', sans-serif;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s;
+    box-shadow: 0 2px 8px rgba(63, 63, 145, 0.25);
+    white-space: nowrap;
+
+    &:hover {
+        background: linear-gradient(135deg, $primary-dark, $primary-color);
+        box-shadow: 0 4px 12px rgba(63, 63, 145, 0.35);
+        transform: translateY(-1px);
+    }
+
+    &.inv-close-dispenser-btn {
+        background: linear-gradient(135deg, #e67e22, #f39c12);
+
+        &:hover {
+            background: linear-gradient(135deg, #d35400, #e67e22);
+        }
+    }
+
+    svg {
+        font-size: 13px;
     }
 }
 
@@ -157,11 +248,11 @@ $border-radius-sm: 8px;
 .inv-form-row {
     display: flex;
     gap: 18px;
-    margin-bottom: 16px;
+    margin-top: 16px;
     align-items: flex-start;
 
-    &:last-child {
-        margin-bottom: 0;
+    &:first-of-type {
+        margin-top: 0;
     }
 
     &.inv-form-row-dispenser {
@@ -211,6 +302,12 @@ $border-radius-sm: 8px;
         &::placeholder {
             color: #bfc5ce;
         }
+
+        &:disabled {
+            background: #f0f2f8;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
     }
 
     .inv-form-select {
@@ -233,6 +330,128 @@ $border-radius-sm: 8px;
             background: $white;
             box-shadow: 0 0 0 3px rgba(106, 106, 197, 0.12);
         }
+
+        &:disabled {
+            background: #f0f2f8;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+    }
+}
+
+// ===== PACKAGE DISCOUNT INPUT =====
+.inv-discount-input-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+
+    .inv-discount-input-full {
+        width: 100%;
+        max-width: 120px;
+        padding: 10px 13px;
+        border: 1.5px solid #e3e8f0;
+        border-radius: $border-radius-sm;
+        font-family: 'Open Sans', sans-serif;
+        font-size: 14px;
+        color: #333;
+        background: #fafbfc;
+        box-sizing: border-box;
+        transition: border 0.25s, box-shadow 0.25s;
+
+        &:focus {
+            border-color: $primary-light;
+            outline: none;
+            background: $white;
+            box-shadow: 0 0 0 3px rgba(106, 106, 197, 0.12);
+        }
+
+        &::-webkit-inner-spin-button,
+        &::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        -moz-appearance: textfield;
+    }
+
+    .inv-discount-percent-label {
+        font-family: 'Roboto', sans-serif;
+        font-weight: 600;
+        color: #888;
+        font-size: 15px;
+        padding: 0 4px;
+    }
+}
+
+// ── Read-only package display ──
+.inv-readonly-label {
+    font-weight: 400;
+    font-size: 11.5px;
+    color: #aab0bc;
+    background: #f0f2f8;
+    padding: 2px 10px;
+    border-radius: 12px;
+    margin-left: 6px;
+}
+
+.inv-readonly-package {
+    width: 100%;
+    border: 1.5px solid #e3e8f0;
+    border-radius: $border-radius-sm;
+    background: #f7f8fc;
+    padding: 12px 16px;
+    min-height: 42px;
+    box-sizing: border-box;
+    cursor: default;
+}
+
+.inv-package-display {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+
+    .inv-package-name {
+        font-family: 'Roboto', sans-serif;
+        font-weight: 600;
+        font-size: 14px;
+        color: $primary-dark;
+    }
+
+    .inv-package-details {
+        font-family: 'Open Sans', sans-serif;
+        font-size: 12.5px;
+        color: #777;
+    }
+
+    .inv-package-price {
+        font-family: 'Roboto', sans-serif;
+        font-weight: 700;
+        font-size: 15px;
+        color: $success-color;
+        margin-left: auto;
+        background: #e8f5e9;
+        padding: 2px 12px;
+        border-radius: 12px;
+    }
+
+    .inv-package-discount-badge {
+        background: $danger-color;
+        color: white;
+        padding: 2px 10px;
+        border-radius: 50px;
+        font-family: 'Roboto', sans-serif;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.3px;
+    }
+}
+
+.inv-package-placeholder {
+    .inv-package-empty {
+        font-family: 'Open Sans', sans-serif;
+        font-size: 13.5px;
+        color: #aab0bc;
     }
 }
 
@@ -263,9 +482,16 @@ $border-radius-sm: 8px;
         box-shadow: 0 5px 12px rgba(63, 63, 145, 0.35);
         transform: translateY(-1px);
     }
+
+    &:disabled {
+        background: #9e9ecc;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+    }
 }
 
-// ── Hint text under fields ──
+// ── Hint text ──
 .inv-hint {
     display: block;
     margin-top: 7px;
@@ -337,6 +563,71 @@ $border-radius-sm: 8px;
     tr:hover td {
         background: #fafbff;
     }
+
+    // Discount columns
+    th:nth-child(5),
+    td:nth-child(5) {
+        text-align: center;
+        min-width: 100px;
+    }
+
+    th:nth-child(6),
+    td:nth-child(6) {
+        text-align: right;
+        min-width: 120px;
+    }
+
+    td {
+        vertical-align: middle;
+    }
+}
+
+.inv-discount-input {
+    width: 60px;
+    padding: 4px 6px;
+    border: 1.5px solid #e3e8f0;
+    border-radius: 4px;
+    font-family: 'Open Sans', sans-serif;
+    font-size: 13px;
+    text-align: center;
+    transition: border-color 0.2s;
+
+    &:focus {
+        outline: none;
+        border-color: #6a6ac5;
+        box-shadow: 0 0 0 3px rgba(106, 106, 197, 0.12);
+    }
+
+    &::-webkit-inner-spin-button,
+    &::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+
+    -moz-appearance: textfield;
+}
+
+.inv-discount-percent {
+    font-family: 'Roboto', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    color: #888;
+    margin-left: 2px;
+}
+
+.inv-final-price-cell {
+    font-family: 'Roboto', sans-serif;
+    font-weight: 600;
+    color: #28a745;
+
+    .inv-original-price-small {
+        font-family: 'Open Sans', sans-serif;
+        font-size: 11px;
+        font-weight: 400;
+        color: #999;
+        text-decoration: line-through;
+        margin-left: 6px;
+    }
 }
 
 .inv-remove-btn {
@@ -403,6 +694,16 @@ $border-radius-sm: 8px;
         }
     }
 
+    &.inv-summary-discount {
+        border-left: 3px solid $danger-color;
+        background: #fff5f5;
+
+        .inv-summary-value {
+            color: $danger-color;
+            font-weight: 700;
+        }
+    }
+
     &.inv-summary-promo .inv-summary-value {
         color: $success-color;
         font-weight: 700;
@@ -442,6 +743,15 @@ $border-radius-sm: 8px;
     }
 }
 
+// Discount amount styles
+.inv-discount-amount {
+    color: $danger-color !important;
+}
+
+.inv-final-price {
+    color: $success-color !important;
+}
+
 // ============================================
 // FORM ACTIONS (submit/cancel)
 // ============================================
@@ -474,12 +784,11 @@ $border-radius-sm: 8px;
     }
 }
 
-.inv-submit-btn {
+.inv-submit-btn,
+.inv-update-btn {
     display: flex;
     align-items: center;
     gap: 9px;
-    background: linear-gradient(135deg, $primary-color, $primary-light);
-    color: $white;
     border: none;
     padding: 12px 32px;
     border-radius: 50px;
@@ -489,23 +798,47 @@ $border-radius-sm: 8px;
     cursor: pointer;
     transition: all 0.25s;
     box-shadow: 0 4px 12px rgba(63, 63, 145, 0.3);
+    color: $white;
 
     &:hover:not(:disabled) {
-        background: linear-gradient(135deg, $primary-dark, $primary-color);
-        box-shadow: 0 6px 16px rgba(63, 63, 145, 0.4);
         transform: translateY(-1px);
     }
 
     &:disabled {
-        background: #9e9ecc;
         cursor: not-allowed;
         transform: none;
         box-shadow: none;
     }
 }
 
+.inv-submit-btn {
+    background: linear-gradient(135deg, $primary-color, $primary-light);
+
+    &:hover:not(:disabled) {
+        background: linear-gradient(135deg, $primary-dark, $primary-color);
+        box-shadow: 0 6px 16px rgba(63, 63, 145, 0.4);
+    }
+
+    &:disabled {
+        background: #9e9ecc;
+    }
+}
+
+.inv-update-btn {
+    background: linear-gradient(135deg, $warning-color, #f39c12);
+
+    &:hover:not(:disabled) {
+        background: linear-gradient(135deg, #d35400, $warning-color);
+        box-shadow: 0 6px 16px rgba(230, 126, 34, 0.4);
+    }
+
+    &:disabled {
+        background: #e8b88a;
+    }
+}
+
 // ============================================
-// LOADING SPINNER (form submit button - white)
+// LOADING SPINNER
 // ============================================
 .inv-loading-spinner {
     width: 16px;
@@ -534,7 +867,7 @@ $border-radius-sm: 8px;
 }
 
 // ============================================
-// VIEW INVOICES — INLINE LIST (replaces the old modal list)
+// VIEW INVOICES — INLINE LIST
 // ============================================
 .inv-list-container {
     max-width: 1100px;
@@ -720,6 +1053,84 @@ $border-radius-sm: 8px;
     white-space: nowrap;
 }
 
+// ===== ACTION BUTTONS IN LIST =====
+.inv-list-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.inv-list-view-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: $info-color;
+    color: $white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-family: 'Roboto', sans-serif;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+
+    &:hover {
+        background: #138496;
+        transform: translateY(-1px);
+    }
+}
+
+.inv-list-edit-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: $warning-color;
+    color: $white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-family: 'Roboto', sans-serif;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+
+    &:hover {
+        background: #d35400;
+        transform: translateY(-1px);
+    }
+}
+
+.inv-list-delete-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: $danger-color;
+    color: $white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-family: 'Roboto', sans-serif;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+
+    &:hover {
+        background: #c82333;
+        transform: translateY(-1px);
+    }
+}
+
+// Payment pill
 .inv-payment-pill {
     display: inline-flex;
     background: #e8f0fe;
@@ -755,30 +1166,116 @@ $border-radius-sm: 8px;
     }
 }
 
-.inv-list-view-btn {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    background: $info-color;
-    color: $white;
-    border: none;
-    padding: 7px 14px;
-    border-radius: 6px;
+// ============================================
+// DELETE CONFIRMATION MODAL
+// ============================================
+.inv-delete-warning {
+    text-align: center;
+    padding: 10px 0;
+
+    .inv-delete-icon {
+        font-size: 48px;
+        color: $danger-color;
+        margin-bottom: 16px;
+    }
+
+    h3 {
+        font-family: 'Roboto', sans-serif;
+        color: #2d2d50;
+        font-size: 17px;
+        margin: 0 0 12px;
+    }
+
+    p {
+        font-family: 'Open Sans', sans-serif;
+        color: #666;
+        font-size: 14px;
+        margin: 0 0 12px;
+        line-height: 1.6;
+    }
+
+    ul {
+        text-align: left;
+        font-family: 'Open Sans', sans-serif;
+        font-size: 13.5px;
+        color: #555;
+        padding-left: 20px;
+        margin: 0 0 16px;
+        line-height: 1.8;
+
+        li {
+            margin-bottom: 4px;
+
+            strong {
+                color: $danger-color;
+            }
+        }
+    }
+
+    .inv-delete-summary {
+        background: #f8f9fc;
+        border-radius: $border-radius-sm;
+        padding: 14px 18px;
+        text-align: left;
+        font-family: 'Open Sans', sans-serif;
+        font-size: 13.5px;
+        color: #555;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px 20px;
+
+        strong {
+            color: #2d2d50;
+        }
+    }
+}
+
+.inv-modal-btn-cancel {
+    background: #f0f2f8;
+    color: #555;
+    border: 1.5px solid #dde1ed;
+    padding: 10px 24px;
+    border-radius: 50px;
     font-family: 'Roboto', sans-serif;
-    font-size: 12.5px;
     font-weight: 600;
+    font-size: 13.5px;
     cursor: pointer;
     transition: all 0.2s;
-    white-space: nowrap;
 
     &:hover {
-        background: #138496;
+        background: #e5e8f0;
+    }
+}
+
+.inv-modal-btn-delete {
+    background: $danger-color;
+    color: $white;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 50px;
+    font-family: 'Roboto', sans-serif;
+    font-weight: 600;
+    font-size: 13.5px;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 3px 8px rgba(220, 53, 69, 0.25);
+
+    &:hover:not(:disabled) {
+        background: #c82333;
         transform: translateY(-1px);
+        box-shadow: 0 5px 12px rgba(220, 53, 69, 0.35);
+    }
+
+    &:disabled {
+        background: #e8a0a8;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
     }
 }
 
 // ============================================
-// MODAL — ONLY for per-invoice details (the single popup)
+// MODAL — ONLY for per-invoice details
 // ============================================
 .inv-modal-overlay {
     position: fixed;
@@ -883,6 +1380,7 @@ $border-radius-sm: 8px;
 .inv-modal-footer {
     display: flex;
     justify-content: flex-end;
+    gap: 10px;
     padding: 16px 22px;
     border-top: 1px solid #eaeef6;
     position: sticky;
@@ -962,6 +1460,14 @@ $border-radius-sm: 8px;
             font-size: 12px;
         }
     }
+
+    .inv-discount-amount {
+        color: $danger-color;
+    }
+
+    .inv-final-price {
+        color: $success-color;
+    }
 }
 
 .inv-details-grid {
@@ -1030,60 +1536,71 @@ $border-radius-sm: 8px;
     border: 1px solid #eef0f7;
     border-radius: $border-radius-sm;
     padding: 6px 16px;
-}
 
-.inv-details-totals-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 0;
-    font-family: 'Open Sans', sans-serif;
-    font-size: 14px;
-    color: #444;
-    border-bottom: 1px solid #f0f2f8;
+    .inv-details-totals-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 0;
+        font-family: 'Open Sans', sans-serif;
+        font-size: 14px;
+        color: #444;
+        border-bottom: 1px solid #f0f2f8;
 
-    &:last-child {
-        border-bottom: none;
-    }
-
-    strong {
-        font-family: 'Roboto', sans-serif;
-        font-weight: 700;
-        color: #2d2d50;
-    }
-
-    &.inv-details-totals-sub {
-        font-size: 12.5px;
-        color: #888;
-        padding-left: 10px;
+        &:last-child {
+            border-bottom: none;
+        }
 
         strong {
-            font-weight: 500;
-            color: #888;
-        }
-    }
-
-    &.inv-details-totals-promo strong {
-        color: $success-color;
-        font-weight: 700;
-    }
-
-    &.inv-details-totals-grand {
-        margin-top: 4px;
-        padding: 12px 0;
-        border-top: 1.5px dashed #e3e8f0;
-        border-bottom: none;
-
-        span {
             font-family: 'Roboto', sans-serif;
             font-weight: 700;
-            color: $primary-dark;
-            font-size: 15px;
+            color: #2d2d50;
         }
 
-        strong {
-            color: $primary-color;
-            font-size: 18px;
+        .inv-discount-amount {
+            color: $danger-color;
+            font-weight: 700;
+        }
+
+        &.inv-details-totals-sub {
+            font-size: 12.5px;
+            color: #888;
+            padding-left: 10px;
+
+            strong {
+                font-weight: 500;
+                color: #888;
+            }
+
+            &.inv-details-totals-promo {
+                .inv-discount-amount {
+                    color: $danger-color;
+                }
+            }
+        }
+
+        &.inv-details-totals-promo strong {
+            color: $success-color;
+            font-weight: 700;
+        }
+
+        &.inv-details-totals-grand {
+            margin-top: 4px;
+            padding: 12px 0;
+            border-top: 1.5px dashed #e3e8f0;
+            border-bottom: none;
+
+            span {
+                font-family: 'Roboto', sans-serif;
+                font-weight: 700;
+                color: $primary-dark;
+                font-size: 15px;
+            }
+
+            strong {
+                color: $primary-color;
+                font-size: 18px;
+            }
         }
     }
 }
@@ -1116,8 +1633,131 @@ $border-radius-sm: 8px;
 }
 
 // ============================================
+// PACKAGE DISCOUNT INFO
+// ============================================
+.inv-package-discount-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Open Sans', sans-serif;
+    font-size: 12px;
+    color: #666;
+    margin-top: 4px;
+
+    .inv-package-discount-badge-sm {
+        background: $danger-color;
+        color: white;
+        padding: 1px 8px;
+        border-radius: 50px;
+        font-weight: 600;
+        font-size: 10px;
+    }
+
+    .inv-package-discount-amount {
+        color: $danger-color;
+        font-weight: 600;
+    }
+
+    .inv-package-final-price {
+        color: $success-color;
+        font-weight: 700;
+    }
+}
+
+// ============================================
+// DISCOUNT TOOLTIP
+// ============================================
+.inv-discount-tooltip {
+    position: relative;
+    display: inline-block;
+
+    &:hover .inv-discount-tooltip-text {
+        visibility: visible;
+        opacity: 1;
+    }
+
+    .inv-discount-tooltip-text {
+        visibility: hidden;
+        opacity: 0;
+        width: 180px;
+        background: #2d2d50;
+        color: white;
+        text-align: center;
+        padding: 6px 10px;
+        border-radius: 6px;
+        font-family: 'Open Sans', sans-serif;
+        font-size: 12px;
+        position: absolute;
+        z-index: 100;
+        bottom: 125%;
+        left: 50%;
+        transform: translateX(-50%);
+        transition: opacity 0.3s;
+
+        &::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #2d2d50 transparent transparent transparent;
+        }
+    }
+}
+
+// ============================================
+// DISCOUNT SUMMARY CARD
+// ============================================
+.inv-discount-summary-card {
+    background: #fff5f5;
+    border: 1px solid #fcc;
+    border-radius: 8px;
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+
+    .inv-discount-summary-label {
+        font-family: 'Roboto', sans-serif;
+        font-weight: 600;
+        color: #555;
+        font-size: 13px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .inv-discount-summary-amount {
+        font-family: 'Roboto', sans-serif;
+        font-weight: 700;
+        color: $danger-color;
+        font-size: 16px;
+    }
+}
+
+// ============================================
 // RESPONSIVE
 // ============================================
+@media screen and (max-width: 992px) {
+    .inv-package-display {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+
+        .inv-package-price {
+            margin-left: 0;
+        }
+    }
+
+    .inv-delete-warning .inv-delete-summary {
+        grid-template-columns: 1fr;
+    }
+}
+
 @media screen and (max-width: 768px) {
     .inv-main {
         padding: 16px 14px 32px;
@@ -1143,11 +1783,28 @@ $border-radius-sm: 8px;
         .inv-toggle-btn {
             flex: 1;
             justify-content: center;
+            font-size: 12px;
+            padding: 8px 12px;
         }
     }
 
     .inv-section {
         padding: 18px;
+    }
+
+    .inv-section-header-with-actions {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+
+        .inv-section-actions {
+            width: 100%;
+        }
+
+        .inv-add-close-btn {
+            width: 100%;
+            justify-content: center;
+        }
     }
 
     .inv-form-row {
@@ -1176,6 +1833,25 @@ $border-radius-sm: 8px;
 
     .inv-dispenser-table {
         min-width: 460px;
+
+        th:nth-child(5),
+        td:nth-child(5) {
+            min-width: 80px;
+        }
+
+        th:nth-child(6),
+        td:nth-child(6) {
+            min-width: 100px;
+        }
+
+        .inv-discount-input {
+            width: 50px;
+            font-size: 12px;
+        }
+    }
+
+    .inv-summary-item.inv-summary-discount {
+        grid-column: 1 / -1;
     }
 
     .inv-form-actions {
@@ -1208,6 +1884,25 @@ $border-radius-sm: 8px;
 
     .inv-list-table-wrap {
         font-size: 12.5px;
+
+        table {
+
+            th,
+            td {
+                padding: 10px 12px;
+                font-size: 12px;
+            }
+        }
+    }
+
+    .inv-list-actions {
+        flex-wrap: wrap;
+        gap: 4px;
+
+        button {
+            padding: 4px 8px;
+            font-size: 11px;
+        }
     }
 
     .inv-modal-content {
@@ -1229,6 +1924,16 @@ $border-radius-sm: 8px;
         align-items: flex-start;
         gap: 10px;
     }
+
+    .inv-package-display {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+
+        .inv-package-price {
+            margin-left: 0;
+        }
+    }
 }
 
 @media (max-width: 480px) {
@@ -1243,5 +1948,49 @@ $border-radius-sm: 8px;
 
     .inv-modal-body {
         padding: 16px;
+    }
+
+    .inv-details-totals-row {
+        font-size: 13px;
+    }
+
+    .inv-details-totals-row.inv-details-totals-grand strong {
+        font-size: 16px;
+    }
+
+    .inv-dispenser-table {
+        font-size: 12px;
+
+        th,
+        td {
+            padding: 6px 8px;
+        }
+
+        .inv-discount-input {
+            width: 40px;
+            padding: 2px 4px;
+            font-size: 11px;
+        }
+
+        .inv-final-price-cell {
+            font-size: 12px;
+        }
+    }
+
+    .inv-delete-warning .inv-delete-summary {
+        grid-template-columns: 1fr;
+        font-size: 12.5px;
+        padding: 10px 14px;
+    }
+
+    .inv-modal-btn-delete,
+    .inv-modal-btn-cancel {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .inv-modal-footer {
+        flex-direction: column;
+        gap: 8px;
     }
 }
