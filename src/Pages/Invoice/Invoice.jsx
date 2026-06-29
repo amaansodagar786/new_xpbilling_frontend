@@ -15,6 +15,66 @@ import "react-toastify/dist/ReactToastify.css";
 import Select from 'react-select';
 
 // ============================================
+// CONFIRMATION MODAL - Custom (Replaces window.confirm)
+// ============================================
+const ConfirmationModal = ({
+    show,
+    onClose,
+    onConfirm,
+    title,
+    message,
+    confirmText = "Yes",
+    cancelText = "Cancel",
+    isConfirming = false,
+    type = "warning" // "warning" | "danger" | "info"
+}) => {
+    if (!show) return null;
+
+    const getIcon = () => {
+        if (type === "danger") return <FaTrash className="confirmation-icon danger" />;
+        if (type === "warning") return <FaBan className="confirmation-icon warning" />;
+        return <FaCheck className="confirmation-icon info" />;
+    };
+
+    const getButtonClass = () => {
+        if (type === "danger") return "confirmation-btn-danger";
+        if (type === "warning") return "confirmation-btn-warning";
+        return "confirmation-btn-info";
+    };
+
+    return (
+        <div className="confirmation-overlay" onClick={onClose}>
+            <div className="confirmation-modal" onClick={(e) => e.stopPropagation()}>
+                <div className="confirmation-header">
+                    <div className="confirmation-title">
+                        {getIcon()}
+                        {title}
+                    </div>
+                    <button className="confirmation-close" onClick={onClose}>
+                        <FaTimes />
+                    </button>
+                </div>
+                <div className="confirmation-body">
+                    <p>{message}</p>
+                </div>
+                <div className="confirmation-footer">
+                    <button className="confirmation-btn-cancel" onClick={onClose}>
+                        {cancelText}
+                    </button>
+                    <button
+                        className={`confirmation-btn-confirm ${getButtonClass()}`}
+                        onClick={onConfirm}
+                        disabled={isConfirming}
+                    >
+                        {isConfirming ? "Processing..." : confirmText}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// ============================================
 // INVOICE DETAILS MODAL
 // ============================================
 const InvoiceDetailsModal = ({
@@ -323,6 +383,18 @@ const Invoice = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [editingInvoiceId, setEditingInvoiceId] = useState(null);
 
+    // ========== CONFIRMATION MODAL ==========
+    const [showConfirmation, setShowConfirmation] = useState(false);
+    const [confirmationConfig, setConfirmationConfig] = useState({
+        title: "",
+        message: "",
+        confirmText: "Yes",
+        cancelText: "Cancel",
+        type: "warning",
+        onConfirm: null
+    });
+    const [isConfirming, setIsConfirming] = useState(false);
+
     // ========== DATA STATES ==========
     const [customers, setCustomers] = useState([]);
     const [workshops, setWorkshops] = useState([]);
@@ -381,7 +453,8 @@ const Invoice = () => {
     const [viewingInvoice, setViewingInvoice] = useState(null);
     const [isLoadingInvoiceDetails, setIsLoadingInvoiceDetails] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
-    const [deletingInvoice, setDeletingInvoice] = useState(null); // ✅ This will store the FULL invoice object now
+    const [deletingInvoice, setDeletingInvoice] = useState(null);
+
     // ========== GST RATE ==========
     const GST_RATE = 18;
 
@@ -548,14 +621,17 @@ const Invoice = () => {
         fetchWorkshopsForCustomer();
     }, [selectedCustomer]);
 
+    // ============================================
+    // AUTO SELECT PACKAGE (Only in create mode, NOT in edit)
+    // ============================================
     useEffect(() => {
         if (
             recentWorkshop &&
-            Array.isArray(recentWorkshop.customers) &&   // 👈 guard added
+            Array.isArray(recentWorkshop.customers) &&
             selectedCustomer &&
             packages &&
             packages.length > 0 &&
-            !isEditing                                    // 👈 also skip during edit, since this is create-only logic
+            !isEditing  // ✅ Skip during edit mode
         ) {
             const customerInWorkshop = recentWorkshop.customers.find(
                 c => c.customerId === selectedCustomer.value
@@ -719,6 +795,58 @@ const Invoice = () => {
     };
 
     // ============================================
+    // HANDLE UPDATE DISPENSER ML
+    // ============================================
+    const handleUpdateDispenserML = (index, newMl) => {
+        const updatedItems = [...dispenserItems];
+        const ml = parseInt(newMl);
+        if (!isNaN(ml) && (ml === 3 || ml === 6)) {
+            const item = updatedItems[index];
+            const oldTotalML = item.totalML;
+            const newTotalML = ml * item.quantity;
+
+            // Update ML and recalculate totalML
+            item.ml = ml;
+            item.totalML = newTotalML;
+
+            // Recalculate prices
+            const price = ml === 3 ? item.sellingPrice3ml : item.sellingPrice6ml;
+            const originalPrice = price * newTotalML;
+            const discountAmt = (originalPrice * (item.discount || 0)) / 100;
+            item.originalPrice = originalPrice;
+            item.finalPrice = originalPrice - discountAmt;
+
+            setDispenserItems(updatedItems);
+        }
+    };
+
+    // ============================================
+    // HANDLE UPDATE DISPENSER QUANTITY
+    // ============================================
+    const handleUpdateDispenserQuantity = (index, newQty) => {
+        const updatedItems = [...dispenserItems];
+        const qty = parseInt(newQty);
+        if (!isNaN(qty) && qty > 0) {
+            const item = updatedItems[index];
+            const oldTotalML = item.totalML;
+            const newTotalML = item.ml * qty;
+
+            // Update quantity and recalculate totalML
+            item.quantity = qty;
+            item.totalML = newTotalML;
+
+            // Recalculate prices
+            const price = item.ml === 3 ? item.sellingPrice3ml : item.sellingPrice6ml;
+            const originalPrice = price * newTotalML;
+            const discountAmt = (originalPrice * (item.discount || 0)) / 100;
+            item.originalPrice = originalPrice;
+            item.finalPrice = originalPrice - discountAmt;
+
+            setDispenserItems(updatedItems);
+        }
+    };
+
+    // ============================================
     // HANDLE ADD & CLOSE WORKSHOP/PACKAGE
     // ============================================
     const handleAddAndCloseWorkshop = () => {
@@ -739,6 +867,40 @@ const Invoice = () => {
         setDispenserML("");
         setDispenserQty("");
         toast.info("Dispenser items cleared");
+    };
+
+    // ============================================
+    // SHOW CONFIRMATION MODAL
+    // ============================================
+    const showConfirmationModal = (config) => {
+        setConfirmationConfig({
+            title: config.title || "Confirm",
+            message: config.message || "Are you sure?",
+            confirmText: config.confirmText || "Yes",
+            cancelText: config.cancelText || "Cancel",
+            type: config.type || "warning",
+            onConfirm: config.onConfirm || null
+        });
+        setShowConfirmation(true);
+    };
+
+    // ============================================
+    // HANDLE CONFIRMATION
+    // ============================================
+    const handleConfirmation = async () => {
+        if (confirmationConfig.onConfirm) {
+            setIsConfirming(true);
+            try {
+                await confirmationConfig.onConfirm();
+            } catch (error) {
+                console.error("Confirmation action failed:", error);
+            } finally {
+                setIsConfirming(false);
+                setShowConfirmation(false);
+            }
+        } else {
+            setShowConfirmation(false);
+        }
     };
 
     // ============================================
@@ -892,8 +1054,16 @@ const Invoice = () => {
         try {
             setIsDeleting(true);
 
+            const invoiceId = deletingInvoice.invoiceId || deletingInvoice._id;
+
+            if (!invoiceId) {
+                toast.error("Invalid invoice ID");
+                setIsDeleting(false);
+                return;
+            }
+
             const response = await fetch(
-                `${import.meta.env.VITE_API_URL}/invoice/delete/${deletingInvoice}`,
+                `${import.meta.env.VITE_API_URL}/invoice/delete/${invoiceId}`,
                 {
                     method: "DELETE",
                     credentials: 'include',
@@ -1090,13 +1260,21 @@ const Invoice = () => {
 
     const handleSwitchToCreateView = () => {
         if (isEditing) {
-            if (window.confirm("You have unsaved changes. Are you sure you want to cancel editing?")) {
-                resetForm();
-            } else {
-                return;
-            }
+            // ✅ Use custom confirmation modal instead of window.confirm
+            showConfirmationModal({
+                title: "Cancel Editing?",
+                message: "You have unsaved changes. Are you sure you want to cancel editing?",
+                confirmText: "Yes, Cancel",
+                cancelText: "Keep Editing",
+                type: "warning",
+                onConfirm: () => {
+                    resetForm();
+                    setActiveView("create");
+                }
+            });
+        } else {
+            setActiveView("create");
         }
-        setActiveView("create");
     };
 
     // ============================================
@@ -1129,7 +1307,7 @@ const Invoice = () => {
     // OPEN DELETE MODAL
     // ============================================
     const handleDeleteClick = (invoice) => {
-        setDeletingInvoice(invoice);  // ✅ Now stores the FULL invoice object, not just ID
+        setDeletingInvoice(invoice);
         setShowDeleteModal(true);
     };
 
@@ -1410,7 +1588,11 @@ const Invoice = () => {
                                         isClearable
                                         styles={customSelectStyles}
                                         noOptionsMessage={() => "No active packages found"}
+                                        isDisabled={isEditing}  // ✅ Disable package selection in edit mode
                                     />
+                                    {isEditing && selectedPackage && (
+                                        <small className="inv-hint">Package cannot be changed in edit mode</small>
+                                    )}
                                     {selectedPackage && (
                                         <small className="inv-hint">
                                             ML: {selectedPackage.data?.bottleML}ml | Oils: {selectedPackage.data?.oilCount} |
@@ -1551,8 +1733,33 @@ const Invoice = () => {
                                                     return (
                                                         <tr key={index}>
                                                             <td>{item.productName}</td>
-                                                            <td>{item.ml}ml</td>
-                                                            <td>{item.quantity}</td>
+                                                            <td>
+                                                                {isEditing ? (
+                                                                    <select
+                                                                        value={item.ml}
+                                                                        onChange={(e) => handleUpdateDispenserML(index, e.target.value)}
+                                                                        className="inv-edit-select"
+                                                                    >
+                                                                        <option value="3">3 ml</option>
+                                                                        <option value="6">6 ml</option>
+                                                                    </select>
+                                                                ) : (
+                                                                    `${item.ml}ml`
+                                                                )}
+                                                            </td>
+                                                            <td>
+                                                                {isEditing ? (
+                                                                    <input
+                                                                        type="number"
+                                                                        min="1"
+                                                                        value={item.quantity}
+                                                                        onChange={(e) => handleUpdateDispenserQuantity(index, e.target.value)}
+                                                                        className="inv-edit-input"
+                                                                    />
+                                                                ) : (
+                                                                    item.quantity
+                                                                )}
+                                                            </td>
                                                             <td>{item.totalML}ml</td>
                                                             <td>
                                                                 <input
@@ -1563,6 +1770,7 @@ const Invoice = () => {
                                                                     value={item.discount || 0}
                                                                     onChange={(e) => handleUpdateDispenserDiscount(index, e.target.value)}
                                                                     className="inv-discount-input"
+                                                                    disabled={!isEditing}
                                                                 />
                                                                 <span className="inv-discount-percent">%</span>
                                                             </td>
@@ -1740,9 +1948,14 @@ const Invoice = () => {
                                 className="inv-cancel-btn"
                                 onClick={() => {
                                     if (isEditing) {
-                                        if (window.confirm("Cancel editing? Changes will be lost.")) {
-                                            resetForm();
-                                        }
+                                        showConfirmationModal({
+                                            title: "Cancel Editing?",
+                                            message: "You have unsaved changes. Are you sure you want to cancel editing?",
+                                            confirmText: "Yes, Cancel",
+                                            cancelText: "Keep Editing",
+                                            type: "warning",
+                                            onConfirm: resetForm
+                                        });
                                     } else {
                                         navigate('/');
                                     }
@@ -1867,7 +2080,7 @@ const Invoice = () => {
                                                         </button>
                                                         <button
                                                             className="inv-list-delete-btn"
-                                                            onClick={() => handleDeleteClick(inv)}  // ✅ Pass the WHOLE invoice object
+                                                            onClick={() => handleDeleteClick(inv)}
                                                             title="Delete Invoice"
                                                         >
                                                             <FaTrash />
@@ -1896,6 +2109,7 @@ const Invoice = () => {
                     getStatusClass={getStatusClass}
                 />
 
+                {/* Delete Confirmation Modal */}
                 <DeleteConfirmModal
                     show={showDeleteModal}
                     onClose={() => {
@@ -1903,8 +2117,25 @@ const Invoice = () => {
                         setDeletingInvoice(null);
                     }}
                     onConfirm={handleDeleteInvoice}
-                    invoice={deletingInvoice}  // ✅ Now uses the stored invoice object directly
+                    invoice={deletingInvoice}
                     isDeleting={isDeleting}
+                />
+
+                {/* Custom Confirmation Modal */}
+                <ConfirmationModal
+                    show={showConfirmation}
+                    onClose={() => {
+                        if (!isConfirming) {
+                            setShowConfirmation(false);
+                        }
+                    }}
+                    onConfirm={handleConfirmation}
+                    title={confirmationConfig.title}
+                    message={confirmationConfig.message}
+                    confirmText={confirmationConfig.confirmText}
+                    cancelText={confirmationConfig.cancelText}
+                    type={confirmationConfig.type}
+                    isConfirming={isConfirming}
                 />
 
             </div>

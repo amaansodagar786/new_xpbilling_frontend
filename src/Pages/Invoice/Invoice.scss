@@ -1994,3 +1994,261 @@ $border-radius-sm: 8px;
         gap: 8px;
     }
 }
+
+
+// ============================================
+// CONFIRMATION MODAL - Custom
+// ============================================
+.confirmation-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(30, 30, 60, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1100;
+    padding: 20px;
+    animation: inv-modal-fadeIn 0.2s ease-out;
+}
+
+.confirmation-modal {
+    background: $white;
+    border-radius: $border-radius;
+    max-width: 420px;
+    width: 100%;
+    box-shadow: 0 8px 32px rgba(30, 30, 60, 0.2);
+    animation: inv-modal-slideUp 0.25s ease-out;
+}
+
+.confirmation-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 22px;
+    border-bottom: 1px solid #eaeef6;
+    background: #fafbfc;
+    border-radius: $border-radius $border-radius 0 0;
+
+    .confirmation-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-family: 'Roboto', sans-serif;
+        font-size: 16px;
+        font-weight: 700;
+        color: $primary-dark;
+
+        .confirmation-icon {
+            font-size: 18px;
+
+            &.warning {
+                color: $warning-color;
+            }
+
+            &.danger {
+                color: $danger-color;
+            }
+
+            &.info {
+                color: $info-color;
+            }
+        }
+    }
+
+    .confirmation-close {
+        background: #f5f6fa;
+        border: none;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        font-size: 14px;
+        cursor: pointer;
+        color: #888;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+
+        &:hover {
+            background: #ede8fa;
+            color: $primary-color;
+        }
+    }
+}
+
+.confirmation-body {
+    padding: 22px 22px 18px;
+
+    p {
+        font-family: 'Open Sans', sans-serif;
+        font-size: 14px;
+        color: #555;
+        line-height: 1.6;
+        margin: 0;
+    }
+}
+
+.confirmation-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 14px 22px 20px;
+    border-top: 1px solid #f0f2f8;
+
+    button {
+        padding: 9px 22px;
+        border-radius: 50px;
+        font-family: 'Roboto', sans-serif;
+        font-weight: 600;
+        font-size: 13px;
+        cursor: pointer;
+        transition: all 0.2s;
+
+        &:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+    }
+
+    .confirmation-btn-cancel {
+        background: #f0f2f8;
+        color: #555;
+        border: 1.5px solid #dde1ed;
+
+        &:hover:not(:disabled) {
+            background: #e5e8f0;
+        }
+    }
+
+    .confirmation-btn-confirm {
+        color: $white;
+        border: none;
+        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+
+        &:hover:not(:disabled) {
+            transform: translateY(-1px);
+        }
+
+        &.confirmation-btn-warning {
+            background: linear-gradient(135deg, $warning-color, #f39c12);
+
+            &:hover:not(:disabled) {
+                background: linear-gradient(135deg, #d35400, $warning-color);
+                box-shadow: 0 5px 12px rgba(230, 126, 34, 0.35);
+            }
+        }
+
+        &.confirmation-btn-danger {
+            background: linear-gradient(135deg, $danger-color, #c82333);
+
+            &:hover:not(:disabled) {
+                background: linear-gradient(135deg, #c82333, #a71d2a);
+                box-shadow: 0 5px 12px rgba(220, 53, 69, 0.35);
+            }
+        }
+
+        &.confirmation-btn-info {
+            background: linear-gradient(135deg, $info-color, #138496);
+
+            &:hover:not(:disabled) {
+                background: linear-gradient(135deg, #138496, #0f6674);
+                box-shadow: 0 5px 12px rgba(23, 162, 184, 0.35);
+            }
+        }
+    }
+}
+
+// ============================================
+// EDITABLE DISPENSER FIELDS
+// ============================================
+.inv-edit-select {
+    padding: 4px 8px;
+    border: 1.5px solid #e3e8f0;
+    border-radius: 4px;
+    font-family: 'Open Sans', sans-serif;
+    font-size: 13px;
+    color: #333;
+    background: $white;
+    cursor: pointer;
+    transition: border-color 0.2s;
+
+    &:focus {
+        outline: none;
+        border-color: $primary-light;
+        box-shadow: 0 0 0 3px rgba(106, 106, 197, 0.12);
+    }
+}
+
+.inv-edit-input {
+    width: 60px;
+    padding: 4px 6px;
+    border: 1.5px solid #e3e8f0;
+    border-radius: 4px;
+    font-family: 'Open Sans', sans-serif;
+    font-size: 13px;
+    text-align: center;
+    transition: border-color 0.2s;
+
+    &:focus {
+        outline: none;
+        border-color: $primary-light;
+        box-shadow: 0 0 0 3px rgba(106, 106, 197, 0.12);
+    }
+
+    &::-webkit-inner-spin-button,
+    &::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+    -moz-appearance: textfield;
+}
+
+// ============================================
+// RESPONSIVE FOR CONFIRMATION MODAL
+// ============================================
+@media screen and (max-width: 480px) {
+    .confirmation-modal {
+        max-width: 100%;
+        border-radius: 16px 16px 0 0;
+    }
+
+    .confirmation-overlay {
+        align-items: flex-end;
+        padding: 0;
+    }
+
+    .confirmation-footer {
+        flex-direction: column;
+
+        button {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+
+    .confirmation-header {
+        .confirmation-title {
+            font-size: 14px;
+        }
+    }
+
+    .confirmation-body {
+        p {
+            font-size: 13px;
+        }
+    }
+
+    .inv-edit-input {
+        width: 50px;
+        font-size: 12px;
+    }
+
+    .inv-edit-select {
+        font-size: 12px;
+        padding: 3px 6px;
+    }
+}
