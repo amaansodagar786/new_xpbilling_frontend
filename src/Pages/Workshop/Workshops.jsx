@@ -610,23 +610,28 @@ const Workshops = () => {
         }
     };
 
-    // ============================================
-    // FETCH CUSTOMERS
-    // ============================================
     const fetchCustomers = async () => {
-        try {
-            const response = await fetch(
-                `${import.meta.env.VITE_API_URL}/customer/get-customers`,
-                { credentials: 'include' }
-            );
-            if (!response.ok) throw new Error('Failed to fetch customers');
-            const data = await response.json();
+    try {
+        const response = await fetch(
+            `${import.meta.env.VITE_API_URL}/customer/get-customers?limit=1000`,
+            { credentials: 'include' }
+        );
+        if (!response.ok) throw new Error('Failed to fetch customers');
+        const data = await response.json();
+        
+        // ✅ Check if data is array or object with data property
+        if (Array.isArray(data)) {
             setCustomers(data);
-        } catch (error) {
-            console.error("Error fetching customers:", error);
-            toast.error("Failed to fetch customers");
+        } else if (data && data.data && Array.isArray(data.data)) {
+            setCustomers(data.data);
+        } else {
+            setCustomers([]);
         }
-    };
+    } catch (error) {
+        console.error("Error fetching customers:", error);
+        toast.error("Failed to fetch customers");
+    }
+};
 
     // ============================================
     // FETCH PACKAGES

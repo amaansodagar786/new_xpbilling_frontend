@@ -381,8 +381,7 @@ const Invoice = () => {
     const [viewingInvoice, setViewingInvoice] = useState(null);
     const [isLoadingInvoiceDetails, setIsLoadingInvoiceDetails] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
-    const [deletingInvoice, setDeletingInvoice] = useState(null);
-
+    const [deletingInvoice, setDeletingInvoice] = useState(null); // ✅ This will store the FULL invoice object now
     // ========== GST RATE ==========
     const GST_RATE = 18;
 
@@ -549,11 +548,15 @@ const Invoice = () => {
         fetchWorkshopsForCustomer();
     }, [selectedCustomer]);
 
-    // ============================================
-    // AUTO SELECT PACKAGE FROM WORKSHOP
-    // ============================================
     useEffect(() => {
-        if (recentWorkshop && selectedCustomer) {
+        if (
+            recentWorkshop &&
+            Array.isArray(recentWorkshop.customers) &&   // 👈 guard added
+            selectedCustomer &&
+            packages &&
+            packages.length > 0 &&
+            !isEditing                                    // 👈 also skip during edit, since this is create-only logic
+        ) {
             const customerInWorkshop = recentWorkshop.customers.find(
                 c => c.customerId === selectedCustomer.value
             );
@@ -570,7 +573,7 @@ const Invoice = () => {
                 }
             }
         }
-    }, [recentWorkshop, selectedCustomer, packages]);
+    }, [recentWorkshop, selectedCustomer, packages, isEditing]);
 
     // ============================================
     // CALCULATE TOTALS WITH DISCOUNTS
@@ -1125,8 +1128,8 @@ const Invoice = () => {
     // ============================================
     // OPEN DELETE MODAL
     // ============================================
-    const handleDeleteClick = (invoiceId) => {
-        setDeletingInvoice(invoiceId);
+    const handleDeleteClick = (invoice) => {
+        setDeletingInvoice(invoice);  // ✅ Now stores the FULL invoice object, not just ID
         setShowDeleteModal(true);
     };
 
@@ -1864,7 +1867,7 @@ const Invoice = () => {
                                                         </button>
                                                         <button
                                                             className="inv-list-delete-btn"
-                                                            onClick={() => handleDeleteClick(inv.invoiceId)}
+                                                            onClick={() => handleDeleteClick(inv)}  // ✅ Pass the WHOLE invoice object
                                                             title="Delete Invoice"
                                                         >
                                                             <FaTrash />
@@ -1893,7 +1896,6 @@ const Invoice = () => {
                     getStatusClass={getStatusClass}
                 />
 
-                {/* Delete Confirmation Modal */}
                 <DeleteConfirmModal
                     show={showDeleteModal}
                     onClose={() => {
@@ -1901,7 +1903,7 @@ const Invoice = () => {
                         setDeletingInvoice(null);
                     }}
                     onConfirm={handleDeleteInvoice}
-                    invoice={allInvoices.find(inv => inv.invoiceId === deletingInvoice)}
+                    invoice={deletingInvoice}  // ✅ Now uses the stored invoice object directly
                     isDeleting={isDeleting}
                 />
 
