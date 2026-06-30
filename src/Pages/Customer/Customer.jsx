@@ -1243,6 +1243,7 @@ const Customer = () => {
                   <th>Name</th>
                   <th>Email</th>
                   <th>Mobile Number</th>
+                  <th style={{ textAlign: 'center' }}>🪙 Loyalty Coins</th>  {/* ✅ NEW COLUMN */}
                 </tr>
               </thead>
               <tbody>
@@ -1255,6 +1256,11 @@ const Customer = () => {
                     <td>{cust.customerName}</td>
                     <td>{cust.email}</td>
                     <td>{cust.contactNumber}</td>
+                    <td style={{ textAlign: 'center' }}>
+                      <span className="loyalty-coins-badge">
+                        {cust.loyaltyCoins || 0}
+                      </span>
+                    </td>
                   </tr>
                 ))}
               </tbody>

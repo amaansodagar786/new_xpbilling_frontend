@@ -6,7 +6,7 @@ import {
     FaPlus, FaSave, FaList, FaTimes, FaEye,
     FaFileInvoice, FaSearch, FaBan, FaCalendarAlt,
     FaCreditCard, FaPlusCircle, FaCheck, FaWindowClose,
-    FaPercentage, FaEdit, FaUndo, FaHistory
+    FaPercentage, FaEdit, FaUndo, FaHistory, FaCoins
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../../Components/Navbar/Navbar";
@@ -26,7 +26,7 @@ const ConfirmationModal = ({
     confirmText = "Yes",
     cancelText = "Cancel",
     isConfirming = false,
-    type = "warning" // "warning" | "danger" | "info"
+    type = "warning"
 }) => {
     if (!show) return null;
 
@@ -133,6 +133,10 @@ const InvoiceDetailsModal = ({
                                             <strong>{invoice.customer.email}</strong>
                                         </div>
                                     )}
+                                    <div className="inv-details-item">
+                                        <span className="inv-details-label">Loyalty Coins</span>
+                                        <strong>{invoice.customer?.loyaltyCoins || 0}</strong>
+                                    </div>
                                     <div className="inv-details-item">
                                         <span className="inv-details-label">Invoice Date</span>
                                         <strong>{formatDate(invoice.invoiceDate)}</strong>
@@ -250,6 +254,33 @@ const InvoiceDetailsModal = ({
                                 </div>
                             )}
 
+                            {/* ===== LOYALTY COINS SECTION ===== */}
+                            {(invoice.loyaltyCoinsEarned > 0 || invoice.loyaltyCoinsUsed > 0) && (
+                                <div className="inv-details-section">
+                                    <h4><FaCoins /> Loyalty Coins</h4>
+                                    <div className="inv-details-grid">
+                                        {invoice.loyaltyCoinsEarned > 0 && (
+                                            <div className="inv-details-item">
+                                                <span className="inv-details-label">Coins Earned</span>
+                                                <strong className="inv-loyalty-earned">+{invoice.loyaltyCoinsEarned} coins</strong>
+                                            </div>
+                                        )}
+                                        {invoice.loyaltyCoinsUsed > 0 && (
+                                            <div className="inv-details-item">
+                                                <span className="inv-details-label">Coins Used</span>
+                                                <strong className="inv-loyalty-used">-{invoice.loyaltyCoinsUsed} coins</strong>
+                                            </div>
+                                        )}
+                                        {invoice.loyaltyDiscountAmount > 0 && (
+                                            <div className="inv-details-item">
+                                                <span className="inv-details-label">Discount from Coins</span>
+                                                <strong className="inv-discount-amount">-₹{invoice.loyaltyDiscountAmount?.toFixed(2)}</strong>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="inv-details-section">
                                 <h4><FaCreditCard /> Payment &amp; Totals</h4>
                                 <div className="inv-details-totals">
@@ -269,6 +300,12 @@ const InvoiceDetailsModal = ({
                                         <div className="inv-details-totals-row inv-details-totals-sub inv-details-totals-promo">
                                             <span>Promo Discount</span>
                                             <strong className="inv-discount-amount">-₹{invoice.promoDiscount?.toFixed(2)}</strong>
+                                        </div>
+                                    )}
+                                    {invoice.loyaltyDiscountAmount > 0 && (
+                                        <div className="inv-details-totals-row inv-details-totals-sub inv-details-totals-loyalty">
+                                            <span>Loyalty Discount</span>
+                                            <strong className="inv-discount-amount">-₹{invoice.loyaltyDiscountAmount?.toFixed(2)}</strong>
                                         </div>
                                     )}
                                     <div className="inv-details-totals-row inv-details-totals-sub">
@@ -339,6 +376,8 @@ const DeleteConfirmModal = ({ show, onClose, onConfirm, invoice, isDeleting }) =
                             <li>Return all inventory used in this invoice</li>
                             <li>Remove the invoice from active records</li>
                             <li>Save a copy for audit purposes</li>
+                            <li>Return loyalty coins used</li>
+                            <li>Remove loyalty coins earned</li>
                             <li>This action <strong>CANNOT</strong> be undone easily</li>
                         </ul>
                         {invoice && (
@@ -346,6 +385,12 @@ const DeleteConfirmModal = ({ show, onClose, onConfirm, invoice, isDeleting }) =
                                 <div><strong>Invoice:</strong> {invoice.invoiceNumber}</div>
                                 <div><strong>Customer:</strong> {invoice.customer?.customerName}</div>
                                 <div><strong>Total:</strong> ₹{invoice.grandTotal?.toFixed(2)}</div>
+                                {invoice.loyaltyCoinsEarned > 0 && (
+                                    <div><strong>Loyalty Earned:</strong> {invoice.loyaltyCoinsEarned} coins</div>
+                                )}
+                                {invoice.loyaltyCoinsUsed > 0 && (
+                                    <div><strong>Loyalty Used:</strong> {invoice.loyaltyCoinsUsed} coins</div>
+                                )}
                             </div>
                         )}
                     </div>
@@ -413,6 +458,14 @@ const Invoice = () => {
     const [paymentStatus, setPaymentStatus] = useState("Cash");
     const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
     const [notes, setNotes] = useState("");
+
+    // ========== LOYALTY COINS STATE ==========
+    const [useLoyaltyCoins, setUseLoyaltyCoins] = useState(false);
+    const [availableLoyaltyCoins, setAvailableLoyaltyCoins] = useState(0);
+    const [usableLoyaltyCoins, setUsableLoyaltyCoins] = useState(0);
+    const [loyaltyCoinsUsed, setLoyaltyCoinsUsed] = useState(0);
+    const [loyaltyCoinsEarned, setLoyaltyCoinsEarned] = useState(0);
+    const [loyaltyDiscountAmount, setLoyaltyDiscountAmount] = useState(0);
 
     // ========== PACKAGE DISCOUNT (EDITABLE) ==========
     const [packageDiscountInput, setPackageDiscountInput] = useState(0);
@@ -631,7 +684,7 @@ const Invoice = () => {
             selectedCustomer &&
             packages &&
             packages.length > 0 &&
-            !isEditing  // ✅ Skip during edit mode
+            !isEditing
         ) {
             const customerInWorkshop = recentWorkshop.customers.find(
                 c => c.customerId === selectedCustomer.value
@@ -652,7 +705,31 @@ const Invoice = () => {
     }, [recentWorkshop, selectedCustomer, packages, isEditing]);
 
     // ============================================
-    // CALCULATE TOTALS WITH DISCOUNTS
+    // CUSTOMER SELECTION - Fetch Loyalty Coins
+    // ============================================
+    useEffect(() => {
+        if (selectedCustomer) {
+            const customer = customers.find(c => c.customerId === selectedCustomer.value);
+            if (customer) {
+                const totalCoins = customer.loyaltyCoins || 0;
+                // Minimum 50 coins must remain in account
+                const usable = Math.max(0, totalCoins - 50);
+                setAvailableLoyaltyCoins(totalCoins);
+                setUsableLoyaltyCoins(usable);
+                setUseLoyaltyCoins(false);
+                setLoyaltyCoinsUsed(0);
+                console.log(`🪙 Customer Loyalty: ${totalCoins} available, ${usable} usable`);
+            }
+        } else {
+            setAvailableLoyaltyCoins(0);
+            setUsableLoyaltyCoins(0);
+            setUseLoyaltyCoins(false);
+            setLoyaltyCoinsUsed(0);
+        }
+    }, [selectedCustomer, customers]);
+
+    // ============================================
+    // CALCULATE TOTALS WITH DISCOUNTS AND LOYALTY
     // ============================================
     useEffect(() => {
         // 1. Calculate Package with Discount
@@ -704,24 +781,50 @@ const Invoice = () => {
 
         // 5. Apply Promo Discount on subtotal WITHOUT GST
         let promoDiscountAmt = 0;
+        let afterPromo = subtotalWithoutGSTCalc;
         if (selectedPromo) {
             promoDiscountAmt = subtotalWithoutGSTCalc * (selectedPromo.discount / 100);
+            afterPromo = subtotalWithoutGSTCalc - promoDiscountAmt;
         }
         setPromoDiscount(promoDiscountAmt);
 
-        // 6. Calculate total discount
-        const totalDiscountAmt = pkgDiscountAmt + dispDiscountTotal + promoDiscountAmt;
-        setTotalDiscount(totalDiscountAmt);
+        // 6. Apply Loyalty Coins Discount (AFTER promo, BEFORE GST)
+        let loyaltyDiscountAmt = 0;
+        let actualCoinsUsed = 0;
+        let coinsEarned = 0;
+
+        if (useLoyaltyCoins && usableLoyaltyCoins > 0 && !isEditing) {
+            // 1 coin = ₹1 discount
+            actualCoinsUsed = Math.min(usableLoyaltyCoins, afterPromo);
+            loyaltyDiscountAmt = actualCoinsUsed;
+            const afterLoyalty = afterPromo - loyaltyDiscountAmt;
+
+            // Calculate coins earned (1 coin per ₹100 spent, before GST)
+            if (afterLoyalty > 0) {
+                coinsEarned = Math.floor(afterLoyalty / 100);
+            }
+        } else {
+            // Coins earned without using coins
+            if (afterPromo > 0) {
+                coinsEarned = Math.floor(afterPromo / 100);
+            }
+        }
+
+        setLoyaltyCoinsUsed(actualCoinsUsed);
+        setLoyaltyDiscountAmount(loyaltyDiscountAmt);
+        setLoyaltyCoinsEarned(coinsEarned);
 
         // 7. Calculate final amounts
-        const afterPromo = subtotalWithoutGSTCalc - promoDiscountAmt;
-        const gst = afterPromo * (GST_RATE / 100);
-        const grand = afterPromo + gst;
+        const finalAmount = afterPromo - loyaltyDiscountAmt;
+        const gst = finalAmount * (GST_RATE / 100);
+        const grand = finalAmount + gst;
+        const totalDiscountAmt = pkgDiscountAmt + dispDiscountTotal + promoDiscountAmt + loyaltyDiscountAmt;
 
         setGstAmount(gst);
+        setTotalDiscount(totalDiscountAmt);
         setGrandTotal(grand);
 
-    }, [selectedPackage, packageDiscountInput, dispenserItems, selectedPromo, GST_RATE]);
+    }, [selectedPackage, packageDiscountInput, dispenserItems, selectedPromo, useLoyaltyCoins, usableLoyaltyCoins, isEditing, GST_RATE]);
 
     // ============================================
     // HANDLE ADD DISPENSER ITEM
@@ -805,11 +908,9 @@ const Invoice = () => {
             const oldTotalML = item.totalML;
             const newTotalML = ml * item.quantity;
 
-            // Update ML and recalculate totalML
             item.ml = ml;
             item.totalML = newTotalML;
 
-            // Recalculate prices
             const price = ml === 3 ? item.sellingPrice3ml : item.sellingPrice6ml;
             const originalPrice = price * newTotalML;
             const discountAmt = (originalPrice * (item.discount || 0)) / 100;
@@ -831,11 +932,9 @@ const Invoice = () => {
             const oldTotalML = item.totalML;
             const newTotalML = item.ml * qty;
 
-            // Update quantity and recalculate totalML
             item.quantity = qty;
             item.totalML = newTotalML;
 
-            // Recalculate prices
             const price = item.ml === 3 ? item.sellingPrice3ml : item.sellingPrice6ml;
             const originalPrice = price * newTotalML;
             const discountAmt = (originalPrice * (item.discount || 0)) / 100;
@@ -930,6 +1029,7 @@ const Invoice = () => {
                 workshopId: selectedWorkshop?.value || null,
                 packageId: selectedPackage?.value || null,
                 xpOilId: selectedXPOil?.value || null,
+                packageDiscount: packageDiscountInput || 0,
                 dispenserItems: dispenserItems.map(item => ({
                     dispenserId: item.dispenserId,
                     ml: item.ml,
@@ -939,7 +1039,8 @@ const Invoice = () => {
                 promoCode: selectedPromo?.code || null,
                 paymentStatus: paymentStatus,
                 invoiceDate: invoiceDate,
-                notes: notes
+                notes: notes,
+                loyaltyCoinsUsed: loyaltyCoinsUsed || 0
             };
 
             const response = await fetch(
@@ -958,7 +1059,12 @@ const Invoice = () => {
             }
 
             const result = await response.json();
-            toast.success(`Invoice ${result.invoice.invoiceNumber} created successfully!`);
+
+            let successMsg = `Invoice ${result.invoice.invoiceNumber} created successfully!`;
+            if (result.loyaltyCoins) {
+                successMsg += ` 🪙 Earned ${result.loyaltyCoins.earned} coins, Used ${result.loyaltyCoins.used} coins`;
+            }
+            toast.success(successMsg);
 
             resetForm();
             fetchAllInvoices();
@@ -1012,6 +1118,7 @@ const Invoice = () => {
                 paymentStatus: paymentStatus,
                 invoiceDate: invoiceDate,
                 notes: notes
+                // ❌ NO loyaltyCoinsUsed - NOT allowed in update!
             };
 
             const response = await fetch(
@@ -1107,6 +1214,10 @@ const Invoice = () => {
         setInvoiceDate(new Date().toISOString().split('T')[0]);
         setPackageDiscountInput(0);
         setRecentWorkshop(null);
+        setUseLoyaltyCoins(false);
+        setLoyaltyCoinsUsed(0);
+        setAvailableLoyaltyCoins(0);
+        setUsableLoyaltyCoins(0);
         setIsEditing(false);
         setEditingInvoiceId(null);
     };
@@ -1234,6 +1345,12 @@ const Invoice = () => {
             setInvoiceDate(invoice.invoiceDate ? new Date(invoice.invoiceDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
             setNotes(invoice.notes || '');
 
+            // ✅ Loyalty coins - NOT allowed to change in edit mode
+            // Just show existing values
+            if (invoice.loyaltyCoinsEarned > 0 || invoice.loyaltyCoinsUsed > 0) {
+                console.log(`🪙 Edit Mode - Loyalty: Earned ${invoice.loyaltyCoinsEarned || 0}, Used ${invoice.loyaltyCoinsUsed || 0}`);
+            }
+
             // Switch to create view and enable edit mode
             setActiveView("create");
             setIsEditing(true);
@@ -1260,7 +1377,6 @@ const Invoice = () => {
 
     const handleSwitchToCreateView = () => {
         if (isEditing) {
-            // ✅ Use custom confirmation modal instead of window.confirm
             showConfirmationModal({
                 title: "Cancel Editing?",
                 message: "You have unsaved changes. Are you sure you want to cancel editing?",
@@ -1588,7 +1704,7 @@ const Invoice = () => {
                                         isClearable
                                         styles={customSelectStyles}
                                         noOptionsMessage={() => "No active packages found"}
-                                        isDisabled={isEditing}  // ✅ Disable package selection in edit mode
+                                        isDisabled={isEditing}
                                     />
                                     {isEditing && selectedPackage && (
                                         <small className="inv-hint">Package cannot be changed in edit mode</small>
@@ -1770,7 +1886,6 @@ const Invoice = () => {
                                                                     value={item.discount || 0}
                                                                     onChange={(e) => handleUpdateDispenserDiscount(index, e.target.value)}
                                                                     className="inv-discount-input"
-                                                                    // disabled={!isEditing}
                                                                 />
                                                                 <span className="inv-discount-percent">%</span>
                                                             </td>
@@ -1861,7 +1976,123 @@ const Invoice = () => {
                             </div>
                         </div>
 
-                        {/* SECTION 5: SUMMARY & CALCULATION */}
+                        {/* SECTION 5: LOYALTY COINS */}
+                        {selectedCustomer && !isEditing && usableLoyaltyCoins > 0 && (
+                            <div className="inv-section inv-loyalty-section">
+                                <h3 className="inv-section-title">
+                                    <FaCoins /> Loyalty Coins
+                                </h3>
+                                <div className="inv-loyalty-container">
+                                    <div className="inv-loyalty-info">
+                                        <div className="inv-loyalty-available">
+                                            <span>Available Coins:</span>
+                                            <strong>{availableLoyaltyCoins}</strong>
+                                        </div>
+                                        <div className="inv-loyalty-usable">
+                                            <span>Usable Coins:</span>
+                                            <strong>{usableLoyaltyCoins} (1 Coin = ₹1)</strong>
+                                        </div>
+                                        <div className="inv-loyalty-earned-preview">
+                                            <span>Will Earn:</span>
+                                            <strong className="inv-loyalty-earned-value">+{loyaltyCoinsEarned} coins</strong>
+                                        </div>
+                                    </div>
+                                    <label className="inv-loyalty-checkbox">
+                                        <input
+                                            type="checkbox"
+                                            checked={useLoyaltyCoins}
+                                            onChange={(e) => setUseLoyaltyCoins(e.target.checked)}
+                                        />
+                                        <span>Use Loyalty Coins (Maximum: {usableLoyaltyCoins} coins)</span>
+                                    </label>
+                                    {useLoyaltyCoins && loyaltyCoinsUsed > 0 && (
+                                        <div className="inv-loyalty-used-info">
+                                            <span>Using: <strong>{loyaltyCoinsUsed}</strong> coins (₹{loyaltyDiscountAmount.toFixed(2)} discount)</span>
+                                        </div>
+                                    )}
+                                    {!useLoyaltyCoins && (
+                                        <div className="inv-loyalty-hint">
+                                            <small>Check to use loyalty coins. Minimum 50 coins must remain in account.</small>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {selectedCustomer && !isEditing && availableLoyaltyCoins > 0 && usableLoyaltyCoins === 0 && (
+                            <div className="inv-section inv-loyalty-section">
+                                <h3 className="inv-section-title">
+                                    <FaCoins /> Loyalty Coins
+                                </h3>
+                                <div className="inv-loyalty-container">
+                                    <div className="inv-loyalty-info">
+                                        <div className="inv-loyalty-available">
+                                            <span>Available Coins:</span>
+                                            <strong>{availableLoyaltyCoins}</strong>
+                                        </div>
+                                        <div className="inv-loyalty-usable">
+                                            <span>Usable Coins:</span>
+                                            <strong>0</strong>
+                                        </div>
+                                        <div className="inv-loyalty-earned-preview">
+                                            <span>Will Earn:</span>
+                                            <strong className="inv-loyalty-earned-value">+{loyaltyCoinsEarned} coins</strong>
+                                        </div>
+                                    </div>
+                                    <div className="inv-loyalty-message">
+                                        <small>Minimum 50 coins required to use loyalty rewards. Need {50 - availableLoyaltyCoins} more coins.</small>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {selectedCustomer && !isEditing && availableLoyaltyCoins === 0 && (
+                            <div className="inv-section inv-loyalty-section">
+                                <h3 className="inv-section-title">
+                                    <FaCoins /> Loyalty Coins
+                                </h3>
+                                <div className="inv-loyalty-container">
+                                    <div className="inv-loyalty-info">
+                                        <div className="inv-loyalty-available">
+                                            <span>Available Coins:</span>
+                                            <strong>0</strong>
+                                        </div>
+                                        <div className="inv-loyalty-earned-preview">
+                                            <span>Will Earn:</span>
+                                            <strong className="inv-loyalty-earned-value">+{loyaltyCoinsEarned} coins</strong>
+                                        </div>
+                                    </div>
+                                    <div className="inv-loyalty-message">
+                                        <small>No loyalty coins available. Earn coins by making purchases!</small>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {isEditing && selectedCustomer && (
+                            <div className="inv-section inv-loyalty-section">
+                                <h3 className="inv-section-title">
+                                    <FaCoins /> Loyalty Coins
+                                </h3>
+                                <div className="inv-loyalty-container">
+                                    <div className="inv-loyalty-info">
+                                        <div className="inv-loyalty-available">
+                                            <span>Available Coins:</span>
+                                            <strong>{availableLoyaltyCoins}</strong>
+                                        </div>
+                                        <div className="inv-loyalty-earned-preview">
+                                            <span>Will Earn:</span>
+                                            <strong className="inv-loyalty-earned-value">+{loyaltyCoinsEarned} coins</strong>
+                                        </div>
+                                    </div>
+                                    <div className="inv-loyalty-edit-mode-message">
+                                        <small>⛔ Loyalty coins cannot be changed in edit mode. Coins will be recalculated automatically.</small>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* SECTION 6: SUMMARY & CALCULATION */}
                         <div className="inv-section inv-summary-section">
                             <h3 className="inv-section-title">
                                 <FaMoneyBillWave /> Summary &amp; Calculation
@@ -1932,6 +2163,22 @@ const Invoice = () => {
                                         <span>Promo Discount ({selectedPromo.discount}%)</span>
                                         <span className="inv-summary-value inv-discount-amount">
                                             -₹{promoDiscount.toFixed(2)}
+                                        </span>
+                                    </div>
+                                )}
+                                {loyaltyDiscountAmount > 0 && (
+                                    <div className="inv-summary-item inv-summary-detail inv-summary-loyalty">
+                                        <span>Loyalty Discount ({loyaltyCoinsUsed} coins)</span>
+                                        <span className="inv-summary-value inv-discount-amount">
+                                            -₹{loyaltyDiscountAmount.toFixed(2)}
+                                        </span>
+                                    </div>
+                                )}
+                                {loyaltyCoinsEarned > 0 && (
+                                    <div className="inv-summary-item inv-summary-detail inv-summary-earned">
+                                        <span>🪙 Loyalty Coins Earned</span>
+                                        <span className="inv-summary-value inv-loyalty-earned">
+                                            +{loyaltyCoinsEarned} coins
                                         </span>
                                     </div>
                                 )}
@@ -2039,7 +2286,7 @@ const Invoice = () => {
                                             <th>Customer</th>
                                             <th>Date</th>
                                             <th>Payment</th>
-                                            <th>Status</th>
+                                            {/* <th>Status</th> */}
                                             <th>Total</th>
                                             <th>Actions</th>
                                         </tr>
@@ -2051,16 +2298,19 @@ const Invoice = () => {
                                                 <td>
                                                     <div className="inv-list-customer-name">{inv.customer?.customerName}</div>
                                                     <div className="inv-list-customer-phone">{inv.customer?.contactNumber}</div>
+                                                    {/* {inv.loyaltyCoinsEarned > 0 && (
+                                                        <div className="inv-list-loyalty-badge">🪙 +{inv.loyaltyCoinsEarned}</div>
+                                                    )} */}
                                                 </td>
                                                 <td className="inv-list-date-cell">{formatDate(inv.invoiceDate)}</td>
                                                 <td>
                                                     <span className="inv-payment-pill">{inv.paymentStatus}</span>
                                                 </td>
-                                                <td>
+                                                {/* <td>
                                                     <span className={`inv-status-badge ${getStatusClass(inv.status)}`}>
                                                         {inv.status}
                                                     </span>
-                                                </td>
+                                                </td> */}
                                                 <td className="inv-list-total-cell">₹{inv.grandTotal?.toFixed(2)}</td>
                                                 <td>
                                                     <div className="inv-list-actions">
