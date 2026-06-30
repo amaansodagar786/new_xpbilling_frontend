@@ -6,13 +6,16 @@ import {
     FaPlus, FaSave, FaList, FaTimes, FaEye,
     FaFileInvoice, FaSearch, FaBan, FaCalendarAlt,
     FaCreditCard, FaPlusCircle, FaCheck, FaWindowClose,
-    FaPercentage, FaEdit, FaUndo, FaHistory, FaCoins
+    FaPercentage, FaEdit, FaUndo, FaHistory, FaCoins,
+    FaFilePdf, FaWhatsapp
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../../Components/Navbar/Navbar";
 import "./Invoice.scss";
 import "react-toastify/dist/ReactToastify.css";
 import Select from 'react-select';
+import html2pdf from "html2pdf.js";
+import InvoicePrint from "./Print/InvoicePrint";
 
 // ============================================
 // CONFIRMATION MODAL - Custom (Replaces window.confirm)
@@ -78,7 +81,8 @@ const ConfirmationModal = ({
 // INVOICE DETAILS MODAL
 // ============================================
 const InvoiceDetailsModal = ({
-    show, onClose, invoice, isLoading, formatDate, getStatusClass
+    show, onClose, invoice, isLoading, formatDate, getStatusClass,
+    onGeneratePDF, onWhatsApp, isExporting  // ✅ isExporting now only for this specific invoice
 }) => {
     if (!show) return null;
 
@@ -341,6 +345,19 @@ const InvoiceDetailsModal = ({
                     )}
                 </div>
                 <div className="inv-modal-footer">
+                    <button
+                        className="inv-modal-btn-pdf"
+                        onClick={() => onGeneratePDF(invoice)}
+                        disabled={isExporting}
+                    >
+                        <FaFilePdf /> {isExporting ? "Generating..." : "Download PDF"}
+                    </button>
+                    <button
+                        className="inv-modal-btn-whatsapp"
+                        onClick={() => onWhatsApp(invoice)}
+                    >
+                        <FaWhatsapp /> Send WhatsApp
+                    </button>
                     <button className="inv-modal-btn-close" onClick={onClose}>
                         Close
                     </button>
@@ -419,6 +436,7 @@ const Invoice = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isUpdating, setIsUpdating] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [exportingInvoices, setExportingInvoices] = useState({});
     const navigate = useNavigate();
 
     // ========== PAGE VIEW TOGGLE ==========
@@ -439,6 +457,9 @@ const Invoice = () => {
         onConfirm: null
     });
     const [isConfirming, setIsConfirming] = useState(false);
+
+    // ========== PDF & WHATSAPP STATE ==========
+    const [invoiceForPrint, setInvoiceForPrint] = useState(null);
 
     // ========== DATA STATES ==========
     const [customers, setCustomers] = useState([]);
@@ -712,13 +733,11 @@ const Invoice = () => {
             const customer = customers.find(c => c.customerId === selectedCustomer.value);
             if (customer) {
                 const totalCoins = customer.loyaltyCoins || 0;
-                // Minimum 50 coins must remain in account
                 const usable = Math.max(0, totalCoins - 50);
                 setAvailableLoyaltyCoins(totalCoins);
                 setUsableLoyaltyCoins(usable);
                 setUseLoyaltyCoins(false);
                 setLoyaltyCoinsUsed(0);
-                console.log(`🪙 Customer Loyalty: ${totalCoins} available, ${usable} usable`);
             }
         } else {
             setAvailableLoyaltyCoins(0);
@@ -794,17 +813,13 @@ const Invoice = () => {
         let coinsEarned = 0;
 
         if (useLoyaltyCoins && usableLoyaltyCoins > 0 && !isEditing) {
-            // 1 coin = ₹1 discount
             actualCoinsUsed = Math.min(usableLoyaltyCoins, afterPromo);
             loyaltyDiscountAmt = actualCoinsUsed;
             const afterLoyalty = afterPromo - loyaltyDiscountAmt;
-
-            // Calculate coins earned (1 coin per ₹100 spent, before GST)
             if (afterLoyalty > 0) {
                 coinsEarned = Math.floor(afterLoyalty / 100);
             }
         } else {
-            // Coins earned without using coins
             if (afterPromo > 0) {
                 coinsEarned = Math.floor(afterPromo / 100);
             }
@@ -905,18 +920,14 @@ const Invoice = () => {
         const ml = parseInt(newMl);
         if (!isNaN(ml) && (ml === 3 || ml === 6)) {
             const item = updatedItems[index];
-            const oldTotalML = item.totalML;
             const newTotalML = ml * item.quantity;
-
             item.ml = ml;
             item.totalML = newTotalML;
-
             const price = ml === 3 ? item.sellingPrice3ml : item.sellingPrice6ml;
             const originalPrice = price * newTotalML;
             const discountAmt = (originalPrice * (item.discount || 0)) / 100;
             item.originalPrice = originalPrice;
             item.finalPrice = originalPrice - discountAmt;
-
             setDispenserItems(updatedItems);
         }
     };
@@ -929,18 +940,14 @@ const Invoice = () => {
         const qty = parseInt(newQty);
         if (!isNaN(qty) && qty > 0) {
             const item = updatedItems[index];
-            const oldTotalML = item.totalML;
             const newTotalML = item.ml * qty;
-
             item.quantity = qty;
             item.totalML = newTotalML;
-
             const price = item.ml === 3 ? item.sellingPrice3ml : item.sellingPrice6ml;
             const originalPrice = price * newTotalML;
             const discountAmt = (originalPrice * (item.discount || 0)) / 100;
             item.originalPrice = originalPrice;
             item.finalPrice = originalPrice - discountAmt;
-
             setDispenserItems(updatedItems);
         }
     };
@@ -966,6 +973,91 @@ const Invoice = () => {
         setDispenserML("");
         setDispenserQty("");
         toast.info("Dispenser items cleared");
+    };
+
+    const generatePDF = async (invoice) => {
+        if (!invoice) return;
+
+        const invoiceId = invoice.invoiceId || invoice.invoiceNumber;
+
+        // ✅ Check if this specific invoice is already exporting
+        if (exportingInvoices[invoiceId]) return;
+
+        // ✅ Set loading for THIS specific invoice only
+        setExportingInvoices(prev => ({ ...prev, [invoiceId]: true }));
+
+        try {
+            // Set invoice for print
+            setInvoiceForPrint(invoice);
+
+            // Wait for render
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            let element = document.getElementById("invoice-print");
+            let attempts = 0;
+            while (!element && attempts < 3) {
+                await new Promise(resolve => setTimeout(resolve, 300));
+                element = document.getElementById("invoice-print");
+                attempts++;
+            }
+
+            if (!element) {
+                toast.error("PDF element not found. Please try again.");
+                setExportingInvoices(prev => ({ ...prev, [invoiceId]: false }));
+                setInvoiceForPrint(null);
+                return;
+            }
+
+            const opt = {
+                filename: `${invoice.invoiceNumber}_${invoice.customer?.customerName || "customer"}.pdf`,
+                image: { type: "jpeg", quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true, logging: false },
+                jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+                pagebreak: { mode: ['css', 'legacy'] },
+                margin: [0, 0, 20, 0]
+            };
+
+            await html2pdf().set(opt).from(element).save();
+            toast.success("PDF downloaded successfully!");
+
+        } catch (error) {
+            console.error("PDF generation error:", error);
+            toast.error("Failed to generate PDF");
+        } finally {
+            // ✅ Clear loading state for THIS specific invoice only
+            setExportingInvoices(prev => ({ ...prev, [invoiceId]: false }));
+            setInvoiceForPrint(null);
+        }
+    };
+
+    // ============================================
+    // OPEN WHATSAPP
+    // ============================================
+    const handleWhatsApp = (invoice) => {
+        try {
+            const customerMobile = invoice.customer?.contactNumber?.replace(/\D/g, '');
+            if (!customerMobile) {
+                toast.error("Customer mobile number not found");
+                return;
+            }
+
+            const message = `Hello ${invoice.customer?.customerName || "Customer"},\n\n` +
+                `Thank you for your purchase!\n` +
+                `📄 Invoice: ${invoice.invoiceNumber}\n` +
+                `📅 Date: ${formatDate(invoice.invoiceDate)}\n` +
+                `💰 Total: ₹${invoice.grandTotal?.toFixed(2)}\n` +
+                `💳 Payment: ${invoice.paymentStatus}\n\n` +
+                `🪙 Loyalty Coins Earned: ${invoice.loyaltyCoinsEarned || 0}\n\n` +
+                `Thank you for shopping with us! 🙏`;
+
+            const url = `https://wa.me/${customerMobile}?text=${encodeURIComponent(message)}`;
+            window.open(url, "_blank");
+            toast.success("WhatsApp opened successfully!");
+
+        } catch (error) {
+            console.error("WhatsApp error:", error);
+            toast.error("Failed to open WhatsApp");
+        }
     };
 
     // ============================================
@@ -1066,6 +1158,11 @@ const Invoice = () => {
             }
             toast.success(successMsg);
 
+            // ✅ Set invoice for PDF and open WhatsApp
+            setInvoiceForPrint(result.invoice);
+            await generatePDF(result.invoice);
+            handleWhatsApp(result.invoice);
+
             resetForm();
             fetchAllInvoices();
 
@@ -1118,7 +1215,6 @@ const Invoice = () => {
                 paymentStatus: paymentStatus,
                 invoiceDate: invoiceDate,
                 notes: notes
-                // ❌ NO loyaltyCoinsUsed - NOT allowed in update!
             };
 
             const response = await fetch(
@@ -1345,8 +1441,7 @@ const Invoice = () => {
             setInvoiceDate(invoice.invoiceDate ? new Date(invoice.invoiceDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
             setNotes(invoice.notes || '');
 
-            // ✅ Loyalty coins - NOT allowed to change in edit mode
-            // Just show existing values
+            // Loyalty coins - NOT allowed to change in edit mode
             if (invoice.loyaltyCoinsEarned > 0 || invoice.loyaltyCoinsUsed > 0) {
                 console.log(`🪙 Edit Mode - Loyalty: Earned ${invoice.loyaltyCoinsEarned || 0}, Used ${invoice.loyaltyCoinsUsed || 0}`);
             }
@@ -2322,6 +2417,25 @@ const Invoice = () => {
                                                             <FaEye />
                                                         </button>
                                                         <button
+                                                            className="inv-list-pdf-btn"
+                                                            onClick={() => generatePDF(inv)}
+                                                            title="Download PDF"
+                                                            disabled={exportingInvoices[inv.invoiceId || inv.invoiceNumber]}
+                                                        >
+                                                            {exportingInvoices[inv.invoiceId || inv.invoiceNumber] ? (
+                                                                <div className="inv-loading-spinner-small"></div>
+                                                            ) : (
+                                                                <FaFilePdf />
+                                                            )}
+                                                        </button>
+                                                        {/* <button
+                                                            className="inv-list-whatsapp-btn"
+                                                            onClick={() => handleWhatsApp(inv)}
+                                                            title="Send WhatsApp"
+                                                        >
+                                                            <FaWhatsapp />
+                                                        </button> */}
+                                                        <button
                                                             className="inv-list-edit-btn"
                                                             onClick={() => handleEditInvoice(inv.invoiceId)}
                                                             title="Edit Invoice"
@@ -2346,7 +2460,6 @@ const Invoice = () => {
                     </div>
                 )}
 
-                {/* Invoice Details Modal */}
                 <InvoiceDetailsModal
                     show={showInvoiceDetailsModal}
                     onClose={() => {
@@ -2357,6 +2470,12 @@ const Invoice = () => {
                     isLoading={isLoadingInvoiceDetails}
                     formatDate={formatDate}
                     getStatusClass={getStatusClass}
+                    onGeneratePDF={(invoice) => {
+                        setInvoiceForPrint(invoice);
+                        setTimeout(() => generatePDF(invoice), 300);
+                    }}
+                    onWhatsApp={handleWhatsApp}
+                    isExporting={viewingInvoice ? exportingInvoices[viewingInvoice.invoiceId || viewingInvoice.invoiceNumber] : false}
                 />
 
                 {/* Delete Confirmation Modal */}
@@ -2387,6 +2506,11 @@ const Invoice = () => {
                     type={confirmationConfig.type}
                     isConfirming={isConfirming}
                 />
+
+                {/* Hidden Invoice Print Component */}
+                <div style={{ position: "absolute", left: "-9999px", top: 0, visibility: "hidden" }}>
+                    {invoiceForPrint && <InvoicePrint invoice={invoiceForPrint} />}
+                </div>
 
             </div>
         </Navbar>
