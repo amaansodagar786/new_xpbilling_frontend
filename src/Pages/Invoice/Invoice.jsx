@@ -1770,7 +1770,7 @@ const Invoice = () => {
                                                                     value={item.discount || 0}
                                                                     onChange={(e) => handleUpdateDispenserDiscount(index, e.target.value)}
                                                                     className="inv-discount-input"
-                                                                    disabled={!isEditing}
+                                                                    // disabled={!isEditing}
                                                                 />
                                                                 <span className="inv-discount-percent">%</span>
                                                             </td>
