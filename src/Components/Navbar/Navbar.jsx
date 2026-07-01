@@ -135,6 +135,12 @@ const Navbar = ({
         return 'Business Reports And Analytics';
       case '/':
         return 'Invoice Creation & Management';
+      case '/inventory/xp':
+        return 'Inventory Management (XP)';
+      case '/inventory/bottles':
+        return 'Inventory Management (BOTTLES)';
+      case '/inventory/dispenser':
+        return 'Inventory Management (DISPENSER)';
       default:
         return '';
     }

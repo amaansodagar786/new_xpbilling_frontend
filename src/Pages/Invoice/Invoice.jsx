@@ -18,7 +18,7 @@ import html2pdf from "html2pdf.js";
 import InvoicePrint from "./Print/InvoicePrint";
 
 // ============================================
-// CONFIRMATION MODAL - Custom (Replaces window.confirm)
+// CONFIRMATION MODAL
 // ============================================
 const ConfirmationModal = ({
     show,
@@ -82,7 +82,7 @@ const ConfirmationModal = ({
 // ============================================
 const InvoiceDetailsModal = ({
     show, onClose, invoice, isLoading, formatDate, getStatusClass,
-    onGeneratePDF, onWhatsApp, isExporting  // ✅ isExporting now only for this specific invoice
+    onGeneratePDF, onWhatsApp, isExporting
 }) => {
     if (!show) return null;
 
@@ -258,7 +258,6 @@ const InvoiceDetailsModal = ({
                                 </div>
                             )}
 
-                            {/* ===== LOYALTY COINS SECTION ===== */}
                             {(invoice.loyaltyCoinsEarned > 0 || invoice.loyaltyCoinsUsed > 0) && (
                                 <div className="inv-details-section">
                                     <h4><FaCoins /> Loyalty Coins</h4>
@@ -628,86 +627,82 @@ const Invoice = () => {
     // ============================================
     // FETCH WORKSHOPS FOR CUSTOMER
     // ============================================
-    useEffect(() => {
-        const fetchWorkshopsForCustomer = async () => {
-            if (!selectedCustomer) {
-                setWorkshops([]);
-                setSelectedWorkshop(null);
-                setRecentWorkshop(null);
-                return;
+    const fetchWorkshopsForCustomer = async (customerId) => {
+        try {
+            const response = await fetch(
+                `${import.meta.env.VITE_API_URL}/workshops/get-active?filter=all&limit=100&sortBy=date&sortOrder=desc`,
+                { credentials: 'include' }
+            );
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch workshops');
             }
 
-            try {
-                const response = await fetch(
-                    `${import.meta.env.VITE_API_URL}/workshops/get-active?filter=all&limit=100&sortBy=date&sortOrder=desc`,
-                    { credentials: 'include' }
+            const data = await response.json();
+            const workshopsArray = Array.isArray(data) ? data : data.workshops || data.data || [];
+
+            const customerWorkshops = workshopsArray.filter(w => {
+                const hasCustomer = w.customers && Array.isArray(w.customers) &&
+                    w.customers.some(c => c.customerId === customerId);
+                return hasCustomer;
+            });
+
+            return customerWorkshops;
+        } catch (error) {
+            console.error("Error fetching workshops:", error);
+            toast.error("Failed to fetch workshops");
+            return [];
+        }
+    };
+
+    // ============================================
+    // AUTO SELECT LATEST WORKSHOP (CREATE MODE)
+    // ============================================
+    useEffect(() => {
+        const autoSelectWorkshop = async () => {
+            if (!selectedCustomer || isEditing) return;
+
+            const customerWorkshops = await fetchWorkshopsForCustomer(selectedCustomer.value);
+            setWorkshops(customerWorkshops);
+
+            if (customerWorkshops.length > 0) {
+                const latest = customerWorkshops.reduce((latestSoFar, current) => {
+                    const currentDateTime = new Date(`${current.date}T${current.startTime}`);
+                    const latestDateTime = new Date(`${latestSoFar.date}T${latestSoFar.startTime}`);
+                    return currentDateTime > latestDateTime ? current : latestSoFar;
+                }, customerWorkshops[0]);
+
+                const customerInWorkshop = latest.customers.find(
+                    c => c.customerId === selectedCustomer.value
                 );
 
-                if (!response.ok) {
-                    throw new Error('Failed to fetch workshops');
-                }
-
-                const data = await response.json();
-
-                const workshopsArray = Array.isArray(data) ? data : data.workshops || data.data || [];
-
-                const customerWorkshops = workshopsArray.filter(w => {
-                    const hasCustomer = w.customers && Array.isArray(w.customers) &&
-                        w.customers.some(c => c.customerId === selectedCustomer.value);
-                    return hasCustomer;
-                });
-
-                setWorkshops(customerWorkshops);
-
-                if (customerWorkshops.length > 0) {
-                    const latest = customerWorkshops.reduce((latestSoFar, current) => {
-                        const currentDateTime = new Date(`${current.date}T${current.startTime}`);
-                        const latestDateTime = new Date(`${latestSoFar.date}T${latestSoFar.startTime}`);
-                        return currentDateTime > latestDateTime ? current : latestSoFar;
-                    }, customerWorkshops[0]);
-
-                    const customerInWorkshop = latest.customers.find(
-                        c => c.customerId === selectedCustomer.value
-                    );
-
-                    if (customerInWorkshop && customerInWorkshop.invoiceCreated === true) {
-                        toast.warning(`Latest workshop invoice already created for ${selectedCustomer.label}`);
-                        setSelectedWorkshop(null);
-                        setRecentWorkshop(null);
-                    } else {
-                        setSelectedWorkshop({
-                            value: latest.workshopId,
-                            label: `${new Date(latest.date).toLocaleDateString()} - ${latest.startTime}`,
-                            data: latest
-                        });
-                        setRecentWorkshop(latest);
-                    }
-                } else {
+                if (customerInWorkshop && customerInWorkshop.invoiceCreated === true) {
+                    toast.warning(`Latest workshop invoice already created for ${selectedCustomer.label}`);
                     setSelectedWorkshop(null);
                     setRecentWorkshop(null);
+                } else {
+                    setSelectedWorkshop({
+                        value: latest.workshopId,
+                        label: `${new Date(latest.date).toLocaleDateString()} - ${latest.startTime}`,
+                        data: latest
+                    });
+                    setRecentWorkshop(latest);
                 }
-            } catch (error) {
-                console.error("Error fetching workshops:", error);
-                toast.error("Failed to fetch workshops");
+            } else {
+                setSelectedWorkshop(null);
+                setRecentWorkshop(null);
             }
         };
 
-        fetchWorkshopsForCustomer();
-    }, [selectedCustomer]);
+        autoSelectWorkshop();
+    }, [selectedCustomer, isEditing]);
 
     // ============================================
-    // AUTO SELECT PACKAGE (Only in create mode, NOT in edit)
+    // AUTO SELECT PACKAGE FROM WORKSHOP
     // ============================================
     useEffect(() => {
-        if (
-            recentWorkshop &&
-            Array.isArray(recentWorkshop.customers) &&
-            selectedCustomer &&
-            packages &&
-            packages.length > 0 &&
-            !isEditing
-        ) {
-            const customerInWorkshop = recentWorkshop.customers.find(
+        if (selectedWorkshop && selectedCustomer) {
+            const customerInWorkshop = selectedWorkshop.data.customers?.find(
                 c => c.customerId === selectedCustomer.value
             );
 
@@ -723,7 +718,7 @@ const Invoice = () => {
                 }
             }
         }
-    }, [recentWorkshop, selectedCustomer, packages, isEditing]);
+    }, [selectedWorkshop, selectedCustomer, packages]);
 
     // ============================================
     // CUSTOMER SELECTION - Fetch Loyalty Coins
@@ -751,7 +746,6 @@ const Invoice = () => {
     // CALCULATE TOTALS WITH DISCOUNTS AND LOYALTY
     // ============================================
     useEffect(() => {
-        // 1. Calculate Package with Discount
         let pkgOriginal = 0;
         let pkgDiscountPercent = 0;
         let pkgDiscountAmt = 0;
@@ -769,7 +763,6 @@ const Invoice = () => {
         setPackageDiscountAmount(pkgDiscountAmt);
         setPackageFinalPrice(pkgFinal);
 
-        // 2. Calculate Dispenser Items with Discounts
         let dispOriginalTotal = 0;
         let dispDiscountTotal = 0;
         let dispFinalTotal = 0;
@@ -790,15 +783,12 @@ const Invoice = () => {
         setDispenserDiscountTotal(dispDiscountTotal);
         setDispenserFinalTotal(dispFinalTotal);
 
-        // 3. Calculate Subtotal (WITH GST included)
         const subtotalWithGST = pkgFinal + dispFinalTotal;
         setSubtotal(subtotalWithGST);
 
-        // 4. Remove GST from subtotal
         const subtotalWithoutGSTCalc = subtotalWithGST / (1 + GST_RATE / 100);
         setSubtotalWithoutGST(subtotalWithoutGSTCalc);
 
-        // 5. Apply Promo Discount on subtotal WITHOUT GST
         let promoDiscountAmt = 0;
         let afterPromo = subtotalWithoutGSTCalc;
         if (selectedPromo) {
@@ -807,7 +797,6 @@ const Invoice = () => {
         }
         setPromoDiscount(promoDiscountAmt);
 
-        // 6. Apply Loyalty Coins Discount (AFTER promo, BEFORE GST)
         let loyaltyDiscountAmt = 0;
         let actualCoinsUsed = 0;
         let coinsEarned = 0;
@@ -829,7 +818,6 @@ const Invoice = () => {
         setLoyaltyDiscountAmount(loyaltyDiscountAmt);
         setLoyaltyCoinsEarned(coinsEarned);
 
-        // 7. Calculate final amounts
         const finalAmount = afterPromo - loyaltyDiscountAmt;
         const gst = finalAmount * (GST_RATE / 100);
         const grand = finalAmount + gst;
@@ -840,6 +828,30 @@ const Invoice = () => {
         setGrandTotal(grand);
 
     }, [selectedPackage, packageDiscountInput, dispenserItems, selectedPromo, useLoyaltyCoins, usableLoyaltyCoins, isEditing, GST_RATE]);
+
+    // ============================================
+    // HANDLE WORKSHOP SELECTION (EDIT MODE)
+    // ============================================
+    const handleWorkshopChange = (selected) => {
+        if (!selected) {
+            setSelectedWorkshop(null);
+            setSelectedPackage(null);
+            return;
+        }
+
+        // ✅ Check if this workshop already has an invoice for this customer
+        const customerInWorkshop = selected.data.customers?.find(
+            c => c.customerId === selectedCustomer.value
+        );
+
+        if (customerInWorkshop && customerInWorkshop.invoiceCreated === true) {
+            toast.error("This workshop already has an invoice created!");
+            return;
+        }
+
+        setSelectedWorkshop(selected);
+        setRecentWorkshop(selected.data);
+    };
 
     // ============================================
     // HANDLE ADD DISPENSER ITEM
@@ -975,22 +987,21 @@ const Invoice = () => {
         toast.info("Dispenser items cleared");
     };
 
+    // ============================================
+    // GENERATE PDF
+    // ============================================
     const generatePDF = async (invoice) => {
         if (!invoice) return;
 
         const invoiceId = invoice.invoiceId || invoice.invoiceNumber;
 
-        // ✅ Check if this specific invoice is already exporting
         if (exportingInvoices[invoiceId]) return;
 
-        // ✅ Set loading for THIS specific invoice only
         setExportingInvoices(prev => ({ ...prev, [invoiceId]: true }));
 
         try {
-            // Set invoice for print
             setInvoiceForPrint(invoice);
 
-            // Wait for render
             await new Promise(resolve => setTimeout(resolve, 500));
 
             let element = document.getElementById("invoice-print");
@@ -1024,7 +1035,6 @@ const Invoice = () => {
             console.error("PDF generation error:", error);
             toast.error("Failed to generate PDF");
         } finally {
-            // ✅ Clear loading state for THIS specific invoice only
             setExportingInvoices(prev => ({ ...prev, [invoiceId]: false }));
             setInvoiceForPrint(null);
         }
@@ -1158,7 +1168,6 @@ const Invoice = () => {
             }
             toast.success(successMsg);
 
-            // ✅ Set invoice for PDF and open WhatsApp
             setInvoiceForPrint(result.invoice);
             await generatePDF(result.invoice);
             handleWhatsApp(result.invoice);
@@ -1365,14 +1374,46 @@ const Invoice = () => {
                 data: invoice.customer
             });
 
-            // Set workshop if exists
-            if (invoice.hasWorkshop && invoice.workshop) {
-                setSelectedWorkshop({
+            // ✅ Store if invoice has a workshop
+            const hasWorkshop = invoice.hasWorkshop && invoice.workshop;
+
+            // ✅ Set workshop directly from invoice data if exists
+            if (hasWorkshop) {
+                const workshopOption = {
                     value: invoice.workshop.workshopId,
                     label: `${new Date(invoice.workshop.date).toLocaleDateString()} - ${invoice.workshop.startTime}`,
-                    data: invoice.workshop
-                });
+                    data: {
+                        workshopId: invoice.workshop.workshopId,
+                        date: invoice.workshop.date,
+                        startTime: invoice.workshop.startTime,
+                        endTime: invoice.workshop.endTime,
+                        customers: []
+                    }
+                };
+                setSelectedWorkshop(workshopOption);
                 setRecentWorkshop(invoice.workshop);
+
+                // ✅ Add workshop to workshops state so Select has options
+                setWorkshops([{
+                    workshopId: invoice.workshop.workshopId,
+                    date: invoice.workshop.date,
+                    startTime: invoice.workshop.startTime,
+                    endTime: invoice.workshop.endTime,
+                    customers: []
+                }]);
+            } else {
+                // ✅ If no workshop, fetch available workshops for this customer
+                const customerWorkshops = await fetchWorkshopsForCustomer(invoice.customer.customerId);
+                // ✅ Filter out workshops that already have invoice for this customer
+                const availableWorkshops = customerWorkshops.filter(w => {
+                    const customerInWorkshop = w.customers?.find(
+                        c => c.customerId === invoice.customer.customerId
+                    );
+                    return !(customerInWorkshop && customerInWorkshop.invoiceCreated === true);
+                });
+                setWorkshops(availableWorkshops);
+                setSelectedWorkshop(null);
+                setRecentWorkshop(null);
             }
 
             // Set package if exists
@@ -1440,11 +1481,6 @@ const Invoice = () => {
             setPaymentStatus(invoice.paymentStatus || 'Cash');
             setInvoiceDate(invoice.invoiceDate ? new Date(invoice.invoiceDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
             setNotes(invoice.notes || '');
-
-            // Loyalty coins - NOT allowed to change in edit mode
-            if (invoice.loyaltyCoinsEarned > 0 || invoice.loyaltyCoinsUsed > 0) {
-                console.log(`🪙 Edit Mode - Loyalty: Earned ${invoice.loyaltyCoinsEarned || 0}, Used ${invoice.loyaltyCoinsUsed || 0}`);
-            }
 
             // Switch to create view and enable edit mode
             setActiveView("create");
@@ -1766,23 +1802,31 @@ const Invoice = () => {
                                 <div className="inv-form-row">
                                     <div className="inv-form-field">
                                         <label>Select Workshop</label>
+                                        {/* WORKSHOP - Conditionally Read-Only */}
                                         <Select
                                             options={workshopOptions}
                                             value={selectedWorkshop}
-                                            onChange={setSelectedWorkshop}
+                                            onChange={handleWorkshopChange}
                                             placeholder="Select workshop"
                                             isClearable
                                             styles={customSelectStyles}
                                             noOptionsMessage={() => "No workshops found for this customer"}
-                                            isDisabled={isEditing}
+                                            // ✅ CORRECT LOGIC:
+                                            // - In CREATE mode: ALWAYS disabled (auto-selected)
+                                            // - In UPDATE mode with workshop: disabled (cannot change)
+                                            // - In UPDATE mode without workshop: enabled (can add)
+                                            isDisabled={!isEditing ? true : (selectedWorkshop !== null)}
                                         />
                                         {recentWorkshop && !selectedWorkshop && !isEditing && (
                                             <small className="inv-hint">
                                                 Latest workshop auto-selected: {new Date(recentWorkshop.date).toLocaleDateString()} - {recentWorkshop.startTime}
                                             </small>
                                         )}
-                                        {isEditing && (
-                                            <small className="inv-hint">Workshop cannot be changed in edit mode</small>
+                                        {isEditing && selectedWorkshop && (
+                                            <small className="inv-hint">Workshop cannot be changed once invoice is created</small>
+                                        )}
+                                        {isEditing && !selectedWorkshop && (
+                                            <small className="inv-hint">Select a workshop from the list</small>
                                         )}
                                     </div>
                                 </div>
@@ -1799,7 +1843,7 @@ const Invoice = () => {
                                         isClearable
                                         styles={customSelectStyles}
                                         noOptionsMessage={() => "No active packages found"}
-                                        isDisabled={isEditing}
+                                        isDisabled={true}  // ✅ Package is READ-ONLY in both modes
                                     />
                                     {isEditing && selectedPackage && (
                                         <small className="inv-hint">Package cannot be changed in edit mode</small>
@@ -1807,7 +1851,7 @@ const Invoice = () => {
                                     {selectedPackage && (
                                         <small className="inv-hint">
                                             ML: {selectedPackage.data?.bottleML}ml | Oils: {selectedPackage.data?.oilCount} |
-                                            Fragrance: {selectedPackage.data?.fragranceQty}g | Alcohol: {selectedPackage.data?.alcoholQty}ml
+                                            Fragrance: {selectedPackage.data?.fragranceQty}g | Fragrance Base: {selectedPackage.data?.alcoholQty}ml
                                         </small>
                                     )}
                                 </div>
@@ -2381,7 +2425,6 @@ const Invoice = () => {
                                             <th>Customer</th>
                                             <th>Date</th>
                                             <th>Payment</th>
-                                            {/* <th>Status</th> */}
                                             <th>Total</th>
                                             <th>Actions</th>
                                         </tr>
@@ -2393,19 +2436,11 @@ const Invoice = () => {
                                                 <td>
                                                     <div className="inv-list-customer-name">{inv.customer?.customerName}</div>
                                                     <div className="inv-list-customer-phone">{inv.customer?.contactNumber}</div>
-                                                    {/* {inv.loyaltyCoinsEarned > 0 && (
-                                                        <div className="inv-list-loyalty-badge">🪙 +{inv.loyaltyCoinsEarned}</div>
-                                                    )} */}
                                                 </td>
                                                 <td className="inv-list-date-cell">{formatDate(inv.invoiceDate)}</td>
                                                 <td>
                                                     <span className="inv-payment-pill">{inv.paymentStatus}</span>
                                                 </td>
-                                                {/* <td>
-                                                    <span className={`inv-status-badge ${getStatusClass(inv.status)}`}>
-                                                        {inv.status}
-                                                    </span>
-                                                </td> */}
                                                 <td className="inv-list-total-cell">₹{inv.grandTotal?.toFixed(2)}</td>
                                                 <td>
                                                     <div className="inv-list-actions">
@@ -2428,13 +2463,6 @@ const Invoice = () => {
                                                                 <FaFilePdf />
                                                             )}
                                                         </button>
-                                                        {/* <button
-                                                            className="inv-list-whatsapp-btn"
-                                                            onClick={() => handleWhatsApp(inv)}
-                                                            title="Send WhatsApp"
-                                                        >
-                                                            <FaWhatsapp />
-                                                        </button> */}
                                                         <button
                                                             className="inv-list-edit-btn"
                                                             onClick={() => handleEditInvoice(inv.invoiceId)}
@@ -2460,6 +2488,7 @@ const Invoice = () => {
                     </div>
                 )}
 
+                {/* Invoice Details Modal */}
                 <InvoiceDetailsModal
                     show={showInvoiceDetailsModal}
                     onClose={() => {

@@ -8,7 +8,7 @@ import {
   FaChevronLeft, FaChevronRight as FaChevronRightIcon,
   FaUser, FaCalendarAlt, FaClock, FaMoneyBillWave,
   FaTag, FaInfoCircle, FaTrashAlt, FaToggleOn, FaToggleOff,
-  FaWeightHanging, FaFlask
+  FaWeightHanging, FaFlask, FaList, FaEye
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../../../Components/Navbar/Navbar";
@@ -755,9 +755,9 @@ const DisposalHistoryPanel = ({ disposals, isLoading, onClose }) => {
 };
 
 // ============================================
-// TRANSACTION HISTORY PANEL
+// TRANSACTION PANEL (For Expanded Row - Only IN transactions)
 // ============================================
-const TransactionPanel = ({ transactions, isLoading, onViewDisposal, hasDisposal }) => {
+const TransactionPanel = ({ transactions, isLoading, onViewDisposal, hasDisposal, onViewAllTransactions }) => {
   const formatDateTime = (dateString) => {
     const date = new Date(dateString);
     return {
@@ -783,12 +783,17 @@ const TransactionPanel = ({ transactions, isLoading, onViewDisposal, hasDisposal
     return (
       <div className="xp-transaction-panel">
         <div className="xp-transaction-panel-header">
-          <h5><FaHistory /> Transaction History</h5>
-          {hasDisposal && (
-            <button className="xp-view-disposal-btn" onClick={onViewDisposal}>
-              <FaTrashAlt /> View Disposals
+          <h5><FaHistory /> Stock History</h5>
+          <div className="xp-transaction-actions">
+            {hasDisposal && (
+              <button className="xp-view-disposal-btn" onClick={onViewDisposal}>
+                <FaTrashAlt /> View Disposals
+              </button>
+            )}
+            <button className="xp-view-all-transactions-btn" onClick={onViewAllTransactions}>
+              <FaEye /> View All Transactions
             </button>
-          )}
+          </div>
         </div>
         <div className="xp-transaction-empty">No stock IN transactions recorded yet.</div>
       </div>
@@ -798,16 +803,24 @@ const TransactionPanel = ({ transactions, isLoading, onViewDisposal, hasDisposal
   return (
     <div className="xp-transaction-panel">
       <div className="xp-transaction-panel-header">
-        <h5><FaHistory /> Transaction History ({inTransactions.length})</h5>
-        {hasDisposal && (
-          <button className="xp-view-disposal-btn" onClick={onViewDisposal}>
-            <FaTrashAlt /> View Disposals
+        <h5><FaHistory /> Stock History ({inTransactions.length})</h5>
+        <div className="xp-transaction-actions">
+          {hasDisposal && (
+            <button className="xp-view-disposal-btn" onClick={onViewDisposal}>
+              <FaTrashAlt /> View Disposals
+            </button>
+          )}
+          <button className="xp-view-all-transactions-btn" onClick={onViewAllTransactions}>
+            <FaEye /> View All Transactions
           </button>
-        )}
+        </div>
       </div>
       <div className="xp-transaction-list">
         {inTransactions.map((t, idx) => {
           const { date, time } = formatDateTime(t.createdAt);
+          const isBulk = t.bulkUploadId && t.bulkUploadId !== '';
+          const reasonLabel = isBulk ? 'Bulk Upload' : t.reason || 'Manual Add';
+
           return (
             <div key={t.transactionId || idx} className="xp-transaction-item">
               <div className="xp-transaction-row">
@@ -834,6 +847,11 @@ const TransactionPanel = ({ transactions, isLoading, onViewDisposal, hasDisposal
                 <span className="xp-txn-label"><FaCalendarAlt /> Date:</span>
                 <span className="xp-txn-value">{date} - {time}</span>
 
+                <span className="xp-txn-separator">|</span>
+
+                <span className="xp-txn-label"><FaTag /> Reason:</span>
+                <span className="xp-txn-value xp-txn-reason">{reasonLabel}</span>
+
                 {t.notes && (
                   <>
                     <span className="xp-txn-separator">|</span>
@@ -851,6 +869,164 @@ const TransactionPanel = ({ transactions, isLoading, onViewDisposal, hasDisposal
 };
 
 // ============================================
+// FULL TRANSACTION MODAL (IN + OUT with Toggle)
+// ============================================
+const FullTransactionModal = ({
+  show, onClose, productName, transactions, isLoading,
+  activeTab, setActiveTab, formatDateTime
+}) => {
+  if (!show) return null;
+
+  const inTransactions = transactions?.filter(t => t.transactionType === 'IN') || [];
+  const outTransactions = transactions?.filter(t => t.transactionType === 'OUT') || [];
+
+  const currentTransactions = activeTab === 'in' ? inTransactions : outTransactions;
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  };
+
+  const formatTime = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const getReasonLabel = (reason, bulkUploadId) => {
+    if (bulkUploadId) return 'Bulk Upload';
+    if (reason === 'Purchase') return 'Manual Add';
+    if (reason === 'Invoice') return 'Invoice Created';
+    if (reason === 'Invoice Return') return 'Invoice Deleted/Restored';
+    if (reason === 'Invoice Edit - Return') return 'Invoice Edit - Returned';
+    if (reason === 'Invoice Edit - New Reduction') return 'Invoice Edit - Reduced';
+    if (reason === 'Invoice Deletion - Return') return 'Invoice Deleted - Returned';
+    return reason || 'Unknown';
+  };
+
+  return (
+    <div className="xp-modal-overlay" onClick={onClose}>
+      <div className="xp-modal-content xp-modal-lg" onClick={(e) => e.stopPropagation()}>
+        <div className="xp-modal-header">
+          <div className="xp-modal-title">
+            <FaHistory /> Transaction History - {productName || 'Product'}
+          </div>
+          <button className="xp-modal-close" onClick={onClose}>
+            <FaTimes />
+          </button>
+        </div>
+        <div className="xp-modal-body">
+          {isLoading ? (
+            <div className="xp-transaction-loading">
+              <div className="xp-loading-spinner large"></div>
+              <p>Loading transactions...</p>
+            </div>
+          ) : transactions?.length === 0 ? (
+            <div className="xp-transaction-empty">No transactions found for this product.</div>
+          ) : (
+            <>
+              {/* Toggle Tabs */}
+              <div className="xp-transaction-tabs">
+                <button
+                  className={`xp-tab-btn ${activeTab === 'in' ? 'xp-tab-active' : ''}`}
+                  onClick={() => setActiveTab('in')}
+                >
+                  <FaArrowUp /> IN ({inTransactions.length})
+                </button>
+                <button
+                  className={`xp-tab-btn ${activeTab === 'out' ? 'xp-tab-active' : ''}`}
+                  onClick={() => setActiveTab('out')}
+                >
+                  <FaArrowDown /> OUT ({outTransactions.length})
+                </button>
+              </div>
+
+              {/* Transactions List */}
+              <div className="xp-full-transaction-list">
+                {currentTransactions.length === 0 ? (
+                  <div className="xp-transaction-empty">
+                    No {activeTab === 'in' ? 'IN' : 'OUT'} transactions found.
+                  </div>
+                ) : (
+                  currentTransactions.map((t, idx) => {
+                    const isIn = t.transactionType === 'IN';
+                    const reasonLabel = getReasonLabel(t.reason, t.bulkUploadId);
+
+                    return (
+                      <div key={t.transactionId || idx} className={`xp-full-txn-item ${isIn ? 'xp-txn-in' : 'xp-txn-out'}`}>
+                        <div className="xp-full-txn-header">
+                          <span className="xp-full-txn-type">
+                            {isIn ? <FaArrowUp className="xp-txn-in-icon" /> : <FaArrowDown className="xp-txn-out-icon" />}
+                            {isIn ? '+' : '-'}{t.quantity} KG
+                          </span>
+                          <span className="xp-full-txn-reason">{reasonLabel}</span>
+                          <span className="xp-full-txn-date">
+                            <FaCalendarAlt /> {formatDate(t.createdAt)}
+                          </span>
+                          <span className="xp-full-txn-time">
+                            <FaClock /> {formatTime(t.createdAt)}
+                          </span>
+                        </div>
+                        <div className="xp-full-txn-details">
+                          <div className="xp-full-txn-row">
+                            <span className="xp-full-txn-label">Performed By:</span>
+                            <span className="xp-full-txn-value">{t.performedBy?.userName || 'Unknown'}</span>
+                          </div>
+                          {isIn && (
+                            <>
+                              <div className="xp-full-txn-row">
+                                <span className="xp-full-txn-label">Purchase Price:</span>
+                                <span className="xp-full-txn-value">₹{t.purchasePrice?.toFixed(2) || '0.00'}/KG</span>
+                              </div>
+                              <div className="xp-full-txn-row">
+                                <span className="xp-full-txn-label">Density:</span>
+                                <span className="xp-full-txn-value">{t.density || 1000}</span>
+                              </div>
+                            </>
+                          )}
+                          <div className="xp-full-txn-row">
+                            <span className="xp-full-txn-label">Stock Change:</span>
+                            <span className="xp-full-txn-value">
+                              {t.previousStock?.toFixed(2)} → <strong>{t.newStock?.toFixed(2)}</strong> KG
+                            </span>
+                          </div>
+                          {t.notes && (
+                            <div className="xp-full-txn-row">
+                              <span className="xp-full-txn-label">Notes:</span>
+                              <span className="xp-full-txn-value">{t.notes}</span>
+                            </div>
+                          )}
+                          {t.bulkUploadId && (
+                            <div className="xp-full-txn-row">
+                              <span className="xp-full-txn-label">Bulk Upload ID:</span>
+                              <span className="xp-full-txn-value xp-txn-bulk-id">{t.bulkUploadId}</span>
+                            </div>
+                          )}
+                          {t.reason && t.reason.includes('Invoice') && (
+                            <div className="xp-full-txn-row">
+                              <span className="xp-full-txn-label">Invoice Related:</span>
+                              <span className="xp-full-txn-value xp-txn-invoice-tag">Yes</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </>
+          )}
+        </div>
+        <div className="xp-modal-footer">
+          <button className="xp-btn-primary" onClick={onClose}>
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ============================================
 // MAIN COMPONENT
 // ============================================
 const XPInventory = () => {
@@ -862,8 +1038,7 @@ const XPInventory = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // ✅ New state for Grams/ML toggle
-  const [showGrams, setShowGrams] = useState(true); // true = Grams, false = ML
+  const [showGrams, setShowGrams] = useState(true);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [pagination, setPagination] = useState({
@@ -912,6 +1087,16 @@ const XPInventory = () => {
   const [disposalData, setDisposalData] = useState(null);
   const [loadingDisposal, setLoadingDisposal] = useState(false);
   const [currentDisposalXpId, setCurrentDisposalXpId] = useState(null);
+
+  // ============================================
+  // FULL TRANSACTION MODAL STATE
+  // ============================================
+  const [showFullTransactionModal, setShowFullTransactionModal] = useState(false);
+  const [fullTransactions, setFullTransactions] = useState([]);
+  const [loadingFullTransactions, setLoadingFullTransactions] = useState(false);
+  const [fullTransactionProductName, setFullTransactionProductName] = useState('');
+  const [fullTransactionXpId, setFullTransactionXpId] = useState('');
+  const [fullTransactionActiveTab, setFullTransactionActiveTab] = useState('in');
 
   const fileInputRef = useRef(null);
 
@@ -998,13 +1183,13 @@ const XPInventory = () => {
   };
 
   // ============================================
-  // ROW EXPANSION — FETCH TRANSACTION HISTORY
+  // ROW EXPANSION — FETCH TRANSACTION HISTORY (ONLY IN - hideInvoice=true)
   // ============================================
   const fetchTransactionsForProduct = async (xpId) => {
     try {
       setLoadingTransactionsId(xpId);
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/xp/get-transactions?xpId=${xpId}&limit=100`,
+        `${import.meta.env.VITE_API_URL}/xp/get-transactions?xpId=${xpId}&limit=100&hideInvoice=true`,
         { credentials: 'include' }
       );
       if (!response.ok) throw new Error('Failed to fetch transaction history');
@@ -1021,6 +1206,38 @@ const XPInventory = () => {
       setTransactionsByXpId(prev => ({ ...prev, [xpId]: [] }));
     } finally {
       setLoadingTransactionsId(null);
+    }
+  };
+
+  // ============================================
+  // FETCH FULL TRANSACTIONS (ALL IN + OUT - hideInvoice=false)
+  // ============================================
+  const fetchFullTransactions = async (xpId, productName) => {
+    try {
+      setLoadingFullTransactions(true);
+      setFullTransactionProductName(productName);
+      setFullTransactionXpId(xpId);
+      setFullTransactionActiveTab('in');
+
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/xp/get-transactions?xpId=${xpId}&limit=500&hideInvoice=false`,
+        { credentials: 'include' }
+      );
+      if (!response.ok) throw new Error('Failed to fetch transactions');
+
+      const data = await response.json();
+      const sorted = [...(data.transactions || [])].sort(
+        (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+      );
+
+      setFullTransactions(sorted);
+      setShowFullTransactionModal(true);
+    } catch (error) {
+      console.error("Error fetching full transactions:", error);
+      toast.error("Failed to load transactions");
+      setFullTransactions([]);
+    } finally {
+      setLoadingFullTransactions(false);
     }
   };
 
@@ -1455,13 +1672,12 @@ const XPInventory = () => {
     return { status: 'healthy', label: 'In Stock' };
   };
 
-  // ✅ Helpers
   const getStockInGrams = (quantity) => {
-    return quantity * 1000;  // Always 1000 Grams per KG
+    return quantity * 1000;
   };
 
   const getStockInML = (quantity, density) => {
-    return quantity * density;  // Uses density
+    return quantity * density;
   };
 
   const getStockDisplay = (quantity, density, showGrams) => {
@@ -1487,6 +1703,17 @@ const XPInventory = () => {
   };
 
   // ============================================
+  // FORMAT DATE TIME FOR FULL MODAL
+  // ============================================
+  const formatDateTime = (dateString) => {
+    const date = new Date(dateString);
+    return {
+      date: date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+      time: date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+    };
+  };
+
+  // ============================================
   // RENDER
   // ============================================
   return (
@@ -1496,7 +1723,7 @@ const XPInventory = () => {
 
         {/* Page Header */}
         <div className="xp-page-header">
-          <h2>XP Inventory Management</h2>
+          <h2></h2>
           <div className="xp-right-section">
             <div className="xp-search-container">
               <FaSearch className="xp-search-icon" />
@@ -1525,17 +1752,7 @@ const XPInventory = () => {
                 }}
                 title="Bulk add stock for multiple products at once"
               >
-                <FaUpload /> Bulk Add Stock
-              </button>
-              <button
-                className="xp-upload-btn"
-                onClick={() => {
-                  setUploadType('products');
-                  setShowBulkUploadModal(true);
-                }}
-                title="Bulk create new products"
-              >
-                <FaBox /> Bulk Add Products
+                <FaUpload /> Bulk Upload
               </button>
               <button className="xp-add-stock-btn" onClick={() => setShowAddStockModal(true)}>
                 <FaPlus /> Add Stock
@@ -1664,6 +1881,7 @@ const XPInventory = () => {
                                 isLoading={loadingTransactionsId === item.xpId}
                                 onViewDisposal={() => fetchDisposalHistory(item.xpId)}
                                 hasDisposal={true}
+                                onViewAllTransactions={() => fetchFullTransactions(item.xpId, item.productName)}
                               />
 
                               {showDisposalPanel && currentDisposalXpId === item.xpId && (
@@ -1817,6 +2035,21 @@ const XPInventory = () => {
           show={showAlertModal}
           onClose={() => setShowAlertModal(false)}
           alerts={alerts}
+        />
+
+        {/* Full Transaction Modal */}
+        <FullTransactionModal
+          show={showFullTransactionModal}
+          onClose={() => {
+            setShowFullTransactionModal(false);
+            setFullTransactions([]);
+          }}
+          productName={fullTransactionProductName}
+          transactions={fullTransactions}
+          isLoading={loadingFullTransactions}
+          activeTab={fullTransactionActiveTab}
+          setActiveTab={setFullTransactionActiveTab}
+          formatDateTime={formatDateTime}
         />
 
       </div>

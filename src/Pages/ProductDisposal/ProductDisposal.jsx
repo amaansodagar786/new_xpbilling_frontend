@@ -670,7 +670,7 @@ const ProductDisposal = () => {
 
                 {/* Page Header */}
                 <div className="pd-page-header">
-                    <h2>Product Disposal</h2>
+                    <h2></h2>
                     <div className="pd-right-section">
                         <div className="pd-inventory-select">
                             <label>Select Inventory:</label>

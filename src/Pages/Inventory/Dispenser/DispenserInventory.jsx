@@ -5,8 +5,9 @@ import {
   FaUpload, FaDownload, FaEdit, FaTrash,
   FaTimes, FaBell,
   FaCheckCircle, FaTimesCircle, FaMoneyBillWave,
-  FaChevronDown, FaChevronUp, FaHistory, FaUser, FaCalendarAlt, FaArrowUp,
-  FaChevronLeft, FaChevronRight, FaTag, FaClock, FaInfoCircle, FaTrashAlt
+  FaChevronDown, FaChevronUp, FaHistory, FaUser, FaCalendarAlt, FaArrowUp, FaArrowDown,
+  FaChevronLeft, FaChevronRight, FaTag, FaClock, FaInfoCircle, FaTrashAlt,
+  FaEye
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../../../Components/Navbar/Navbar";
@@ -862,9 +863,182 @@ const DisposalHistoryPanel = ({ disposals, isLoading, onClose }) => {
 };
 
 // ============================================
+// FULL TRANSACTION MODAL (IN + OUT with Toggle)
+// ============================================
+const FullTransactionModal = ({
+  show, onClose, productName, transactions, isLoading,
+  activeTab, setActiveTab
+}) => {
+  if (!show) return null;
+
+  const inTransactions = transactions?.filter(t => t.transactionType === 'IN') || [];
+  const outTransactions = transactions?.filter(t => t.transactionType === 'OUT') || [];
+
+  const currentTransactions = activeTab === 'in' ? inTransactions : outTransactions;
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  };
+
+  const formatTime = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const getReasonLabel = (reason, bulkUploadId) => {
+    if (bulkUploadId) return 'Bulk Upload';
+    if (reason === 'Purchase') return 'Manual Add';
+    if (reason === 'Invoice') return 'Invoice Created';
+    if (reason === 'Invoice Return') return 'Invoice Deleted/Restored';
+    if (reason === 'Invoice Edit - Return') return 'Invoice Edit - Returned';
+    if (reason === 'Invoice Edit - New Reduction') return 'Invoice Edit - Reduced';
+    if (reason === 'Invoice Deletion - Return') return 'Invoice Deleted - Returned';
+    return reason || 'Unknown';
+  };
+
+  return (
+    <div className="di-modal-overlay" onClick={onClose}>
+      <div className="di-modal-content di-modal-lg" onClick={(e) => e.stopPropagation()}>
+        <div className="di-modal-header">
+          <div className="di-modal-title">
+            <FaHistory /> Transaction History - {productName || 'Product'}
+          </div>
+          <button className="di-modal-close" onClick={onClose}>
+            <FaTimes />
+          </button>
+        </div>
+        <div className="di-modal-body">
+          {isLoading ? (
+            <div className="di-transaction-loading">
+              <div className="di-loading-spinner large"></div>
+              <p>Loading transactions...</p>
+            </div>
+          ) : transactions?.length === 0 ? (
+            <div className="di-transaction-empty">No transactions found for this product.</div>
+          ) : (
+            <>
+              {/* Toggle Tabs */}
+              <div className="di-transaction-tabs">
+                <button
+                  className={`di-tab-btn ${activeTab === 'in' ? 'di-tab-active' : ''}`}
+                  onClick={() => setActiveTab('in')}
+                >
+                  <FaArrowUp /> IN ({inTransactions.length})
+                </button>
+                <button
+                  className={`di-tab-btn ${activeTab === 'out' ? 'di-tab-active' : ''}`}
+                  onClick={() => setActiveTab('out')}
+                >
+                  <FaArrowDown /> OUT ({outTransactions.length})
+                </button>
+              </div>
+
+              {/* Transactions List */}
+              <div className="di-full-transaction-list">
+                {currentTransactions.length === 0 ? (
+                  <div className="di-transaction-empty">
+                    No {activeTab === 'in' ? 'IN' : 'OUT'} transactions found.
+                  </div>
+                ) : (
+                  currentTransactions.map((t, idx) => {
+                    const isIn = t.transactionType === 'IN';
+                    const reasonLabel = getReasonLabel(t.reason, t.bulkUploadId);
+
+                    return (
+                      <div key={t.transactionId || idx} className={`di-full-txn-item ${isIn ? 'di-txn-in' : 'di-txn-out'}`}>
+                        <div className="di-full-txn-header">
+                          <span className="di-full-txn-type">
+                            {isIn ? <FaArrowUp className="di-txn-in-icon" /> : <FaArrowDown className="di-txn-out-icon" />}
+                            {isIn ? '+' : '-'}{t.quantity} KG
+                          </span>
+                          <span className="di-full-txn-reason">{reasonLabel}</span>
+                          <span className="di-full-txn-date">
+                            <FaCalendarAlt /> {formatDate(t.createdAt)}
+                          </span>
+                          <span className="di-full-txn-time">
+                            <FaClock /> {formatTime(t.createdAt)}
+                          </span>
+                        </div>
+                        <div className="di-full-txn-details">
+                          <div className="di-full-txn-row">
+                            <span className="di-full-txn-label">Performed By:</span>
+                            <span className="di-full-txn-value">{t.performedBy?.userName || 'Unknown'}</span>
+                          </div>
+                          {isIn && (
+                            <>
+                              <div className="di-full-txn-row">
+                                <span className="di-full-txn-label">Purchase Price:</span>
+                                <span className="di-full-txn-value">₹{t.purchasePrice?.toFixed(2) || '0.00'}/KG</span>
+                              </div>
+                              <div className="di-full-txn-row">
+                                <span className="di-full-txn-label">Selling Price 3ml:</span>
+                                <span className="di-full-txn-value">₹{t.sellingPrice3ml?.toFixed(2) || '0.00'}/KG</span>
+                              </div>
+                              <div className="di-full-txn-row">
+                                <span className="di-full-txn-label">Selling Price 6ml:</span>
+                                <span className="di-full-txn-value">₹{t.sellingPrice6ml?.toFixed(2) || '0.00'}/KG</span>
+                              </div>
+                              <div className="di-full-txn-row">
+                                <span className="di-full-txn-label">Discount:</span>
+                                <span className="di-full-txn-value">{t.discount || 0}%</span>
+                              </div>
+                            </>
+                          )}
+                          <div className="di-full-txn-row">
+                            <span className="di-full-txn-label">Stock Change:</span>
+                            <span className="di-full-txn-value">
+                              {t.previousStock?.toFixed(2)} → <strong>{t.newStock?.toFixed(2)}</strong> KG
+                            </span>
+                          </div>
+                          {t.notes && (
+                            <div className="di-full-txn-row">
+                              <span className="di-full-txn-label">Notes:</span>
+                              <span className="di-full-txn-value">{t.notes}</span>
+                            </div>
+                          )}
+                          {t.bulkUploadId && (
+                            <div className="di-full-txn-row">
+                              <span className="di-full-txn-label">Bulk Upload ID:</span>
+                              <span className="di-full-txn-value di-txn-bulk-id">{t.bulkUploadId}</span>
+                            </div>
+                          )}
+                          {t.reason && t.reason.includes('Invoice') && (
+                            <div className="di-full-txn-row">
+                              <span className="di-full-txn-label">Invoice Related:</span>
+                              <span className="di-full-txn-value di-txn-invoice-tag">Yes</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </>
+          )}
+        </div>
+        <div className="di-modal-footer">
+          <button className="di-btn-primary" onClick={onClose}>
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ============================================
 // TRANSACTION HISTORY ROW
 // ============================================
-const TransactionHistoryRow = ({ colSpan, isLoading, transactions, onViewDisposal, hasDisposal }) => {
+const TransactionHistoryRow = ({
+  colSpan,
+  isLoading,
+  transactions,
+  onViewDisposal,
+  hasDisposal,
+  onViewAllTransactions
+}) => {
   const formatDateTime = (dateString) => {
     if (!dateString) return "-";
     const d = new Date(dateString);
@@ -898,11 +1072,16 @@ const TransactionHistoryRow = ({ colSpan, isLoading, transactions, onViewDisposa
           <div className="di-expand-content">
             <div className="di-expand-title">
               <FaHistory /> Stock Added History (IN Transactions)
-              {hasDisposal && (
-                <button className="di-view-disposal-btn" onClick={onViewDisposal}>
-                  <FaTrashAlt /> View Disposals
+              <div className="di-expand-actions">
+                {hasDisposal && (
+                  <button className="di-view-disposal-btn" onClick={onViewDisposal}>
+                    <FaTrashAlt /> View Disposals
+                  </button>
+                )}
+                <button className="di-view-all-transactions-btn" onClick={onViewAllTransactions}>
+                  <FaEye /> View All Transactions
                 </button>
-              )}
+              </div>
             </div>
             <div className="di-expand-empty">
               <FaHistory className="di-expand-empty-icon" />
@@ -920,16 +1099,24 @@ const TransactionHistoryRow = ({ colSpan, isLoading, transactions, onViewDisposa
         <div className="di-expand-content">
           <div className="di-expand-title">
             <FaHistory /> Stock Added History (IN Transactions) - {inTransactions.length}
-            {hasDisposal && (
-              <button className="di-view-disposal-btn" onClick={onViewDisposal}>
-                <FaTrashAlt /> View Disposals
+            <div className="di-expand-actions">
+              {hasDisposal && (
+                <button className="di-view-disposal-btn" onClick={onViewDisposal}>
+                  <FaTrashAlt /> View Disposals
+                </button>
+              )}
+              <button className="di-view-all-transactions-btn" onClick={onViewAllTransactions}>
+                <FaEye /> View All Transactions
               </button>
-            )}
+            </div>
           </div>
 
           <div className="di-transaction-list">
             {inTransactions.map((t, idx) => {
               const { date, time } = formatDateTime(t.createdAt);
+              const isBulk = t.bulkUploadId && t.bulkUploadId !== '';
+              const reasonLabel = isBulk ? 'Bulk Upload' : t.reason || 'Manual Add';
+
               return (
                 <div key={t.transactionId || idx} className="di-transaction-item">
                   <div className="di-transaction-row">
@@ -955,6 +1142,11 @@ const TransactionHistoryRow = ({ colSpan, isLoading, transactions, onViewDisposa
 
                     <span className="di-txn-label"><FaCalendarAlt /> Date:</span>
                     <span className="di-txn-value">{date} - {time}</span>
+
+                    <span className="di-txn-separator">|</span>
+
+                    <span className="di-txn-label"><FaTag /> Reason:</span>
+                    <span className="di-txn-value di-txn-reason">{reasonLabel}</span>
 
                     {t.notes && (
                       <>
@@ -1037,6 +1229,16 @@ const DispenserInventory = () => {
   const [loadingDisposal, setLoadingDisposal] = useState(false);
   const [currentDisposalDispenserId, setCurrentDisposalDispenserId] = useState(null);
 
+  // ============================================
+  // FULL TRANSACTION MODAL STATE
+  // ============================================
+  const [showFullTransactionModal, setShowFullTransactionModal] = useState(false);
+  const [fullTransactions, setFullTransactions] = useState([]);
+  const [loadingFullTransactions, setLoadingFullTransactions] = useState(false);
+  const [fullTransactionProductName, setFullTransactionProductName] = useState('');
+  const [fullTransactionDispenserId, setFullTransactionDispenserId] = useState('');
+  const [fullTransactionActiveTab, setFullTransactionActiveTab] = useState('in');
+
   const fileInputRef = useRef(null);
 
   const fetchInventory = async (page = 1, search = '') => {
@@ -1112,12 +1314,15 @@ const DispenserInventory = () => {
     fetchInventory(newPage, searchTerm);
   };
 
+  // ============================================
+  // FETCH TRANSACTIONS (With hideInvoice=true - ONLY IN, no invoice related)
+  // ============================================
   const fetchTransactionsForProduct = async (dispenserId) => {
     try {
       setLoadingTransactionsFor(dispenserId);
 
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/dispenser/get-transactions?dispenserId=${dispenserId}&limit=200&page=1`,
+        `${import.meta.env.VITE_API_URL}/dispenser/get-transactions?dispenserId=${dispenserId}&limit=200&page=1&hideInvoice=true`,
         { credentials: 'include' }
       );
 
@@ -1138,6 +1343,39 @@ const DispenserInventory = () => {
       }));
     } finally {
       setLoadingTransactionsFor(null);
+    }
+  };
+
+  // ============================================
+  // FETCH FULL TRANSACTIONS (ALL IN + OUT - hideInvoice=false)
+  // ============================================
+  const fetchFullTransactions = async (dispenserId, productName) => {
+    try {
+      setLoadingFullTransactions(true);
+      setFullTransactionProductName(productName);
+      setFullTransactionDispenserId(dispenserId);
+      setFullTransactionActiveTab('in');
+
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/dispenser/get-transactions?dispenserId=${dispenserId}&limit=500&page=1&hideInvoice=false`,
+        { credentials: 'include' }
+      );
+
+      if (!response.ok) throw new Error('Failed to fetch transactions');
+
+      const data = await response.json();
+      const sorted = [...(data.transactions || [])].sort(
+        (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+      );
+
+      setFullTransactions(sorted);
+      setShowFullTransactionModal(true);
+    } catch (error) {
+      console.error("Error fetching full transactions:", error);
+      toast.error("Failed to load transactions");
+      setFullTransactions([]);
+    } finally {
+      setLoadingFullTransactions(false);
     }
   };
 
@@ -1634,7 +1872,7 @@ const DispenserInventory = () => {
 
         {/* Page Header */}
         <div className="di-page-header">
-          <h2>Dispenser Inventory Management</h2>
+          <h2></h2>
           <div className="di-right-section">
             <div className="di-search-container">
               <FaSearch className="di-search-icon" />
@@ -1760,6 +1998,7 @@ const DispenserInventory = () => {
                               transactions={transactionCache[item.dispenserId]}
                               onViewDisposal={() => fetchDisposalHistory(item.dispenserId)}
                               hasDisposal={true}
+                              onViewAllTransactions={() => fetchFullTransactions(item.dispenserId, item.productName)}
                             />
 
                             {showDisposalPanel && currentDisposalDispenserId === item.dispenserId && (
@@ -1916,6 +2155,20 @@ const DispenserInventory = () => {
           show={showAlertModal}
           onClose={() => setShowAlertModal(false)}
           alerts={alerts}
+        />
+
+        {/* Full Transaction Modal */}
+        <FullTransactionModal
+          show={showFullTransactionModal}
+          onClose={() => {
+            setShowFullTransactionModal(false);
+            setFullTransactions([]);
+          }}
+          productName={fullTransactionProductName}
+          transactions={fullTransactions}
+          isLoading={loadingFullTransactions}
+          activeTab={fullTransactionActiveTab}
+          setActiveTab={setFullTransactionActiveTab}
         />
 
       </div>
