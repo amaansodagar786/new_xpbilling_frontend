@@ -151,7 +151,7 @@ const Navbar = ({
   // Define all possible menu items with their required permissions - ALL WORKING ICONS
   const allMenuData = [
     { icon: <TbPackage />, title: "Invoice", path: "/", permission: "invoice" },
-    // { icon: <HiOutlineHome />, title: "Dashboard", path: "/dashboard", permission: "dashboard" },
+    { icon: <HiOutlineHome />, title: "Dashboard", path: "/dashboard", permission: "dashboard" },
     { icon: <TbUsers />, title: "Customer", path: "/customer", permission: "customer" },
     { icon: <TbUsers />, title: "Admin", path: "/admin", permission: "admin" },
     { icon: <MdDiscount />, title: "PromoCodes", path: "/promo", permission: "discount" },

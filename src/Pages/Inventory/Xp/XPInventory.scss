@@ -1825,3 +1825,342 @@ $border-radius-sm: 8px;
         }
     }
 }
+
+// ============================================
+// VIEW ALL TRANSACTIONS BUTTON (ADD THIS)
+// ============================================
+.xp-transaction-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.xp-view-all-transactions-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 14px;
+    background: linear-gradient(135deg, $primary-color, $primary-light);
+    color: $white;
+    border: none;
+    border-radius: 50px;
+    font-family: 'Roboto', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+
+    &:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(63, 63, 145, 0.3);
+        background: linear-gradient(135deg, $primary-dark, $primary-color);
+    }
+
+    svg {
+        font-size: 11px;
+    }
+}
+
+// ============================================
+// FULL TRANSACTION MODAL (ADD THIS)
+// ============================================
+.xp-modal-content.xp-modal-lg {
+    max-width: 820px;
+}
+
+// ── Transaction tabs ──
+.xp-transaction-tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 18px;
+    border-bottom: 2px solid #f0f2f8;
+    padding-bottom: 10px;
+
+    .xp-tab-btn {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 8px 20px;
+        border: none;
+        border-radius: 50px;
+        font-family: 'Roboto', sans-serif;
+        font-size: 13px;
+        font-weight: 600;
+        color: #888;
+        background: #f5f6fa;
+        cursor: pointer;
+        transition: all 0.25s;
+
+        &:hover {
+            background: #e8eaf0;
+            color: #555;
+        }
+
+        &.xp-tab-active {
+            background: linear-gradient(135deg, $primary-color, $primary-light);
+            color: $white;
+            box-shadow: 0 3px 10px rgba(63, 63, 145, 0.25);
+
+            &:hover {
+                box-shadow: 0 4px 14px rgba(63, 63, 145, 0.35);
+            }
+        }
+    }
+}
+
+// ── Full transaction list ──
+.xp-full-transaction-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 420px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.xp-full-txn-item {
+    background: $white;
+    border: 1px solid #eceef6;
+    border-radius: $border-radius-sm;
+    padding: 12px 16px;
+    transition: all 0.2s;
+    border-left: 4px solid transparent;
+
+    &.xp-txn-in {
+        border-left-color: $success-color;
+        background: #f8fff9;
+    }
+
+    &.xp-txn-out {
+        border-left-color: $danger-color;
+        background: #fff8f8;
+    }
+
+    &:hover {
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+    }
+}
+
+.xp-full-txn-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f0f2f8;
+    margin-bottom: 8px;
+
+    .xp-full-txn-type {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-family: 'Roboto', sans-serif;
+        font-size: 15px;
+        font-weight: 700;
+
+        .xp-txn-in-icon {
+            color: $success-color;
+        }
+
+        .xp-txn-out-icon {
+            color: $danger-color;
+        }
+
+        &.xp-txn-in {
+            color: $success-color;
+        }
+
+        &.xp-txn-out {
+            color: $danger-color;
+        }
+    }
+
+    .xp-full-txn-reason {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 12px;
+        background: #f0f2f8;
+        border-radius: 20px;
+        font-family: 'Open Sans', sans-serif;
+        font-size: 12px;
+        font-weight: 600;
+        color: #555;
+    }
+
+    .xp-full-txn-date,
+    .xp-full-txn-time {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-family: 'Open Sans', sans-serif;
+        font-size: 12px;
+        color: #888;
+
+        svg {
+            font-size: 11px;
+        }
+    }
+}
+
+.xp-full-txn-details {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    .xp-full-txn-row {
+        display: flex;
+        align-items: baseline;
+        gap: 6px;
+        flex-wrap: wrap;
+        font-family: 'Open Sans', sans-serif;
+        font-size: 13px;
+
+        .xp-full-txn-label {
+            font-weight: 600;
+            color: #888;
+            min-width: 120px;
+        }
+
+        .xp-full-txn-value {
+            color: #3a3a5c;
+
+            strong {
+                color: $primary-color;
+                font-weight: 700;
+            }
+        }
+
+        .xp-txn-bulk-id {
+            background: #e8f4fd;
+            padding: 1px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            color: #0c6b9e;
+            font-weight: 600;
+            font-family: monospace;
+        }
+
+        .xp-txn-invoice-tag {
+            background: #fff3cd;
+            padding: 1px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            color: #856404;
+            font-weight: 600;
+        }
+    }
+}
+
+.xp-transaction-empty {
+    padding: 24px 0;
+    text-align: center;
+    font-family: 'Open Sans', sans-serif;
+    font-size: 14px;
+    color: #aab0bc;
+}
+
+.xp-transaction-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+
+    p {
+        margin-top: 12px;
+        font-family: 'Open Sans', sans-serif;
+        color: #888;
+        font-size: 14px;
+    }
+
+    .xp-loading-spinner.large {
+        width: 40px;
+        height: 40px;
+        border-width: 3px;
+    }
+}
+
+// ── Responsive for Full Transaction Modal ──
+@media screen and (max-width: 768px) {
+    .xp-modal-content.xp-modal-lg {
+        max-width: 100%;
+    }
+
+    .xp-full-txn-header {
+        gap: 8px;
+
+        .xp-full-txn-type {
+            font-size: 13px;
+        }
+
+        .xp-full-txn-reason {
+            font-size: 11px;
+            padding: 2px 10px;
+        }
+
+        .xp-full-txn-date,
+        .xp-full-txn-time {
+            font-size: 11px;
+        }
+    }
+
+    .xp-full-txn-details .xp-full-txn-row {
+        font-size: 12px;
+
+        .xp-full-txn-label {
+            min-width: 90px;
+        }
+    }
+
+    .xp-transaction-tabs {
+        .xp-tab-btn {
+            font-size: 12px;
+            padding: 6px 14px;
+        }
+    }
+
+    .xp-transaction-actions {
+        margin-top: 6px;
+        width: 100%;
+        justify-content: flex-start;
+    }
+}
+
+@media (max-width: 480px) {
+    .xp-full-txn-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+    }
+
+    .xp-full-txn-details .xp-full-txn-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 2px;
+
+        .xp-full-txn-label {
+            min-width: auto;
+        }
+    }
+
+    .xp-transaction-tabs {
+        .xp-tab-btn {
+            font-size: 11px;
+            padding: 5px 12px;
+        }
+    }
+
+    .xp-transaction-actions {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 6px;
+
+        .xp-view-disposal-btn,
+        .xp-view-all-transactions-btn {
+            justify-content: center;
+        }
+    }
+}
