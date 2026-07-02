@@ -161,7 +161,7 @@ const Navbar = ({
     { icon: <FaFlask />, title: "Xp Inventory", path: "/inventory/xp", permission: "inventory" },
     { icon: <FaSyringe />, title: "Dispenser Inventory", path: "/inventory/dispenser", permission: "inventory" },
     { icon: <TbTrash />, title: "Product Disposal", path: "/productdisposal", permission: "disposal" },
-    // { icon: <TbReportAnalytics />, title: "Report", path: "/report", permission: "report" },
+    { icon: <TbReportAnalytics />, title: "Report", path: "/report", permission: "report" },
   ];
 
   // Filter menu items based on user permissions

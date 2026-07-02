@@ -917,7 +917,7 @@ const Dashboard = () => {
                     {/* Pending Invoices */}
                     <div className="db-workshops-card">
                         <div className="db-table-header">
-                            <h3><FaExclamationTriangle style={{ color: '#dc3545' }} /> Pending Invoices</h3>
+                            <h3><FaExclamationTriangle style={{ color: '#dc3545' }} /> Pending Workshop Invoices</h3>
                             <button className="db-view-all-link" onClick={() => navigate('/workshops')}>
                                 View All →
                             </button>
