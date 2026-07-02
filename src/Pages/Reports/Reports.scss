@@ -6,20 +6,20 @@
 // ============================================
 // VARIABLES
 // ============================================
-$primary-color:  #3f3f91;
-$primary-light:  #6a6ac5;
-$primary-dark:   #2d2f87;
-$success-color:  #28a745;
-$danger-color:   #dc3545;
-$warning-color:  #e67e22;
-$info-color:     #17a2b8;
-$muted-color:    #95a5a6;
-$bg-color:       #dfeafb;
-$white:          #ffffff;
-$shadow:         0 2px 10px rgba(0,0,0,0.07);
-$shadow-md:      0 6px 24px rgba(0,0,0,0.10);
-$radius:         14px;
-$radius-sm:      8px;
+$primary-color: #3f3f91;
+$primary-light: #6a6ac5;
+$primary-dark: #2d2f87;
+$success-color: #28a745;
+$danger-color: #dc3545;
+$warning-color: #e67e22;
+$info-color: #17a2b8;
+$muted-color: #95a5a6;
+$bg-color: #dfeafb;
+$white: #ffffff;
+$shadow: 0 2px 10px rgba(0, 0, 0, 0.07);
+$shadow-md: 0 6px 24px rgba(0, 0, 0, 0.10);
+$radius: 14px;
+$radius-sm: 8px;
 
 // ============================================
 // MAIN
@@ -83,11 +83,11 @@ $radius-sm:      8px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.22s;
-    box-shadow: 0 3px 8px rgba(40,167,69,0.25);
+    box-shadow: 0 3px 8px rgba(40, 167, 69, 0.25);
 
     &:hover:not(:disabled) {
       transform: translateY(-2px);
-      box-shadow: 0 5px 14px rgba(40,167,69,0.35);
+      box-shadow: 0 5px 14px rgba(40, 167, 69, 0.35);
     }
 
     &:disabled {
@@ -107,7 +107,10 @@ $radius-sm:      8px;
   margin: 0 auto 22px;
   overflow-x: auto;
   scrollbar-width: none;
-  &::-webkit-scrollbar { display: none; }
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 .rp-tabs {
@@ -148,7 +151,7 @@ $radius-sm:      8px;
     &.rp-tab-active {
       background: linear-gradient(135deg, $primary-color, $primary-light);
       color: $white;
-      box-shadow: 0 3px 10px rgba(63,63,145,0.3);
+      box-shadow: 0 3px 10px rgba(63, 63, 145, 0.3);
     }
   }
 }
@@ -202,7 +205,7 @@ $radius-sm:      8px;
     &:focus {
       border-color: $primary-light;
       outline: none;
-      box-shadow: 0 0 0 3px rgba(106,106,197,0.12);
+      box-shadow: 0 0 0 3px rgba(106, 106, 197, 0.12);
       background: $white;
     }
   }
@@ -229,11 +232,11 @@ $radius-sm:      8px;
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.2s;
-  box-shadow: 0 3px 8px rgba(63,63,145,0.25);
+  box-shadow: 0 3px 8px rgba(63, 63, 145, 0.25);
 
   &:hover:not(:disabled) {
     transform: translateY(-2px);
-    box-shadow: 0 5px 14px rgba(63,63,145,0.35);
+    box-shadow: 0 5px 14px rgba(63, 63, 145, 0.35);
   }
 
   &:disabled {
@@ -276,9 +279,17 @@ $radius-sm:      8px;
   display: grid;
   gap: 16px;
 
-  &.rp-grid-4 { grid-template-columns: repeat(4, 1fr); }
-  &.rp-grid-3 { grid-template-columns: repeat(3, 1fr); }
-  &.rp-grid-2 { grid-template-columns: repeat(2, 1fr); }
+  &.rp-grid-4 {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  &.rp-grid-3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  &.rp-grid-2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 .rp-summary-card {
@@ -301,16 +312,32 @@ $radius-sm:      8px;
   &::before {
     content: '';
     position: absolute;
-    top: 0; left: 0; right: 0;
+    top: 0;
+    left: 0;
+    right: 0;
     height: 3.5px;
     border-radius: 3.5px 3.5px 0 0;
   }
 
-  &.rp-card-primary::before    { background: linear-gradient(90deg, $primary-color, $primary-light); }
-  &.rp-card-success::before    { background: linear-gradient(90deg, $success-color, #2ecc71); }
-  &.rp-card-danger::before     { background: linear-gradient(90deg, $danger-color, #e74c3c); }
-  &.rp-card-warning::before    { background: linear-gradient(90deg, $warning-color, #f0ad4e); }
-  &.rp-card-info::before       { background: linear-gradient(90deg, $info-color, #5bc0de); }
+  &.rp-card-primary::before {
+    background: linear-gradient(90deg, $primary-color, $primary-light);
+  }
+
+  &.rp-card-success::before {
+    background: linear-gradient(90deg, $success-color, #2ecc71);
+  }
+
+  &.rp-card-danger::before {
+    background: linear-gradient(90deg, $danger-color, #e74c3c);
+  }
+
+  &.rp-card-warning::before {
+    background: linear-gradient(90deg, $warning-color, #f0ad4e);
+  }
+
+  &.rp-card-info::before {
+    background: linear-gradient(90deg, $info-color, #5bc0de);
+  }
 }
 
 .rp-card-icon {
@@ -323,11 +350,35 @@ $radius-sm:      8px;
   font-size: 19px;
   flex-shrink: 0;
 
-  &.rp-icon-primary { background: rgba(63,63,145,0.1); color: $primary-color; box-shadow: 0 3px 8px rgba(63,63,145,0.12); }
-  &.rp-icon-success { background: rgba(40,167,69,0.1); color: $success-color; box-shadow: 0 3px 8px rgba(40,167,69,0.12); }
-  &.rp-icon-danger  { background: rgba(220,53,69,0.1); color: $danger-color; box-shadow: 0 3px 8px rgba(220,53,69,0.12); }
-  &.rp-icon-warning { background: rgba(230,126,34,0.1); color: $warning-color; box-shadow: 0 3px 8px rgba(230,126,34,0.12); }
-  &.rp-icon-info    { background: rgba(23,162,184,0.1); color: $info-color; box-shadow: 0 3px 8px rgba(23,162,184,0.12); }
+  &.rp-icon-primary {
+    background: rgba(63, 63, 145, 0.1);
+    color: $primary-color;
+    box-shadow: 0 3px 8px rgba(63, 63, 145, 0.12);
+  }
+
+  &.rp-icon-success {
+    background: rgba(40, 167, 69, 0.1);
+    color: $success-color;
+    box-shadow: 0 3px 8px rgba(40, 167, 69, 0.12);
+  }
+
+  &.rp-icon-danger {
+    background: rgba(220, 53, 69, 0.1);
+    color: $danger-color;
+    box-shadow: 0 3px 8px rgba(220, 53, 69, 0.12);
+  }
+
+  &.rp-icon-warning {
+    background: rgba(230, 126, 34, 0.1);
+    color: $warning-color;
+    box-shadow: 0 3px 8px rgba(230, 126, 34, 0.12);
+  }
+
+  &.rp-icon-info {
+    background: rgba(23, 162, 184, 0.1);
+    color: $info-color;
+    box-shadow: 0 3px 8px rgba(23, 162, 184, 0.12);
+  }
 }
 
 .rp-card-body {
@@ -434,6 +485,7 @@ $radius-sm:      8px;
       font-size: 13.5px;
       color: #3a3a5c;
       border-bottom: 1px solid #f5f6fa;
+      vertical-align: middle;
     }
 
     tr:last-child td {
@@ -446,11 +498,21 @@ $radius-sm:      8px;
   }
 }
 
-// Specific cell types
+// ============================================
+// CELL TYPES
+// ============================================
 .rp-cell-name {
   font-family: 'Roboto', sans-serif;
   font-weight: 700;
   color: $primary-color;
+}
+
+.rp-cell-products {
+  font-size: 12.5px;
+  max-width: 300px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .rp-cell-revenue {
@@ -465,23 +527,15 @@ $radius-sm:      8px;
   color: $danger-color;
 }
 
-.rp-cell-profit {
-  font-family: 'Roboto', sans-serif;
-  font-weight: 800;
-  color: $success-color;
-
-  &.rp-profit-negative {
-    color: $danger-color;
-  }
-}
-
 .rp-cell-number {
   font-family: 'Roboto', sans-serif;
   font-weight: 700;
   color: #2d2d50;
 }
 
-// Category badges
+// ============================================
+// CATEGORY BADGES
+// ============================================
 .rp-category-badge {
   display: inline-flex;
   align-items: center;
@@ -491,54 +545,30 @@ $radius-sm:      8px;
   font-size: 11.5px;
   font-weight: 700;
 
-  &.rp-badge-xp        { background: rgba(63,63,145,0.1); color: $primary-color; }
-  &.rp-badge-dispenser { background: rgba(23,162,184,0.1); color: $info-color; }
-  &.rp-badge-package   { background: rgba(230,126,34,0.1); color: $warning-color; }
-  &.rp-badge-bottle    { background: rgba(40,167,69,0.1); color: $success-color; }
-}
+  &.rp-badge-xp {
+    background: rgba(63, 63, 145, 0.1);
+    color: $primary-color;
+  }
 
-// Margin bar
-.rp-margin-bar-wrap {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
+  &.rp-badge-dispenser {
+    background: rgba(23, 162, 184, 0.1);
+    color: $info-color;
+  }
 
-.rp-margin-bar {
-  height: 7px;
-  border-radius: 4px;
-  background: #eaeef6;
-  flex: 1;
-  min-width: 60px;
-  overflow: hidden;
+  &.rp-badge-package {
+    background: rgba(230, 126, 34, 0.1);
+    color: $warning-color;
+  }
 
-  .rp-margin-fill {
-    height: 100%;
-    border-radius: 4px;
-    background: linear-gradient(90deg, $success-color, #2ecc71);
-    transition: width 0.4s ease;
-
-    &.rp-margin-negative {
-      background: linear-gradient(90deg, $danger-color, #e74c3c);
-    }
+  &.rp-badge-bottle {
+    background: rgba(40, 167, 69, 0.1);
+    color: $success-color;
   }
 }
 
-.rp-margin-value {
-  font-family: 'Roboto', sans-serif;
-  font-size: 12.5px;
-  font-weight: 700;
-  color: $success-color;
-  white-space: nowrap;
-  min-width: 46px;
-  text-align: right;
-
-  &.rp-margin-negative {
-    color: $danger-color;
-  }
-}
-
-// Status badge
+// ============================================
+// STATUS BADGE
+// ============================================
 .rp-status-badge {
   display: inline-flex;
   align-items: center;
@@ -548,14 +578,35 @@ $radius-sm:      8px;
   font-size: 11.5px;
   font-weight: 700;
 
-  &.rp-status-healthy    { background: #d4edda; color: #155724; }
-  &.rp-status-low        { background: #fff3cd; color: #856404; }
-  &.rp-status-out        { background: #f8d7da; color: #721c24; }
-  &.rp-status-active     { background: #d4edda; color: #155724; }
-  &.rp-status-inactive   { background: #f0f2f8; color: #555; }
+  &.rp-status-healthy {
+    background: #d4edda;
+    color: #155724;
+  }
+
+  &.rp-status-low {
+    background: #fff3cd;
+    color: #856404;
+  }
+
+  &.rp-status-out {
+    background: #f8d7da;
+    color: #721c24;
+  }
+
+  &.rp-status-active {
+    background: #d4edda;
+    color: #155724;
+  }
+
+  &.rp-status-inactive {
+    background: #f0f2f8;
+    color: #555;
+  }
 }
 
-// Workshop status
+// ============================================
+// WORKSHOP STATUS
+// ============================================
 .rp-workshop-status {
   display: inline-flex;
   align-items: center;
@@ -572,12 +623,37 @@ $radius-sm:      8px;
     border-radius: 50%;
   }
 
-  &.rp-ws-active     { background: #d4edda; color: #155724; .rp-ws-dot { background: $success-color; } }
-  &.rp-ws-inactive   { background: #f0f2f8; color: #666; .rp-ws-dot { background: $muted-color; } }
-  &.rp-ws-completed  { background: #cce5ff; color: #004085; .rp-ws-dot { background: $info-color; } }
+  &.rp-ws-active {
+    background: #d4edda;
+    color: #155724;
+
+    .rp-ws-dot {
+      background: $success-color;
+    }
+  }
+
+  &.rp-ws-inactive {
+    background: #f0f2f8;
+    color: #666;
+
+    .rp-ws-dot {
+      background: $muted-color;
+    }
+  }
+
+  &.rp-ws-completed {
+    background: #cce5ff;
+    color: #004085;
+
+    .rp-ws-dot {
+      background: $info-color;
+    }
+  }
 }
 
-// Attendance progress (workshops)
+// ============================================
+// ATTENDANCE PROGRESS (WORKSHOPS)
+// ============================================
 .rp-attendance-wrap {
   display: flex;
   align-items: center;
@@ -610,7 +686,9 @@ $radius-sm:      8px;
   text-align: right;
 }
 
-// Customer avatar in table
+// ============================================
+// CUSTOMER AVATAR IN TABLE
+// ============================================
 .rp-customer-avatar {
   display: flex;
   align-items: center;
@@ -629,7 +707,7 @@ $radius-sm:      8px;
     font-weight: 800;
     color: $white;
     flex-shrink: 0;
-    box-shadow: 0 2px 6px rgba(63,63,145,0.2);
+    box-shadow: 0 2px 6px rgba(63, 63, 145, 0.2);
   }
 
   .rp-avatar-name {
@@ -646,62 +724,9 @@ $radius-sm:      8px;
   }
 }
 
-// Rank badge (top selling)
-.rp-rank {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  font-family: 'Roboto', sans-serif;
-  font-size: 12px;
-  font-weight: 800;
-
-  &.rp-rank-1 { background: #fff3e0; color: #f5a623; }
-  &.rp-rank-2 { background: #f5f5f5; color: #9e9e9e; }
-  &.rp-rank-3 { background: #fbe9e7; color: #c0804a; }
-  &.rp-rank-other { background: #f0f2f8; color: #888; }
-}
-
 // ============================================
 // LOADING
 // ============================================
-.rp-loading-container {
-  max-width: 1300px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 70px 20px;
-  background: $white;
-  border-radius: $radius;
-  box-shadow: $shadow;
-  gap: 16px;
-
-  p {
-    font-family: 'Open Sans', sans-serif;
-    color: #9aa0b0;
-    font-size: 14.5px;
-    margin: 0;
-  }
-}
-
-.rp-loading-spinner {
-  width: 42px;
-  height: 42px;
-  border: 3.5px solid #e8eaf0;
-  border-top: 3.5px solid $primary-color;
-  border-radius: 50%;
-  animation: rp-spin 0.8s linear infinite;
-}
-
-@keyframes rp-spin {
-  0%   { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
 .rp-loading-row {
   display: flex;
   align-items: center;
@@ -721,6 +746,16 @@ $radius-sm:      8px;
   border-radius: 50%;
   animation: rp-spin 0.8s linear infinite;
   flex-shrink: 0;
+}
+
+@keyframes rp-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 // ============================================
@@ -762,8 +797,13 @@ $radius-sm:      8px;
 // ============================================
 @media screen and (max-width: 1100px) {
   .rp-summary-grid {
-    &.rp-grid-4 { grid-template-columns: repeat(2, 1fr); }
-    &.rp-grid-3 { grid-template-columns: repeat(2, 1fr); }
+    &.rp-grid-4 {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    &.rp-grid-3 {
+      grid-template-columns: repeat(2, 1fr);
+    }
   }
 }
 
@@ -775,7 +815,9 @@ $radius-sm:      8px;
   .rp-page-header {
     padding: 14px 16px;
 
-    h2 { font-size: 18px; }
+    h2 {
+      font-size: 18px;
+    }
   }
 
   .rp-filters {
@@ -798,6 +840,7 @@ $radius-sm:      8px;
   }
 
   .rp-summary-grid {
+
     &.rp-grid-4,
     &.rp-grid-3,
     &.rp-grid-2 {
@@ -806,12 +849,18 @@ $radius-sm:      8px;
   }
 
   .rp-table-wrap table {
-    th, td { padding: 11px 14px; font-size: 13px; }
+
+    th,
+    td {
+      padding: 11px 14px;
+      font-size: 13px;
+    }
   }
 }
 
 @media screen and (max-width: 480px) {
   .rp-summary-grid {
+
     &.rp-grid-4,
     &.rp-grid-3,
     &.rp-grid-2 {
@@ -825,5 +874,18 @@ $radius-sm:      8px;
 
   .rp-card-value {
     font-size: 19px;
+  }
+
+  .rp-table-wrap table {
+
+    th,
+    td {
+      padding: 9px 10px;
+      font-size: 12px;
+    }
+  }
+
+  .rp-cell-products {
+    max-width: 120px;
   }
 }

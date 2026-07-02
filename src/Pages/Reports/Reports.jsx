@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-    FaChartBar, FaShoppingCart, FaBoxOpen, FaChartLine,
-    FaCalendarCheck, FaUsers, FaTrophy, FaDownload,
-    FaRupeeSign, FaFileInvoiceDollar, FaSearch, FaRedo,
-    FaFlask, FaSyringe, FaBox, FaExclamationTriangle,
+    FaChartBar, FaShoppingCart, FaBoxOpen,
+    FaCalendarCheck, FaUsers, FaDownload,
+    FaRupeeSign, FaFileInvoiceDollar, FaRedo,
+    FaExclamationTriangle,
     FaCheckCircle, FaArrowUp, FaFilter
 } from "react-icons/fa";
 import Navbar from "../../Components/Navbar/Navbar";
@@ -17,10 +17,8 @@ const REPORT_TABS = [
     { id: "sales", label: "Sales", icon: <FaChartBar /> },
     { id: "purchase", label: "Purchase", icon: <FaShoppingCart /> },
     { id: "inventory", label: "Inventory", icon: <FaBoxOpen /> },
-    { id: "profit", label: "Profit", icon: <FaChartLine /> },
     { id: "workshop", label: "Workshops", icon: <FaCalendarCheck /> },
-    { id: "customer", label: "Customers", icon: <FaUsers /> },
-    { id: "top-selling", label: "Top Selling", icon: <FaTrophy /> }
+    { id: "customer", label: "Customers", icon: <FaUsers /> }
 ];
 
 const DATE_FILTERS = [
@@ -60,13 +58,6 @@ const getCategoryBadgeClass = (cat) => {
 const getInitials = (name) => {
     if (!name) return '?';
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-};
-
-const getRankClass = (i) => {
-    if (i === 0) return 'rp-rank-1';
-    if (i === 1) return 'rp-rank-2';
-    if (i === 2) return 'rp-rank-3';
-    return 'rp-rank-other';
 };
 
 // ============================================
@@ -196,7 +187,7 @@ const Reports = () => {
     // ============================================
     // FILTERS VISIBILITY
     // ============================================
-    const showInventoryFilter = ["sales", "purchase", "profit", "inventory", "top-selling"].includes(activeTab);
+    const showInventoryFilter = ["sales", "purchase", "inventory"].includes(activeTab);
     const showStatusFilter = ["inventory", "workshop"].includes(activeTab);
     const showSearchFilter = activeTab === "customer";
 
@@ -204,40 +195,83 @@ const Reports = () => {
     // RENDER — SALES TABLE
     // ============================================
     const renderSalesTable = () => {
-        const rows = reportData?.sales || [];
+        const summary = reportData?.summary || {};
+        const invoiceDetails = reportData?.invoiceDetails || [];
+        const productWiseSales = reportData?.productWiseSales || [];
+
         return (
             <>
                 <div className="rp-summary-grid rp-grid-4">
-                    <SummaryCard label="Total Revenue" value={fmt(reportData?.summary?.totalRevenue)} icon={<FaRupeeSign />} cardClass="rp-card-primary" iconClass="rp-icon-primary" />
-                    <SummaryCard label="Total Products" value={fmtNum(reportData?.summary?.totalProducts)} icon={<FaBoxOpen />} cardClass="rp-card-info" iconClass="rp-icon-info" />
-                    <SummaryCard label="Total Invoices" value={fmtNum(reportData?.summary?.totalInvoices)} icon={<FaFileInvoiceDollar />} cardClass="rp-card-success" iconClass="rp-icon-success" />
-                    <SummaryCard label="Total Qty Sold" value={fmtNum(reportData?.summary?.totalQuantity)} icon={<FaChartBar />} cardClass="rp-card-warning" iconClass="rp-icon-warning" />
+                    <SummaryCard label="Total Revenue" value={fmt(summary.totalRevenue)} icon={<FaRupeeSign />} cardClass="rp-card-primary" iconClass="rp-icon-primary" />
+                    <SummaryCard label="Total Products" value={fmtNum(summary.totalProducts)} icon={<FaBoxOpen />} cardClass="rp-card-info" iconClass="rp-icon-info" />
+                    <SummaryCard label="Total Invoices" value={fmtNum(summary.totalInvoices)} icon={<FaFileInvoiceDollar />} cardClass="rp-card-success" iconClass="rp-icon-success" />
+                    <SummaryCard label="Total Qty Sold" value={fmtNum(summary.totalQuantity)} icon={<FaChartBar />} cardClass="rp-card-warning" iconClass="rp-icon-warning" />
                 </div>
+
+                {/* Tab 1: Invoice Details */}
                 <div className="rp-table-card">
                     <div className="rp-table-header">
-                        <h3><FaChartBar /> Sales Breakdown</h3>
-                        <span className="rp-row-count">{rows.length} products</span>
+                        <h3><FaFileInvoiceDollar /> Invoice Details</h3>
+                        <span className="rp-row-count">{invoiceDetails.length} invoices</span>
                     </div>
-                    {rows.length === 0 ? <EmptyState label="No sales data for this period" /> : (
+                    {invoiceDetails.length === 0 ? <EmptyState label="No invoices for this period" /> : (
                         <div className="rp-table-wrap">
                             <table>
                                 <thead>
                                     <tr>
-                                        <th>Product</th>
-                                        <th>Category</th>
-                                        <th>Quantity</th>
-                                        <th>Invoices</th>
-                                        <th>Revenue</th>
+                                        <th>Invoice</th>
+                                        <th>Customer</th>
+                                        <th>Date</th>
+                                        <th>Payment</th>
+                                        <th>Products</th>
+                                        <th>Grand Total</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {rows.map((row, i) => (
+                                    {invoiceDetails.map((row, i) => (
                                         <tr key={i}>
-                                            <td className="rp-cell-name">{row._id}</td>
-                                            <td><span className={`rp-category-badge ${getCategoryBadgeClass(row.category)}`}>{row.category}</span></td>
-                                            <td className="rp-cell-number">{fmtNum(row.totalQuantity)}</td>
-                                            <td className="rp-cell-number">{fmtNum(row.invoiceCount)}</td>
-                                            <td className="rp-cell-revenue">{fmt(row.totalRevenue)}</td>
+                                            <td className="rp-cell-name">{row['Invoice Number'] || '-'}</td>
+                                            <td>{row['Customer'] || '-'}</td>
+                                            <td>{row['Date'] || '-'}</td>
+                                            <td>{row['Payment'] || '-'}</td>
+                                            <td className="rp-cell-products">{row['Products'] || '-'}</td>
+                                            <td className="rp-cell-revenue">{row['Grand Total'] || fmt(0)}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
+
+                {/* Tab 2: Product Wise Sales (NO REVENUE! with units) */}
+                <div className="rp-table-card">
+                    <div className="rp-table-header">
+                        <h3><FaBoxOpen /> Product Wise Sales</h3>
+                        <span className="rp-row-count">{productWiseSales.length} entries</span>
+                    </div>
+                    {productWiseSales.length === 0 ? <EmptyState label="No product sales for this period" /> : (
+                        <div className="rp-table-wrap">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Invoice</th>
+                                        <th>Date</th>
+                                        <th>Customer</th>
+                                        <th>Product</th>
+                                        <th>Category</th>
+                                        <th>Quantity</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {productWiseSales.map((row, i) => (
+                                        <tr key={i}>
+                                            <td className="rp-cell-name">{row['Invoice'] || '-'}</td>
+                                            <td>{row['Date'] || '-'}</td>
+                                            <td>{row['Customer'] || '-'}</td>
+                                            <td>{row['Product'] || '-'}</td>
+                                            <td><span className={`rp-category-badge ${getCategoryBadgeClass(row['Category'])}`}>{row['Category'] || '-'}</span></td>
+                                            <td className="rp-cell-number">{row['Quantity'] || '0'}</td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -253,40 +287,126 @@ const Reports = () => {
     // RENDER — PURCHASE TABLE
     // ============================================
     const renderPurchaseTable = () => {
-        const rows = reportData?.purchase || [];
+        const summary = reportData?.summary || {};
+        const purchaseData = reportData?.purchase || [];
+        const transactionDetails = reportData?.transactionDetails || [];
+        const productWisePurchase = reportData?.productWisePurchase || [];
+
         return (
             <>
                 <div className="rp-summary-grid rp-grid-4">
-                    <SummaryCard label="Total Cost" value={fmt(reportData?.summary?.totalCost)} icon={<FaRupeeSign />} cardClass="rp-card-danger" iconClass="rp-icon-danger" />
-                    <SummaryCard label="Total Products" value={fmtNum(reportData?.summary?.totalProducts)} icon={<FaBoxOpen />} cardClass="rp-card-primary" iconClass="rp-icon-primary" />
-                    <SummaryCard label="Total Quantity" value={fmtNum(reportData?.summary?.totalQuantity)} icon={<FaArrowUp />} cardClass="rp-card-info" iconClass="rp-icon-info" />
-                    <SummaryCard label="Avg Price / KG" value={fmt(reportData?.summary?.avgPrice)} icon={<FaChartBar />} cardClass="rp-card-warning" iconClass="rp-icon-warning" />
+                    <SummaryCard label="Total Cost" value={fmt(summary.totalCost)} icon={<FaRupeeSign />} cardClass="rp-card-danger" iconClass="rp-icon-danger" />
+                    <SummaryCard label="Total Products" value={fmtNum(summary.totalProducts)} icon={<FaBoxOpen />} cardClass="rp-card-primary" iconClass="rp-icon-primary" />
+                    <SummaryCard label="Total Quantity" value={fmtNum(summary.totalQuantity)} icon={<FaArrowUp />} cardClass="rp-card-info" iconClass="rp-icon-info" />
+                    <SummaryCard label="Avg Price" value={fmt(summary.avgPrice)} icon={<FaChartBar />} cardClass="rp-card-warning" iconClass="rp-icon-warning" />
                 </div>
+
+                {/* Tab 1: Product Summary */}
                 <div className="rp-table-card">
                     <div className="rp-table-header">
-                        <h3><FaShoppingCart /> Purchase Breakdown</h3>
-                        <span className="rp-row-count">{rows.length} products</span>
+                        <h3><FaShoppingCart /> Product Purchase Summary</h3>
+                        <span className="rp-row-count">{purchaseData.length} products</span>
                     </div>
-                    {rows.length === 0 ? <EmptyState label="No purchase data for this period" /> : (
+                    {purchaseData.length === 0 ? <EmptyState label="No purchase data for this period" /> : (
                         <div className="rp-table-wrap">
                             <table>
                                 <thead>
                                     <tr>
                                         <th>Product</th>
                                         <th>Category</th>
-                                        <th>Qty (KG)</th>
-                                        <th>Avg Price / KG</th>
+                                        <th>Quantity</th>
+                                        <th>Avg Price</th>
                                         <th>Total Cost</th>
+                                        <th>Transactions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {rows.map((row, i) => (
+                                    {purchaseData.map((row, i) => (
                                         <tr key={i}>
-                                            <td className="rp-cell-name">{row._id}</td>
-                                            <td><span className={`rp-category-badge ${getCategoryBadgeClass(row.category)}`}>{row.category}</span></td>
-                                            <td className="rp-cell-number">{fmtNum(row.totalQuantity)}</td>
-                                            <td className="rp-cell-number">{fmt(row.avgPurchasePrice)}</td>
-                                            <td className="rp-cell-cost">{fmt(row.totalCost)}</td>
+                                            <td className="rp-cell-name">{row.productName || row._id || '-'}</td>
+                                            <td><span className={`rp-category-badge ${getCategoryBadgeClass(row.category)}`}>{row.category || '-'}</span></td>
+                                            <td className="rp-cell-number">{row.totalQuantity !== undefined ? `${Number(row.totalQuantity).toFixed(2)} ${row.unit || ''}` : '-'}</td>
+                                            <td className="rp-cell-number">{row.category === 'Bottles' ? 'N/A' : fmt(row.avgPurchasePrice)}</td>
+                                            <td className="rp-cell-cost">{row.category === 'Bottles' ? 'N/A' : fmt(row.totalCost)}</td>
+                                            <td className="rp-cell-number">{row.transactionCount || 0}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
+
+                {/* Tab 2: Transaction Details */}
+                <div className="rp-table-card">
+                    <div className="rp-table-header">
+                        <h3><FaShoppingCart /> Transaction Details</h3>
+                        <span className="rp-row-count">{transactionDetails.length} transactions</span>
+                    </div>
+                    {transactionDetails.length === 0 ? <EmptyState label="No transactions for this period" /> : (
+                        <div className="rp-table-wrap">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Product</th>
+                                        <th>Category</th>
+                                        <th>Date</th>
+                                        <th>Quantity</th>
+                                        <th>Price/Unit</th>
+                                        <th>Total</th>
+                                        <th>Reason</th>
+                                        <th>By</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {transactionDetails.map((row, i) => (
+                                        <tr key={i}>
+                                            <td className="rp-cell-name">{row['Product'] || '-'}</td>
+                                            <td><span className={`rp-category-badge ${getCategoryBadgeClass(row['Category'])}`}>{row['Category'] || '-'}</span></td>
+                                            <td>{row['Date'] || '-'}</td>
+                                            <td className="rp-cell-number">{row['Quantity'] || '0'}</td>
+                                            <td>{row['Price/Unit'] || '-'}</td>
+                                            <td className="rp-cell-cost">{row['Total'] || '-'}</td>
+                                            <td>{row['Reason'] || '-'}</td>
+                                            <td>{row['By'] || '-'}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
+
+                {/* Tab 3: Product Wise Purchase */}
+                <div className="rp-table-card">
+                    <div className="rp-table-header">
+                        <h3><FaBoxOpen /> Product Wise Purchase</h3>
+                        <span className="rp-row-count">{productWisePurchase.length} entries</span>
+                    </div>
+                    {productWisePurchase.length === 0 ? <EmptyState label="No purchase entries" /> : (
+                        <div className="rp-table-wrap">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Product</th>
+                                        <th>Category</th>
+                                        <th>Date</th>
+                                        <th>Quantity</th>
+                                        <th>Price/Unit</th>
+                                        <th>Total</th>
+                                        <th>Reason</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {productWisePurchase.map((row, i) => (
+                                        <tr key={i}>
+                                            <td className="rp-cell-name">{row['Product'] || '-'}</td>
+                                            <td><span className={`rp-category-badge ${getCategoryBadgeClass(row['Category'])}`}>{row['Category'] || '-'}</span></td>
+                                            <td>{row['Date'] || '-'}</td>
+                                            <td className="rp-cell-number">{row['Quantity'] || '0'}</td>
+                                            <td>{row['Price/Unit'] || '-'}</td>
+                                            <td className="rp-cell-cost">{row['Total'] || '-'}</td>
+                                            <td>{row['Reason'] || '-'}</td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -303,6 +423,8 @@ const Reports = () => {
     // ============================================
     const renderInventoryTable = () => {
         const rows = reportData?.inventory || [];
+        const movementHistory = reportData?.movementHistory || [];
+
         return (
             <>
                 <div className="rp-summary-grid rp-grid-4">
@@ -311,9 +433,11 @@ const Reports = () => {
                     <SummaryCard label="Low Stock" value={fmtNum(reportData?.summary?.lowStock)} icon={<FaExclamationTriangle />} cardClass="rp-card-warning" iconClass="rp-icon-warning" />
                     <SummaryCard label="Out of Stock" value={fmtNum(reportData?.summary?.outOfStock)} icon={<FaExclamationTriangle />} cardClass="rp-card-danger" iconClass="rp-icon-danger" />
                 </div>
+
+                {/* Tab 1: Current Stock */}
                 <div className="rp-table-card">
                     <div className="rp-table-header">
-                        <h3><FaBoxOpen /> Inventory Status</h3>
+                        <h3><FaBoxOpen /> Current Stock</h3>
                         <span className="rp-row-count">{rows.length} items</span>
                     </div>
                     {rows.length === 0 ? <EmptyState label="No inventory data found" /> : (
@@ -333,16 +457,16 @@ const Reports = () => {
                                 <tbody>
                                     {rows.map((row, i) => (
                                         <tr key={i}>
-                                            <td className="rp-cell-name">{row.productName}</td>
-                                            <td><span className={`rp-category-badge ${getCategoryBadgeClass(row.category)}`}>{row.category}</span></td>
-                                            <td className="rp-cell-number">{fmtNum(row.quantity)}</td>
+                                            <td className="rp-cell-name">{row.productName || '-'}</td>
+                                            <td><span className={`rp-category-badge ${getCategoryBadgeClass(row.category)}`}>{row.category || '-'}</span></td>
+                                            <td className="rp-cell-number">{row.quantity !== undefined ? `${Number(row.quantity).toFixed(2)} ${row.unit || ''}` : '-'}</td>
                                             <td className="rp-cell-number">{fmtNum(row.minStock)}</td>
-                                            <td>{fmt(row.avgPurchasePrice)}</td>
-                                            <td className="rp-cell-revenue">{fmt(row.totalValue)}</td>
+                                            <td>{row.category === 'Bottles' ? 'N/A' : fmt(row.avgPurchasePrice)}</td>
+                                            <td className="rp-cell-revenue">{row.category === 'Bottles' ? 'N/A' : fmt(row.totalValue)}</td>
                                             <td>
                                                 <span className={`rp-status-badge ${row.status === 'Out of Stock' ? 'rp-status-out' :
                                                     row.status === 'Low Stock' ? 'rp-status-low' : 'rp-status-healthy'
-                                                    }`}>{row.status}</span>
+                                                    }`}>{row.status || '-'}</span>
                                             </td>
                                         </tr>
                                     ))}
@@ -351,65 +475,41 @@ const Reports = () => {
                         </div>
                     )}
                 </div>
-            </>
-        );
-    };
 
-    // ============================================
-    // RENDER — PROFIT TABLE
-    // ============================================
-    const renderProfitTable = () => {
-        const rows = reportData?.profit || [];
-        return (
-            <>
-                <div className="rp-summary-grid rp-grid-4">
-                    <SummaryCard label="Total Revenue" value={fmt(reportData?.summary?.totalRevenue)} icon={<FaRupeeSign />} cardClass="rp-card-primary" iconClass="rp-icon-primary" />
-                    <SummaryCard label="Total Cost" value={fmt(reportData?.summary?.totalCost)} icon={<FaShoppingCart />} cardClass="rp-card-danger" iconClass="rp-icon-danger" />
-                    <SummaryCard label="Net Profit" value={fmt(reportData?.summary?.totalProfit)} icon={<FaChartLine />} cardClass="rp-card-success" iconClass="rp-icon-success" />
-                    <SummaryCard label="Avg Margin" value={`${(reportData?.summary?.avgMargin || 0).toFixed(1)}%`} icon={<FaChartBar />} cardClass="rp-card-warning" iconClass="rp-icon-warning" />
-                </div>
+                {/* Tab 2: Movement History (ONLY IN transactions) */}
                 <div className="rp-table-card">
                     <div className="rp-table-header">
-                        <h3><FaChartLine /> Profit Analysis</h3>
-                        <span className="rp-row-count">{rows.length} products</span>
+                        <h3><FaArrowUp /> Movement History (Stock Added)</h3>
+                        <span className="rp-row-count">{movementHistory.length} entries</span>
                     </div>
-                    {rows.length === 0 ? <EmptyState label="No profit data for this period" /> : (
+                    {movementHistory.length === 0 ? <EmptyState label="No stock added transactions" /> : (
                         <div className="rp-table-wrap">
                             <table>
                                 <thead>
                                     <tr>
                                         <th>Product</th>
                                         <th>Category</th>
-                                        <th>Revenue</th>
-                                        <th>Cost</th>
-                                        <th>Profit</th>
-                                        <th>Margin</th>
+                                        <th>Date</th>
+                                        <th>Type</th>
+                                        <th>Quantity</th>
+                                        <th>Price</th>
+                                        <th>Balance</th>
+                                        <th>Reason</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {rows.map((row, i) => {
-                                        const isNeg = (row.profit || 0) < 0;
-                                        const margin = Math.min(Math.abs(row.margin || 0), 100);
-                                        return (
-                                            <tr key={i}>
-                                                <td className="rp-cell-name">{row._id}</td>
-                                                <td><span className={`rp-category-badge ${getCategoryBadgeClass(row.category)}`}>{row.category}</span></td>
-                                                <td className="rp-cell-revenue">{fmt(row.revenue)}</td>
-                                                <td className="rp-cell-cost">{fmt(row.cost)}</td>
-                                                <td className={`rp-cell-profit ${isNeg ? 'rp-profit-negative' : ''}`}>{fmt(row.profit)}</td>
-                                                <td>
-                                                    <div className="rp-margin-bar-wrap">
-                                                        <div className="rp-margin-bar">
-                                                            <div className={`rp-margin-fill ${isNeg ? 'rp-margin-negative' : ''}`} style={{ width: `${margin}%` }}></div>
-                                                        </div>
-                                                        <span className={`rp-margin-value ${isNeg ? 'rp-margin-negative' : ''}`}>
-                                                            {(row.margin || 0).toFixed(1)}%
-                                                        </span>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
+                                    {movementHistory.map((row, i) => (
+                                        <tr key={i}>
+                                            <td className="rp-cell-name">{row.productName || '-'}</td>
+                                            <td><span className={`rp-category-badge ${getCategoryBadgeClass(row.category)}`}>{row.category || '-'}</span></td>
+                                            <td>{row.date ? new Date(row.date).toLocaleDateString('en-IN') : '-'}</td>
+                                            <td><span className="rp-status-badge rp-status-healthy">{row.type || 'Added'}</span></td>
+                                            <td className="rp-cell-number">{row.quantity !== undefined ? `${Number(row.quantity).toFixed(2)} ${row.unit || ''}` : '-'}</td>
+                                            <td>{row.category === 'Bottles' ? 'N/A' : fmt(row.price)}</td>
+                                            <td className="rp-cell-number">{row.balance !== undefined ? `${Number(row.balance).toFixed(2)} ${row.unit || ''}` : '-'}</td>
+                                            <td>{row.reason || '-'}</td>
+                                        </tr>
+                                    ))}
                                 </tbody>
                             </table>
                         </div>
@@ -560,60 +660,6 @@ const Reports = () => {
     };
 
     // ============================================
-    // RENDER — TOP SELLING TABLE
-    // ============================================
-    const renderTopSellingTable = () => {
-        const rows = reportData?.products || [];
-        const s = reportData?.summary || {};
-        return (
-            <>
-                <div className="rp-summary-grid rp-grid-2">
-                    <SummaryCard label="Total Revenue" value={fmt(s.totalRevenue)} icon={<FaRupeeSign />} cardClass="rp-card-primary" iconClass="rp-icon-primary" />
-                    <SummaryCard label="Total Orders" value={fmtNum(s.totalOrders)} icon={<FaFileInvoiceDollar />} cardClass="rp-card-success" iconClass="rp-icon-success" />
-                </div>
-                <div className="rp-table-card">
-                    <div className="rp-table-header">
-                        <h3><FaTrophy /> Top Selling Products</h3>
-                        <span className="rp-row-count">{rows.length} products</span>
-                    </div>
-                    {rows.length === 0 ? <EmptyState label="No product sales for this period" /> : (
-                        <div className="rp-table-wrap">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Rank</th>
-                                        <th>Product</th>
-                                        <th>Category</th>
-                                        <th>Total Sold</th>
-                                        <th>Orders</th>
-                                        <th>Revenue</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {rows.map((row, i) => (
-                                        <tr key={i}>
-                                            <td>
-                                                <span className={`rp-rank ${getRankClass(i)}`}>
-                                                    {i + 1}
-                                                </span>
-                                            </td>
-                                            <td className="rp-cell-name">{row._id}</td>
-                                            <td><span className={`rp-category-badge ${getCategoryBadgeClass(row.category)}`}>{row.category}</span></td>
-                                            <td className="rp-cell-number">{fmtNum(row.totalSold)}</td>
-                                            <td className="rp-cell-number">{fmtNum(row.totalOrders)}</td>
-                                            <td className="rp-cell-revenue">{fmt(row.totalRevenue)}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-                </div>
-            </>
-        );
-    };
-
-    // ============================================
     // EMPTY STATE COMPONENT
     // ============================================
     const EmptyState = ({ label }) => (
@@ -645,10 +691,8 @@ const Reports = () => {
             case 'sales': return renderSalesTable();
             case 'purchase': return renderPurchaseTable();
             case 'inventory': return renderInventoryTable();
-            case 'profit': return renderProfitTable();
             case 'workshop': return renderWorkshopTable();
             case 'customer': return renderCustomerTable();
-            case 'top-selling': return renderTopSellingTable();
             default: return null;
         }
     };
