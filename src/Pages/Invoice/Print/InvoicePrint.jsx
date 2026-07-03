@@ -13,6 +13,7 @@ const InvoicePrint = ({ invoice }) => {
         dispenserItems,
         paymentStatus,
         subtotal,
+        subtotalWithoutGST,
         gstRate,
         gstAmount,
         packageDiscountAmount,
@@ -27,14 +28,15 @@ const InvoicePrint = ({ invoice }) => {
         hasPackage,
         hasDispenser,
         hasPromo,
-        workshop
+        workshop,
+        loyaltyCoinsEarned
     } = invoice;
 
     // ============================================
-    // HELPER: Number to Words Conversion (FIXED - "Only" at end only)
+    // HELPER: Number to Words Conversion
     // ============================================
     const numberToWords = (num) => {
-        if (num === 0) return 'Zero Only';
+        if (num === 0) return 'Zero';
 
         const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
             'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen',
@@ -91,7 +93,6 @@ const InvoicePrint = ({ invoice }) => {
             }
         }
 
-        // ✅ "Only" at the END only
         return words.trim();
     };
 
@@ -117,6 +118,33 @@ const InvoicePrint = ({ invoice }) => {
     };
 
     // ============================================
+    // ✅ CALCULATE DISPENSER TOTAL
+    // ============================================
+    const calculateDispenserTotal = () => {
+        if (!hasDispenser || !dispenserItems || dispenserItems.length === 0) return 0;
+        return dispenserItems.reduce((sum, item) => {
+            const price = item.ml === 3 ? item.sellingPrice3ml : item.sellingPrice6ml;
+            const originalTotal = price * item.totalML;
+            const discountAmt = (originalTotal * (item.discount || 0)) / 100;
+            return sum + (originalTotal - discountAmt);
+        }, 0);
+    };
+
+    // ============================================
+    // ✅ CALCULATE SUBTOTAL AFTER ALL DISCOUNTS (BEFORE GST)
+    // ============================================
+    const calculateSubtotalAfterDiscounts = () => {
+        let afterPromo = subtotalWithoutGST || 0;
+        if (hasPromo && promoDiscount) {
+            afterPromo = afterPromo - promoDiscount;
+        }
+        if (loyaltyDiscountAmount) {
+            afterPromo = afterPromo - loyaltyDiscountAmount;
+        }
+        return afterPromo;
+    };
+
+    // ============================================
     // TERMS & CONDITIONS
     // ============================================
     const termsAndConditions =
@@ -124,6 +152,13 @@ const InvoicePrint = ({ invoice }) => {
 
     const declaration =
         `We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.`;
+
+    // ============================================
+    // GET VALUES
+    // ============================================
+    const packageFinalPrice = packageItem?.finalPrice || packageItem?.pricing || 0;
+    const dispenserTotal = calculateDispenserTotal();
+    const subtotalAfterDiscounts = calculateSubtotalAfterDiscounts();
 
     return (
         <div id="invoice-print">
@@ -135,7 +170,6 @@ const InvoicePrint = ({ invoice }) => {
                 <div className="invoice-header">
                     <div className="company-top-info">
                         <div className="company-name-left">
-
                             <p style={{ fontSize: '9px', fontWeight: 'normal' }}>SFP SONS (INDIA) PRIVATE LIMITED</p>
                         </div>
                         <div className="gst-number-right">
@@ -188,7 +222,6 @@ const InvoicePrint = ({ invoice }) => {
                                         <td>{customer.contactNumber}</td>
                                     </tr>
                                 )}
-                                {/* ❌ REMOVED Loyalty Coins from Billing Details */}
                             </tbody>
                         </table>
                     </div>
@@ -221,7 +254,6 @@ const InvoicePrint = ({ invoice }) => {
                                         <td><strong>{promoApplied.code}</strong> ({promoApplied.discount}% off)</td>
                                     </tr>
                                 )}
-                                {/* ❌ REMOVED Loyalty Coins Used from Invoice Details */}
                             </tbody>
                         </table>
                     </div>
@@ -284,58 +316,51 @@ const InvoicePrint = ({ invoice }) => {
                 </div>
 
                 {/* ============================================
-                    TOTALS SECTION (UPDATED)
+                    ✅ UPDATED TOTALS SECTION - CORRECT ORDER
                 ============================================ */}
                 <div className="totals-section">
                     <div className="amount-details">
                         <table>
                             <tbody>
-                                {/* ✅ Subtotal (incl. GST) - After all item discounts */}
+                                {/* 1. PRICE (Subtotal without GST) */}
                                 <tr>
-                                    <td>Subtotal (incl. GST):</td>
-                                    <td>{formatCurrency(subtotal)}</td>
+                                    <td>Price (excl GST):</td>
+                                    <td>{formatCurrency(subtotalWithoutGST || 0)}</td>
                                 </tr>
 
-                                {/* ✅ Package Price (after discount) */}
+                                {/* 2. Package Price (after discount) */}
                                 {hasPackage && packageItem && (
                                     <tr>
                                         <td>Package Price:</td>
-                                        <td>{formatCurrency(packageItem.finalPrice || packageItem.pricing)}</td>
+                                        <td>{formatCurrency(packageFinalPrice)}</td>
                                     </tr>
                                 )}
 
-                                {/* ✅ Dispenser Price (after discount) */}
+                                {/* 3. Dispenser Price (after discount) */}
                                 {hasDispenser && dispenserItems && dispenserItems.length > 0 && (
                                     <tr>
                                         <td>Dispenser Price:</td>
-                                        <td>{formatCurrency(
-                                            dispenserItems.reduce((sum, item) => {
-                                                const price = item.ml === 3 ? item.sellingPrice3ml : item.sellingPrice6ml;
-                                                const originalTotal = price * item.totalML;
-                                                const discountAmt = (originalTotal * (item.discount || 0)) / 100;
-                                                return sum + (originalTotal - discountAmt);
-                                            }, 0)
-                                        )}</td>
+                                        <td>{formatCurrency(dispenserTotal)}</td>
                                     </tr>
                                 )}
 
-                                {/* ✅ Promo Discount (if exists) */}
+                                {/* 4. Promo Discount (if exists) */}
                                 {hasPromo && promoDiscount > 0 && (
                                     <tr>
-                                        <td>Promo Discount ({promoApplied?.discount}%):</td>
+                                        <td>Promo Discount:</td>
                                         <td style={{ color: '#dc3545' }}>-{formatCurrency(promoDiscount)}</td>
                                     </tr>
                                 )}
 
-                                {/* ✅ Loyalty Discount (if exists) */}
+                                {/* 5. Loyalty Discount (if exists) */}
                                 {loyaltyDiscountAmount > 0 && (
                                     <tr>
-                                        <td>Loyalty Discount ({loyaltyCoinsUsed} coins):</td>
+                                        <td>Loyalty Discount ({loyaltyCoinsUsed || 0} coins):</td>
                                         <td style={{ color: '#dc3545' }}>-{formatCurrency(loyaltyDiscountAmount)}</td>
                                     </tr>
                                 )}
 
-                                {/* ✅ Total Discount (sum of all discounts) */}
+                                {/* 6. Total Discount (sum of all discounts) */}
                                 {totalDiscountAmount > 0 && (
                                     <tr>
                                         <td><strong>Total Discount:</strong></td>
@@ -343,29 +368,45 @@ const InvoicePrint = ({ invoice }) => {
                                     </tr>
                                 )}
 
-                                {/* ✅ GST */}
+                                {/* 7. Subtotal (After all discounts, BEFORE GST) */}
                                 <tr style={{ borderTop: '1px dashed #ddd' }}>
-                                    <td><strong>GST ({gstRate}%):</strong></td>
-                                    <td><strong>{formatCurrency(gstAmount)}</strong></td>
+                                    <td><strong>Subtotal:</strong></td>
+                                    <td><strong>{formatCurrency(subtotalAfterDiscounts)}</strong></td>
                                 </tr>
 
-                                {/* ✅ Grand Total */}
+                                {/* 8. GST */}
+                                <tr>
+                                    <td><strong>GST ({gstRate || 18}%):</strong></td>
+                                    <td><strong>{formatCurrency(gstAmount || 0)}</strong></td>
+                                </tr>
+
+                                {/* 9. Grand Total */}
                                 <tr className="grand-total">
                                     <td><strong>Grand Total:</strong></td>
-                                    <td><strong>{formatCurrency(grandTotal)}</strong></td>
+                                    <td><strong>{formatCurrency(grandTotal || 0)}</strong></td>
                                 </tr>
 
-                                {/* ❌ REMOVED Loyalty Coins Earned */}
+                                {/* ✅ Loyalty Coins Earned (At bottom) */}
+                                {loyaltyCoinsEarned > 0 && (
+                                    <tr>
+                                        <td style={{ paddingTop: '10px', borderTop: '1px solid #ddd' }}>
+                                            <span style={{ fontSize: '12px', color: '#555' }}>🪙 Loyalty Coins Earned:</span>
+                                        </td>
+                                        <td style={{ paddingTop: '10px', borderTop: '1px solid #ddd', textAlign: 'right' }}>
+                                            <span style={{ color: '#28a745', fontWeight: 'bold' }}>+{loyaltyCoinsEarned} coins</span>
+                                        </td>
+                                    </tr>
+                                )}
                             </tbody>
                         </table>
                     </div>
                 </div>
 
                 {/* ============================================
-                    AMOUNT IN WORDS (FIXED - "Only" at end only)
+                    AMOUNT IN WORDS
                 ============================================ */}
                 <div className="amount-in-words">
-                    <p><strong>Amount in Words:</strong> {numberToWords(grandTotal)} Only</p>
+                    <p><strong>Amount in Words:</strong> {numberToWords(grandTotal || 0)}Only</p>
                 </div>
 
                 {/* ============================================

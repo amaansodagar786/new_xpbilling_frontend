@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, NavLink, useLocation } from "react-router-dom";
 
-// Icon imports - REMOVED ALL PI ICONS
+// Icon imports
 import { BiLogOut, BiLayout, BiLogIn } from "react-icons/bi";
 import { 
   TbLayoutGridAdd, 
@@ -12,7 +12,9 @@ import {
   TbPackage, 
   TbTools, 
   TbBottle,
-  TbFlask
+  TbFlask,
+  TbChevronDown,
+  TbChevronRight
 } from "react-icons/tb";
 import { LuCircleDot, LuFile } from "react-icons/lu";
 import { CiShoppingBasket } from "react-icons/ci";
@@ -22,7 +24,7 @@ import { GiHamburgerMenu } from "react-icons/gi";
 import { RxCross1 } from "react-icons/rx";
 import { FiUser } from "react-icons/fi";
 import { MdDiscount } from "react-icons/md";
-import { FaSearch, FaFileExcel, FaPlus, FaBox, FaFlask, FaSyringe, FaVial } from "react-icons/fa";
+import { FaSearch, FaFileExcel, FaPlus, FaBox, FaFlask, FaSyringe, FaVial, FaWarehouse } from "react-icons/fa";
 
 import logo from "../../assets/logo/jass_logo_new.png";
 import "./Navbar.scss";
@@ -38,16 +40,15 @@ const Navbar = ({
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userPermissions, setUserPermissions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [openDropdowns, setOpenDropdowns] = useState({});
   const navigate = useNavigate();
   const location = useLocation();
 
   // Sync with parent's collapsed state
   useEffect(() => {
-    console.log('Navbar: isCollapsed prop changed to:', isCollapsed);
     setToggle(isCollapsed);
   }, [isCollapsed]);
 
-  // Handle internal toggle changes
   const handleToggle = (newToggleState) => {
     setToggle(newToggleState);
     if (onToggleCollapse) {
@@ -67,13 +68,21 @@ const Navbar = ({
     handleToggle(false);
   };
 
-  // ✅ CHECK AUTH USING COOKIE (NOT localStorage)
+  // Toggle dropdown
+  const toggleDropdown = (key) => {
+    setOpenDropdowns(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
+  // ✅ CHECK AUTH USING COOKIE
   useEffect(() => {
     const checkAuth = async () => {
       try {
         setIsLoading(true);
         const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/me`, {
-          credentials: 'include' // Sends cookie automatically
+          credentials: 'include'
         });
 
         if (response.ok) {
@@ -101,18 +110,16 @@ const Navbar = ({
     navigate("/login");
   };
 
-  // ✅ UPDATED LOGOUT - Clear cookie via API
   const handleLogout = async () => {
     try {
       await fetch(`${import.meta.env.VITE_API_URL}/auth/logout`, {
         method: "POST",
-        credentials: 'include' // Sends cookie for logout
+        credentials: 'include'
       });
     } catch (error) {
       console.error("Logout error:", error);
     }
 
-    // Clear state
     setIsLoggedIn(false);
     setUserPermissions([]);
     navigate("/login");
@@ -123,8 +130,14 @@ const Navbar = ({
     switch (route) {
       case '/customer':
         return 'Customer Dashboard';
-      case '/inventory':
-        return 'Inventory Management';
+      case '/inventory/xp':
+        return 'XP Inventory Management';
+      case '/inventory/dispenser':
+        return 'Dispenser Inventory Management';
+      case '/inventory/bottles':
+        return 'Bottles Inventory Management';
+      case '/inventory/exclusive':
+        return 'Exclusive Inventory Management';
       case '/dashboard':
         return 'Dashboard';
       case '/admin':
@@ -135,12 +148,12 @@ const Navbar = ({
         return 'Business Reports And Analytics';
       case '/':
         return 'Invoice Creation & Management';
-      case '/inventory/xp':
-        return 'Inventory Management (XP)';
-      case '/inventory/bottles':
-        return 'Inventory Management (BOTTLES)';
-      case '/inventory/dispenser':
-        return 'Inventory Management (DISPENSER)';
+      case '/packages':
+        return 'Package Management';
+      case '/workshop':
+        return 'Workshop Management';
+      case '/promo':
+        return 'Promo Code Management';
       default:
         return '';
     }
@@ -148,33 +161,206 @@ const Navbar = ({
 
   const pageTitle = getPageTitle();
 
-  // Define all possible menu items with their required permissions - ALL WORKING ICONS
-  const allMenuData = [
-    { icon: <TbPackage />, title: "Invoice", path: "/", permission: "invoice" },
-    { icon: <HiOutlineHome />, title: "Dashboard", path: "/dashboard", permission: "dashboard" },
-    { icon: <TbUsers />, title: "Customer", path: "/customer", permission: "customer" },
-    { icon: <TbUsers />, title: "Admin", path: "/admin", permission: "admin" },
-    { icon: <MdDiscount />, title: "PromoCodes", path: "/promo", permission: "discount" },
-    { icon: <TbPackage />, title: "Packages", path: "/packages", permission: "packages" },
-    { icon: <TbTools />, title: "Workshop", path: "/workshop", permission: "packages" },
-    { icon: <TbBottle />, title: "Bottle Inventory", path: "/inventory/bottles", permission: "inventory" },
-    { icon: <FaFlask />, title: "Xp Inventory", path: "/inventory/xp", permission: "inventory" },
-    { icon: <FaSyringe />, title: "Dispenser Inventory", path: "/inventory/dispenser", permission: "inventory" },
-    { icon: <TbTrash />, title: "Product Disposal", path: "/productdisposal", permission: "disposal" },
-    { icon: <TbReportAnalytics />, title: "Report", path: "/report", permission: "report" },
+  // ✅ MENU CONFIGURATION WITH DROPDOWN SUPPORT
+  const menuConfig = [
+    { 
+      id: 'home',
+      icon: <HiOutlineHome />, 
+      title: "Dashboard", 
+      path: "/dashboard", 
+      permission: "dashboard" 
+    },
+    { 
+      id: 'invoice',
+      icon: <TbPackage />, 
+      title: "Invoice", 
+      path: "/", 
+      permission: "invoice" 
+    },
+    { 
+      id: 'customer',
+      icon: <TbUsers />, 
+      title: "Customer", 
+      path: "/customer", 
+      permission: "customer" 
+    },
+    { 
+      id: 'packages',
+      icon: <TbPackage />, 
+      title: "Packages", 
+      path: "/packages", 
+      permission: "packages" 
+    },
+    { 
+      id: 'workshop',
+      icon: <TbTools />, 
+      title: "Workshop", 
+      path: "/workshop", 
+      permission: "packages" 
+    },
+    { 
+      id: 'promo',
+      icon: <MdDiscount />, 
+      title: "Promo Codes", 
+      path: "/promo", 
+      permission: "discount" 
+    },
+    { 
+      id: 'inventory',
+      icon: <FaWarehouse />, 
+      title: "Inventories", 
+      permission: "inventory",
+      isDropdown: true,
+      children: [
+        { 
+          id: 'inventory-xp',
+          icon: <FaFlask />, 
+          title: "XP Inventory", 
+          path: "/inventory/xp", 
+          permission: "inventory" 
+        },
+        { 
+          id: 'inventory-dispenser',
+          icon: <FaSyringe />, 
+          title: "Dispenser Inventory", 
+          path: "/inventory/dispenser", 
+          permission: "inventory" 
+        },
+        { 
+          id: 'inventory-bottles',
+          icon: <TbBottle />, 
+          title: "Bottles Inventory", 
+          path: "/inventory/bottles", 
+          permission: "inventory" 
+        },
+        { 
+          id: 'inventory-exclusive',
+          icon: <FaVial />, 
+          title: "Exclusive Inventory", 
+          path: "/inventory/exclusive", 
+          permission: "inventory" 
+        }
+      ]
+    },
+    { 
+      id: 'productdisposal',
+      icon: <TbTrash />, 
+      title: "Product Disposal", 
+      path: "/productdisposal", 
+      permission: "disposal" 
+    },
+    { 
+      id: 'report',
+      icon: <TbReportAnalytics />, 
+      title: "Report", 
+      path: "/report", 
+      permission: "report" 
+    },
+    { 
+      id: 'admin',
+      icon: <TbUsers />, 
+      title: "Admin", 
+      path: "/admin", 
+      permission: "admin" 
+    }
   ];
 
-  // Filter menu items based on user permissions
+  // Filter menu based on permissions
   const getFilteredMenu = () => {
     if (userPermissions.includes("admin")) {
-      return allMenuData;
+      return menuConfig;
     }
-    return allMenuData.filter(item => userPermissions.includes(item.permission));
+    
+    const filterItems = (items) => {
+      return items
+        .filter(item => userPermissions.includes(item.permission))
+        .map(item => {
+          if (item.isDropdown) {
+            return {
+              ...item,
+              children: item.children.filter(child => userPermissions.includes(child.permission))
+            };
+          }
+          return item;
+        })
+        .filter(item => {
+          if (item.isDropdown) {
+            return item.children.length > 0;
+          }
+          return true;
+        });
+    };
+    
+    return filterItems(menuConfig);
   };
 
   const filteredMenuData = getFilteredMenu();
 
-  // Show loading state
+  // Check if any child is active
+  const isChildActive = (children) => {
+    return children.some(child => location.pathname === child.path);
+  };
+
+  // Render menu item
+  const renderMenuItem = (item) => {
+    if (item.isDropdown) {
+      const isOpen = openDropdowns[item.id] || false;
+      const hasActiveChild = isChildActive(item.children);
+      
+      return (
+        <li key={item.id} className={`dropdown-item ${hasActiveChild ? 'active-parent' : ''}`}>
+          <div 
+            className="dropdown-trigger"
+            onClick={() => toggleDropdown(item.id)}
+          >
+            <span className="menu-icon">{item.icon}</span>
+            <span className="menu-title">{item.title}</span>
+            <span className="dropdown-arrow">
+              {isOpen ? <TbChevronDown /> : <TbChevronRight />}
+            </span>
+          </div>
+          <ul className={`dropdown-menu ${isOpen ? 'open' : ''}`}>
+            {item.children.map(child => (
+              <li key={child.id}>
+                <NavLink
+                  to={child.path}
+                  className={({ isActive }) => (isActive ? "active" : "")}
+                  onClick={(e) => {
+                    if (onNavigation) {
+                      e.preventDefault();
+                      onNavigation(child.path);
+                    }
+                  }}
+                >
+                  <span className="menu-icon">{child.icon}</span>
+                  <span className="menu-title">{child.title}</span>
+                </NavLink>
+              </li>
+            ))}
+          </ul>
+        </li>
+      );
+    }
+
+    return (
+      <li key={item.id}>
+        <NavLink
+          to={item.path}
+          className={({ isActive }) => (isActive ? "active" : "")}
+          onClick={(e) => {
+            if (onNavigation) {
+              e.preventDefault();
+              onNavigation(item.path);
+            }
+          }}
+        >
+          <span className="menu-icon">{item.icon}</span>
+          <span className="menu-title">{item.title}</span>
+        </NavLink>
+      </li>
+    );
+  };
+
   if (isLoading) {
     return (
       <div style={{
@@ -211,23 +397,7 @@ const Navbar = ({
         </div>
 
         <ul className="side-menu top">
-          {filteredMenuData.map(({ icon, title, path }, i) => (
-            <li key={i}>
-              <NavLink
-                to={path}
-                className={({ isActive }) => (isActive ? "active" : "")}
-                onClick={(e) => {
-                  if (onNavigation) {
-                    e.preventDefault();
-                    onNavigation(path);
-                  }
-                }}
-              >
-                <span className="menu-icon">{icon}</span>
-                <span className="menu-title">{title}</span>
-              </NavLink>
-            </li>
-          ))}
+          {filteredMenuData.map(item => renderMenuItem(item))}
 
           {isLoggedIn && (
             <li className="logout-menu-item">
@@ -248,7 +418,6 @@ const Navbar = ({
               onClick={handleHamburgerClick}
             />
 
-            {/* Page-specific dashboard controls */}
             {pageTitle && (
               <div className="page-title">
                 {pageTitle}

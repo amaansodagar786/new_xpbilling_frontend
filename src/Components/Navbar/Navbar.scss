@@ -12,9 +12,11 @@ $active-text: #4b37c4;
 $inactive-text: #ffffff;
 $red: #e74c3c;
 $active-bg: #dfeafb;
+$dropdown-bg: rgba(255, 255, 255, 0.08);
+$dropdown-hover: rgba(255, 255, 255, 0.15);
 
 // ============================================
-// CSS CUSTOM PROPERTIES (kept for JS/dynamic usage)
+// CSS CUSTOM PROPERTIES
 // ============================================
 :root {
   --sidebar-bg: #{$sidebar-bg};
@@ -65,7 +67,7 @@ $active-bg: #dfeafb;
     }
 
     li {
-      margin: 6px 0;
+      margin: 2px 0;
       position: relative;
 
       a {
@@ -101,6 +103,110 @@ $active-bg: #dfeafb;
     }
   }
 
+  // ── Dropdown Styles ──
+  .dropdown-item {
+    .dropdown-trigger {
+      display: flex;
+      align-items: center;
+      gap: 19px;
+      padding: 10px 14px;
+      height: 44px;
+      color: $inactive-text;
+      font-family: 'Open Sans', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 0.2s;
+      border-radius: 0;
+      position: relative;
+
+      &:hover {
+        color: #fff;
+        background: $dropdown-hover;
+      }
+
+      .menu-icon {
+        font-size: 18px;
+        flex-shrink: 0;
+        color: #fff;
+        display: flex;
+        align-items: center;
+      }
+
+      .menu-title {
+        flex: 1;
+      }
+
+      .dropdown-arrow {
+        font-size: 14px;
+        color: rgba(255, 255, 255, 0.6);
+        transition: transform 0.3s ease;
+        display: flex;
+        align-items: center;
+      }
+    }
+
+    &.active-parent {
+      .dropdown-trigger {
+        color: #fff;
+      }
+    }
+
+    .dropdown-menu {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease, padding 0.3s ease;
+      background: $dropdown-bg;
+      border-radius: 8px;
+      margin-left: 10px;
+
+      &.open {
+        max-height: 500px;
+        padding: 5px 0;
+      }
+
+      li {
+        a {
+          padding: 8px 14px 8px 20px;
+          height: 38px;
+          font-size: 14px;
+          font-weight: 500;
+          color: rgba(255, 255, 255, 0.8);
+
+          &:hover {
+            color: #fff;
+            background: $dropdown-hover;
+          }
+
+          svg {
+            font-size: 15px;
+          }
+
+          &.active {
+            background: $active-bg;
+            color: $active-text;
+            border-radius: 25px 0 0 25px;
+            margin-left: 10px;
+            padding-left: 45px;
+            width: calc(100% - 10px);
+
+            svg {
+              background: #fff;
+              color: $active-text;
+              border-radius: 50%;
+              padding: 3px;
+              width: 20px;
+              height: 20px;
+            }
+          }
+        }
+      }
+    }
+  }
+
   // ── Collapsed state ──
   &.hide {
     .side-menu li a {
@@ -127,10 +233,49 @@ $active-bg: #dfeafb;
         display: none;
       }
     }
+
+    // Collapsed dropdown styles
+    .dropdown-item {
+      .dropdown-trigger {
+        justify-content: center;
+        padding: 10px;
+
+        .menu-title {
+          display: none;
+        }
+
+        .dropdown-arrow {
+          display: none;
+        }
+      }
+
+      .dropdown-menu {
+        max-height: 0;
+        padding: 0;
+        overflow: hidden;
+
+        &.open {
+          max-height: 0;
+        }
+      }
+    }
+
+    // Collapsed active parent - show active child icon style
+    .dropdown-item.active-parent {
+      .dropdown-trigger .menu-icon svg {
+        background: #fff;
+        color: $active-text;
+        border-radius: 50%;
+        padding: 4px;
+        width: 22px;
+        height: 22px;
+      }
+    }
   }
 
   // ── Active style — expanded only ──
   &:not(.hide) {
+
     .side-menu li.active a,
     .side-menu li a.active {
       background: $active-bg;
@@ -154,8 +299,9 @@ $active-bg: #dfeafb;
       }
     }
 
-    // Right-side curve blend
+    // Right-side curve blend for active
     .side-menu li.active {
+
       &::before,
       &::after {
         content: "";
@@ -179,10 +325,51 @@ $active-bg: #dfeafb;
         box-shadow: 10px -10px 0 $active-bg;
       }
     }
+
+    // Active styles for dropdown child items
+    .dropdown-menu li.active a,
+    .dropdown-menu li a.active {
+      background: $active-bg;
+      color: $active-text;
+      margin-left: 10px;
+      padding-left: 45px;
+      border-radius: 25px 0 0 25px;
+      width: calc(100% - 10px);
+      box-shadow: 4px 0 10px rgba(0, 0, 0, 0.06);
+
+      svg {
+        background: #fff;
+        color: $active-text;
+        border-radius: 50%;
+        padding: 3px;
+        width: 20px;
+        height: 20px;
+      }
+    }
+
+    // Active parent highlight
+    .dropdown-item.active-parent {
+      .dropdown-trigger {
+        color: #fff;
+        position: relative;
+
+        &::after {
+          content: '';
+          position: absolute;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          height: 2px;
+          background: rgba(255, 255, 255, 0.3);
+          border-radius: 2px;
+        }
+      }
+    }
   }
 
   // ── Collapsed active icon ──
   &.hide {
+
     .side-menu li.active a svg,
     .side-menu li a.active svg {
       background: #fff;
@@ -267,9 +454,8 @@ $active-bg: #dfeafb;
   width: calc(100% - 220px);
   left: 220px;
   transition: left 0.3s ease, width 0.3s ease;
-   background-color: #dfeafb;
+  background-color: #dfeafb;
 
-  // Top nav
   nav {
     height: 65px;
     background: white;
@@ -284,7 +470,6 @@ $active-bg: #dfeafb;
     width: 95%;
     margin: 0 auto;
     border-radius: 0 0 25px 25px;
-    
 
     .menuIcon {
       cursor: pointer;
@@ -295,7 +480,7 @@ $active-bg: #dfeafb;
   }
 }
 
-#sidebar.hide ~ #content {
+#sidebar.hide~#content {
   width: calc(100% - 60px);
   left: 60px;
   background-color: #dfeafb;
@@ -324,7 +509,7 @@ $active-bg: #dfeafb;
 }
 
 // ============================================
-// ICON BUTTON (top nav)
+// ICON BUTTON
 // ============================================
 .icon-button {
   display: flex;
@@ -392,6 +577,7 @@ $active-bg: #dfeafb;
     opacity: 0;
     transform: translateY(-8px);
   }
+
   100% {
     opacity: 1;
     transform: translateY(0);
@@ -422,9 +608,27 @@ $active-bg: #dfeafb;
       width: 0;
     }
 
-    // Mobile active styles — same for both expanded and collapsed
+    .dropdown-item {
+      .dropdown-trigger {
+        .dropdown-arrow {
+          display: flex !important;
+        }
+      }
+
+      .dropdown-menu {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease;
+
+        &.open {
+          max-height: 500px;
+        }
+      }
+    }
+
     &.hide,
     & {
+
       .side-menu li.active a,
       .side-menu li a.active {
         background: $active-bg;
@@ -461,6 +665,28 @@ $active-bg: #dfeafb;
           display: inline;
         }
       }
+
+      .dropdown-item .dropdown-trigger {
+        justify-content: flex-start;
+        padding: 10px 14px;
+
+        .menu-title {
+          display: inline;
+        }
+
+        .dropdown-arrow {
+          display: flex;
+        }
+      }
+
+      .dropdown-item .dropdown-menu {
+        max-height: 0;
+        overflow: hidden;
+
+        &.open {
+          max-height: 500px;
+        }
+      }
     }
   }
 
@@ -470,7 +696,7 @@ $active-bg: #dfeafb;
     transition: 0.2s ease-out;
   }
 
-  #sidebar.hide ~ #content {
+  #sidebar.hide~#content {
     width: 100%;
     left: 0;
   }

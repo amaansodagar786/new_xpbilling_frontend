@@ -769,7 +769,7 @@ const Invoice = () => {
 
         dispenserItems.forEach(item => {
             const price = item.ml === 3 ? item.sellingPrice3ml : item.sellingPrice6ml;
-            const itemOriginal = price * item.totalML;
+            const itemOriginal = price * item.quantity;
             const itemDiscountPercent = item.discount || 0;
             const itemDiscountAmt = (itemOriginal * itemDiscountPercent) / 100;
             const itemFinal = itemOriginal - itemDiscountAmt;
@@ -956,7 +956,7 @@ const Invoice = () => {
             item.quantity = qty;
             item.totalML = newTotalML;
             const price = item.ml === 3 ? item.sellingPrice3ml : item.sellingPrice6ml;
-            const originalPrice = price * newTotalML;
+            const originalPrice = price * item.quantity;
             const discountAmt = (originalPrice * (item.discount || 0)) / 100;
             item.originalPrice = originalPrice;
             item.finalPrice = originalPrice - discountAmt;
@@ -1981,7 +1981,7 @@ const Invoice = () => {
                                             <tbody>
                                                 {dispenserItems.map((item, index) => {
                                                     const price = item.ml === 3 ? item.sellingPrice3ml : item.sellingPrice6ml;
-                                                    const originalPrice = price * item.totalML;
+                                                    const originalPrice = price * item.quantity;
                                                     const discountAmt = (originalPrice * (item.discount || 0)) / 100;
                                                     const finalPrice = originalPrice - discountAmt;
 
