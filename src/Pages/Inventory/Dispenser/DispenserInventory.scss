@@ -1999,3 +1999,179 @@ $border-radius-sm: 8px;
         }
     }
 }
+
+
+// ============================================
+// DISPENSER INVENTORY - ADDITIONAL STYLES
+// (Status Filter & Export Button)
+// ============================================
+// Add this to your DispenserInventory.scss file
+
+// ── Status Filter ──
+.di-status-filter {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #f5f7fa;
+    border: 1.5px solid #e3e8f0;
+    border-radius: 50px;
+    padding: 3px 8px 3px 14px;
+    transition: all 0.25s;
+
+    &:focus-within {
+        border-color: $primary-light;
+        background: $white;
+        box-shadow: 0 0 0 3px rgba(106, 106, 197, 0.12);
+    }
+
+    .di-filter-icon {
+        color: #aab0bc;
+        font-size: 13px;
+        flex-shrink: 0;
+    }
+
+    .di-status-select {
+        background: transparent;
+        border: none;
+        padding: 6px 8px 6px 4px;
+        font-family: 'Open Sans', sans-serif;
+        font-size: 13px;
+        font-weight: 500;
+        color: #333;
+        cursor: pointer;
+        outline: none;
+        min-width: 120px;
+        appearance: none;
+
+        option {
+            padding: 6px 10px;
+            font-family: 'Open Sans', sans-serif;
+            font-size: 13px;
+        }
+
+        &:focus {
+            outline: none;
+        }
+    }
+
+    // Add a dropdown arrow indicator
+    &::after {
+        content: '▾';
+        color: #aab0bc;
+        font-size: 10px;
+        margin-right: 4px;
+        pointer-events: none;
+    }
+}
+
+// ── Export Button ──
+.di-export-btn {
+    background: linear-gradient(135deg, #27ae60, #2ecc71) !important;
+    box-shadow: 0 3px 8px rgba(39, 174, 96, 0.25) !important;
+
+    &:hover:not(:disabled) {
+        background: linear-gradient(135deg, #219653, #27ae60) !important;
+        box-shadow: 0 5px 14px rgba(39, 174, 96, 0.35) !important;
+    }
+
+    &:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+        transform: none !important;
+        box-shadow: none !important;
+    }
+
+    svg {
+        font-size: 13px;
+    }
+}
+
+// ── Responsive for Status Filter ──
+@media screen and (max-width: 768px) {
+    .di-status-filter {
+        width: 100%;
+        padding: 3px 8px 3px 14px;
+
+        .di-status-select {
+            width: 100%;
+            min-width: auto;
+            font-size: 13px;
+            padding: 6px 4px;
+        }
+    }
+
+    .di-export-btn {
+        width: 100%;
+        justify-content: center;
+        padding: 10px 16px;
+        font-size: 13px;
+    }
+
+    .di-action-buttons-group {
+        flex-wrap: wrap;
+        gap: 8px;
+
+        button {
+            flex: 1;
+            justify-content: center;
+            font-size: 12px;
+            padding: 8px 12px;
+            min-width: calc(50% - 4px);
+        }
+    }
+}
+
+@media (max-width: 480px) {
+    .di-status-filter {
+        padding: 2px 6px 2px 12px;
+
+        .di-status-select {
+            font-size: 12px;
+            padding: 4px 4px 4px 2px;
+            min-width: 100px;
+        }
+
+        .di-filter-icon {
+            font-size: 11px;
+        }
+    }
+
+    .di-export-btn {
+        font-size: 11px;
+        padding: 8px 12px;
+    }
+
+    .di-action-buttons-group {
+        gap: 6px;
+
+        button {
+            font-size: 11px;
+            padding: 7px 10px;
+            gap: 4px;
+            min-width: calc(50% - 3px);
+
+            svg {
+                font-size: 11px;
+            }
+        }
+    }
+}
+
+// ── Fix for very small screens ──
+@media (max-width: 400px) {
+    .di-action-buttons-group {
+        button {
+            font-size: 10px;
+            padding: 6px 8px;
+            min-width: 100%;
+        }
+    }
+
+    .di-status-filter {
+        .di-status-select {
+            font-size: 11px;
+            padding: 4px 2px;
+            min-width: 80px;
+        }
+    }
+}

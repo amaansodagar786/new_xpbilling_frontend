@@ -1732,3 +1732,106 @@ $border-radius-sm: 8px;
         }
     }
 }
+
+
+// ============================================
+// WORKSHOPS - EXPORT BUTTON ONLY
+// ============================================
+// Add this to your Workshops.scss file
+
+// ── Export Button ──
+.ws-export-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    background: linear-gradient(135deg, #27ae60, #2ecc71) !important;
+    color: $white !important;
+    padding: 9px 20px !important;
+    border: none !important;
+    border-radius: 50px !important;
+    font-family: 'Roboto', sans-serif !important;
+    font-size: 13.5px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    transition: all 0.22s ease !important;
+    box-shadow: 0 3px 8px rgba(39, 174, 96, 0.25) !important;
+    letter-spacing: 0.2px !important;
+    white-space: nowrap !important;
+
+    &:hover:not(:disabled) {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 5px 14px rgba(39, 174, 96, 0.35) !important;
+        background: linear-gradient(135deg, #219653, #27ae60) !important;
+    }
+
+    &:active:not(:disabled) {
+        transform: translateY(0) !important;
+    }
+
+    &:disabled {
+        opacity: 0.55 !important;
+        cursor: not-allowed !important;
+        transform: none !important;
+        box-shadow: none !important;
+    }
+
+    svg {
+        font-size: 14px !important;
+    }
+}
+
+// ── Responsive for Export Button ──
+@media screen and (max-width: 768px) {
+    .ws-export-btn {
+        width: 100% !important;
+        justify-content: center !important;
+        padding: 10px 16px !important;
+        font-size: 13px !important;
+    }
+
+    .ws-action-buttons-group {
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+
+        button {
+            flex: 1 !important;
+            justify-content: center !important;
+            font-size: 12px !important;
+            padding: 8px 12px !important;
+            min-width: calc(50% - 4px) !important;
+        }
+    }
+}
+
+@media (max-width: 480px) {
+    .ws-export-btn {
+        font-size: 11px !important;
+        padding: 8px 12px !important;
+    }
+
+    .ws-action-buttons-group {
+        gap: 6px !important;
+
+        button {
+            font-size: 11px !important;
+            padding: 7px 10px !important;
+            gap: 4px !important;
+            min-width: calc(50% - 3px) !important;
+
+            svg {
+                font-size: 11px !important;
+            }
+        }
+    }
+}
+
+// ── Fix for very small screens ──
+@media (max-width: 400px) {
+    .ws-action-buttons-group {
+        button {
+            font-size: 10px !important;
+            padding: 6px 8px !important;
+            min-width: 100% !important;
+        }
+    }
+}

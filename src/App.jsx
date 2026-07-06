@@ -19,6 +19,7 @@ import ProductDisposal from "./Pages/ProductDisposal/ProductDisposal";
 import Invoice from "./Pages/Invoice/Invoice";
 import Dashboard from "./Pages/Dashboard/Dashboard";
 import Reports from "./Pages/Reports/Reports";
+import Logs from "./Pages/Logs/Logs";
 
 function App() {
   return (
@@ -33,6 +34,8 @@ function App() {
             {/* ===== PUBLIC ROUTES ===== */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/logs" element={<Logs />} />
+
 
             {/* ===== PROTECTED ROUTES WITH PERMISSIONS ===== */}
 
