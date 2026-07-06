@@ -6,7 +6,7 @@ import {
     FaCheckCircle, FaTimesCircle, FaChevronLeft, FaChevronRight,
     FaChevronRight as FaExpandChevron, FaHistory, FaArrowUp, FaArrowDown,
     FaUser, FaCalendarAlt, FaClock, FaTag, FaInfoCircle, FaTrashAlt,
-    FaEye, FaChevronDown
+    FaEye, FaChevronDown, FaFilter
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../../../Components/Navbar/Navbar";
@@ -519,7 +519,6 @@ const DisposalHistoryPanel = ({ disposals, isLoading, onClose }) => {
                     const { date, time } = formatDateTime(d.disposedAt);
                     return (
                         <div key={d.disposalEntryId || idx} className="bi-disposal-item">
-                            {/* SINGLE ROW - ALL FIELDS */}
                             <div className="bi-disposal-row">
                                 <span className="bi-disposal-label"><FaUser /> Disposed By:</span>
                                 <span className="bi-disposal-value">{d.performedBy?.userName || 'Unknown'}</span>
@@ -616,7 +615,6 @@ const FullTransactionModal = ({
                         <div className="bi-transaction-empty">No transactions found for this item.</div>
                     ) : (
                         <>
-                            {/* Toggle Tabs */}
                             <div className="bi-transaction-tabs">
                                 <button
                                     className={`bi-tab-btn ${activeTab === 'in' ? 'bi-tab-active' : ''}`}
@@ -632,7 +630,6 @@ const FullTransactionModal = ({
                                 </button>
                             </div>
 
-                            {/* Transactions List */}
                             <div className="bi-full-transaction-list">
                                 {currentTransactions.length === 0 ? (
                                     <div className="bi-transaction-empty">
@@ -835,8 +832,8 @@ const TransactionPanel = ({
 const BottleInventory = () => {
     const [inventory, setInventory] = useState([]);
     const [filteredInventory, setFilteredInventory] = useState([]);
-    const [allInventory, setAllInventory] = useState([]); // ✅ NEW: All items for dropdown
-    const [isLoadingAllInventory, setIsLoadingAllInventory] = useState(false); // ✅ NEW
+    const [allInventory, setAllInventory] = useState([]);
+    const [isLoadingAllInventory, setIsLoadingAllInventory] = useState(false);
     const [mlSizes, setMlSizes] = useState([]);
     const [itemTypes, setItemTypes] = useState([]);
     const [alerts, setAlerts] = useState([]);
@@ -844,12 +841,14 @@ const BottleInventory = () => {
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedML, setSelectedML] = useState("");
     const [selectedItemType, setSelectedItemType] = useState("");
+    const [statusFilter, setStatusFilter] = useState("all"); // ✅ NEW: Status filter
     const [showAddStockModal, setShowAddStockModal] = useState(false);
     const [showAddMLModal, setShowAddMLModal] = useState(false);
     const [showAddItemModal, setShowAddItemModal] = useState(false);
     const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
     const [showErrorModal, setShowErrorModal] = useState(false);
     const [showAlertModal, setShowAlertModal] = useState(false);
+    const [isExporting, setIsExporting] = useState(false); // ✅ NEW
 
     // Pagination states
     const [currentPage, setCurrentPage] = useState(1);
@@ -926,7 +925,6 @@ const BottleInventory = () => {
             const data = await response.json();
             setAllInventory(data.inventory || []);
 
-            // Extract distinct ML sizes and Item Types from all inventory
             const allMlSizes = [...new Set((data.inventory || []).map(item => item.mlSize))].sort();
             const allItemTypes = [...new Set((data.inventory || []).map(item => item.itemType))].sort();
 
@@ -943,7 +941,7 @@ const BottleInventory = () => {
     // ============================================
     // FETCH DATA WITH PAGINATION
     // ============================================
-    const fetchInventory = async (page = 1, search = '', mlSize = '', itemType = '') => {
+    const fetchInventory = async (page = 1, search = '', mlSize = '', itemType = '', status = 'all') => {
         try {
             setIsLoading(true);
             const queryParams = new URLSearchParams({
@@ -966,15 +964,20 @@ const BottleInventory = () => {
 
             const data = await response.json();
 
-            setInventory(data.inventory || []);
-            setFilteredInventory(data.inventory || []);
-            setPagination(data.pagination || {
-                total: 0,
-                page: 1,
-                limit: 20,
-                totalPages: 0,
-                hasNextPage: false,
-                hasPrevPage: false
+            let items = data.inventory || [];
+
+            if (status === 'low') {
+                items = items.filter(item => item.quantity > 0 && item.quantity <= (item.minStock || 5));
+            } else if (status === 'out-of-stock') {
+                items = items.filter(item => item.quantity === 0);
+            }
+
+            setInventory(items);
+            setFilteredInventory(items);
+            setPagination({
+                ...data.pagination,
+                total: items.length,
+                totalPages: Math.ceil(items.length / 20)
             });
             setCurrentPage(data.pagination?.page || 1);
 
@@ -1031,11 +1034,10 @@ const BottleInventory = () => {
     };
 
     useEffect(() => {
-        fetchInventory(1, '', '', '');
+        fetchInventory(1, '', '', '', statusFilter);
         fetchMLSizes();
         fetchItemTypes();
         fetchAlerts();
-        // ✅ Fetch all inventory once on load
         fetchAllInventory();
     }, []);
 
@@ -1044,7 +1046,7 @@ const BottleInventory = () => {
     // ============================================
     const handleSearch = (term) => {
         setSearchTerm(term);
-        fetchInventory(1, term, selectedML, selectedItemType);
+        fetchInventory(1, term, selectedML, selectedItemType, statusFilter);
     };
 
     // ============================================
@@ -1053,7 +1055,15 @@ const BottleInventory = () => {
     const handleFilterChange = (mlSize, itemType) => {
         setSelectedML(mlSize);
         setSelectedItemType(itemType);
-        fetchInventory(1, searchTerm, mlSize, itemType);
+        fetchInventory(1, searchTerm, mlSize, itemType, statusFilter);
+    };
+
+    // ============================================
+    // HANDLE STATUS FILTER
+    // ============================================
+    const handleStatusFilter = (status) => {
+        setStatusFilter(status);
+        fetchInventory(1, searchTerm, selectedML, selectedItemType, status);
     };
 
     // ============================================
@@ -1062,7 +1072,50 @@ const BottleInventory = () => {
     const handlePageChange = (newPage) => {
         if (newPage < 1 || newPage > pagination.totalPages) return;
         setCurrentPage(newPage);
-        fetchInventory(newPage, searchTerm, selectedML, selectedItemType);
+        fetchInventory(newPage, searchTerm, selectedML, selectedItemType, statusFilter);
+    };
+
+    // ============================================
+    // ✅ EXPORT TO EXCEL
+    // ============================================
+    const handleExport = async () => {
+        try {
+            setIsExporting(true);
+
+            const params = new URLSearchParams();
+            if (statusFilter !== 'all') params.set('status', statusFilter);
+            if (searchTerm.trim()) params.set('search', searchTerm.trim());
+            if (selectedML) params.set('mlSize', selectedML);
+            if (selectedItemType) params.set('itemType', selectedItemType);
+
+            const response = await fetch(
+                `${import.meta.env.VITE_API_URL}/bottles/export?${params}`,
+                { credentials: 'include' }
+            );
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to export');
+            }
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `bottles_inventory_export_${new Date().toISOString().split('T')[0]}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+
+            toast.success('Export completed successfully!');
+
+        } catch (error) {
+            console.error("Error exporting:", error);
+            toast.error(error.message || 'Failed to export');
+        } finally {
+            setIsExporting(false);
+        }
     };
 
     // ============================================
@@ -1077,7 +1130,7 @@ const BottleInventory = () => {
                 itemType: item.itemType,
                 limit: 100,
                 page: 1,
-                hideInvoice: 'true'  // ✅ Added to show only IN transactions
+                hideInvoice: 'true'
             });
 
             const response = await fetch(
@@ -1178,26 +1231,6 @@ const BottleInventory = () => {
         }
     };
 
-    // ============================================
-    // CHECK IF ITEM HAS DISPOSAL HISTORY
-    // ============================================
-    const checkHasDisposal = async (item) => {
-        try {
-            const bottleItemId = item.bottleItemId;
-            if (!bottleItemId) return false;
-
-            const response = await fetch(
-                `${import.meta.env.VITE_API_URL}/disposal/get-by-product/${bottleItemId}`,
-                { credentials: 'include' }
-            );
-            if (!response.ok) return false;
-            const data = await response.json();
-            return data.data && data.data.disposals && data.data.disposals.length > 0;
-        } catch (error) {
-            return false;
-        }
-    };
-
     const handleRowClick = async (item) => {
         const rowKey = getRowKey(item);
 
@@ -1220,7 +1253,6 @@ const BottleInventory = () => {
     // ============================================
     const openAddStockModal = async () => {
         setShowAddStockModal(true);
-        // ✅ Fetch all inventory when modal opens
         await fetchAllInventory();
     };
 
@@ -1271,9 +1303,8 @@ const BottleInventory = () => {
 
             setAddStockData({ mlSize: "", itemType: "", quantity: "", reason: "Purchase" });
             setShowAddStockModal(false);
-            await fetchInventory(currentPage, searchTerm, selectedML, selectedItemType);
+            await fetchInventory(currentPage, searchTerm, selectedML, selectedItemType, statusFilter);
             await fetchAlerts();
-            // ✅ Refresh all inventory after adding stock
             await fetchAllInventory();
 
             if (expandedRowKey === updatedRowKey) {
@@ -1329,9 +1360,8 @@ const BottleInventory = () => {
 
             setNewML("");
             setShowAddMLModal(false);
-            await fetchInventory(currentPage, searchTerm, selectedML, selectedItemType);
+            await fetchInventory(currentPage, searchTerm, selectedML, selectedItemType, statusFilter);
             await fetchMLSizes();
-            // ✅ Refresh all inventory after adding ML
             await fetchAllInventory();
 
         } catch (error) {
@@ -1374,9 +1404,8 @@ const BottleInventory = () => {
 
             setNewItemType("");
             setShowAddItemModal(false);
-            await fetchInventory(currentPage, searchTerm, selectedML, selectedItemType);
+            await fetchInventory(currentPage, searchTerm, selectedML, selectedItemType, statusFilter);
             await fetchItemTypes();
-            // ✅ Refresh all inventory after adding item type
             await fetchAllInventory();
 
         } catch (error) {
@@ -1445,9 +1474,8 @@ const BottleInventory = () => {
                 fileInputRef.current.value = "";
             }
             setShowBulkUploadModal(false);
-            await fetchInventory(currentPage, searchTerm, selectedML, selectedItemType);
+            await fetchInventory(currentPage, searchTerm, selectedML, selectedItemType, statusFilter);
             await fetchAlerts();
-            // ✅ Refresh all inventory after bulk upload
             await fetchAllInventory();
 
             setTransactionsByRowKey({});
@@ -1571,6 +1599,20 @@ const BottleInventory = () => {
                             />
                         </div>
                         <div className="bi-action-buttons-group">
+                            {/* ✅ STATUS FILTER */}
+                            <div className="bi-status-filter">
+                                <FaFilter className="bi-filter-icon" />
+                                <select
+                                    value={statusFilter}
+                                    onChange={(e) => handleStatusFilter(e.target.value)}
+                                    className="bi-status-select"
+                                >
+                                    <option value="all">All Items</option>
+                                    <option value="low">Low Stock</option>
+                                    <option value="out-of-stock">Out of Stock</option>
+                                </select>
+                            </div>
+
                             <button
                                 className="bi-alert-btn"
                                 onClick={() => setShowAlertModal(true)}
@@ -1587,6 +1629,15 @@ const BottleInventory = () => {
                             </button>
                             <button className="bi-upload-btn" onClick={() => setShowBulkUploadModal(true)}>
                                 <FaUpload /> Bulk Upload
+                            </button>
+                            {/* ✅ EXPORT BUTTON */}
+                            <button
+                                className="bi-export-btn"
+                                onClick={handleExport}
+                                disabled={isExporting}
+                                title="Export to Excel"
+                            >
+                                <FaDownload /> {isExporting ? "Exporting..." : "Export"}
                             </button>
                             <button
                                 className="bi-add-stock-btn"
@@ -1692,7 +1743,6 @@ const BottleInventory = () => {
 
                                                 {isExpanded && (
                                                     <>
-                                                        {/* Transaction Panel */}
                                                         <tr className="bi-transaction-row">
                                                             <td colSpan="6">
                                                                 <TransactionPanel
@@ -1705,7 +1755,6 @@ const BottleInventory = () => {
                                                             </td>
                                                         </tr>
 
-                                                        {/* Disposal Panel */}
                                                         {showDisposalPanel && currentDisposalRowKey === rowKey && (
                                                             <tr className="bi-transaction-row">
                                                                 <td colSpan="6">
@@ -1784,7 +1833,6 @@ const BottleInventory = () => {
                 )}
 
                 {/* Modals */}
-                {/* ✅ UPDATED: AddStockModal with allInventory and loading state */}
                 <AddStockModal
                     show={showAddStockModal}
                     onClose={() => setShowAddStockModal(false)}
@@ -1842,7 +1890,6 @@ const BottleInventory = () => {
                     alerts={alerts}
                 />
 
-                {/* Full Transaction Modal */}
                 <FullTransactionModal
                     show={showFullTransactionModal}
                     onClose={() => {

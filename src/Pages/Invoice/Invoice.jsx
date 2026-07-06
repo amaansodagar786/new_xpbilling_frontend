@@ -7,7 +7,7 @@ import {
     FaFileInvoice, FaSearch, FaBan, FaCalendarAlt,
     FaCreditCard, FaPlusCircle, FaCheck, FaWindowClose,
     FaPercentage, FaEdit, FaUndo, FaHistory, FaCoins,
-    FaFilePdf, FaWhatsapp
+    FaFilePdf, FaWhatsapp, FaDownload
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../../Components/Navbar/Navbar";
@@ -436,6 +436,8 @@ const Invoice = () => {
     const [isUpdating, setIsUpdating] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [exportingInvoices, setExportingInvoices] = useState({});
+    // ✅ NEW: Export all invoices state
+    const [isExportingAll, setIsExportingAll] = useState(false);
     const navigate = useNavigate();
 
     // ========== PAGE VIEW TOGGLE ==========
@@ -520,6 +522,10 @@ const Invoice = () => {
     const [isLoadingInvoices, setIsLoadingInvoices] = useState(false);
     const [invoiceSearchTerm, setInvoiceSearchTerm] = useState("");
     const [hasLoadedInvoicesOnce, setHasLoadedInvoicesOnce] = useState(false);
+
+    // ✅ NEW: Filter states
+    const [timeFilter, setTimeFilter] = useState("all");
+    const [paymentFilter, setPaymentFilter] = useState("");
 
     // ========== MODAL STATES ==========
     const [showInvoiceDetailsModal, setShowInvoiceDetailsModal] = useState(false);
@@ -829,6 +835,18 @@ const Invoice = () => {
 
     }, [selectedPackage, packageDiscountInput, dispenserItems, selectedPromo, useLoyaltyCoins, usableLoyaltyCoins, isEditing, GST_RATE]);
 
+
+
+    // ============================================
+    // REFETCH INVOICES WHEN FILTERS CHANGE (LIST VIEW)
+    // ============================================
+    useEffect(() => {
+        if (activeView === "list") {
+            fetchAllInvoices();
+        }
+    }, [timeFilter, paymentFilter]);
+
+
     // ============================================
     // HANDLE WORKSHOP SELECTION (EDIT MODE)
     // ============================================
@@ -839,7 +857,6 @@ const Invoice = () => {
             return;
         }
 
-        // ✅ Check if this workshop already has an invoice for this customer
         const customerInWorkshop = selected.data.customers?.find(
             c => c.customerId === selectedCustomer.value
         );
@@ -1328,20 +1345,47 @@ const Invoice = () => {
     };
 
     // ============================================
-    // FETCH ALL INVOICES
+    // FETCH ALL INVOICES WITH FILTERS
     // ============================================
     const fetchAllInvoices = async () => {
         try {
             setIsLoadingInvoices(true);
+
+            // Build query params
+            const params = new URLSearchParams();
+            params.set('limit', '200');
+
+            // Time filter
+            if (timeFilter && timeFilter !== 'all') {
+                params.set('timeFilter', timeFilter);
+            }
+
+            // Payment filter
+            if (paymentFilter) {
+                params.set('paymentStatus', paymentFilter);
+            }
+
             const response = await fetch(
-                `${import.meta.env.VITE_API_URL}/invoice/get-all?limit=200`,
+                `${import.meta.env.VITE_API_URL}/invoice/get-all?${params}`,
                 { credentials: 'include' }
             );
 
             if (!response.ok) throw new Error('Failed to fetch invoices');
 
             const data = await response.json();
-            setAllInvoices(data.invoices || []);
+
+            // Apply search filter client-side
+            let filtered = data.invoices || [];
+            if (invoiceSearchTerm.trim()) {
+                const search = invoiceSearchTerm.trim().toLowerCase();
+                filtered = filtered.filter(inv =>
+                    inv.invoiceNumber?.toLowerCase().includes(search) ||
+                    inv.customer?.customerName?.toLowerCase().includes(search) ||
+                    inv.customer?.contactNumber?.includes(search)
+                );
+            }
+
+            setAllInvoices(filtered);
             setHasLoadedInvoicesOnce(true);
         } catch (error) {
             console.error("Error fetching invoices:", error);
@@ -1349,6 +1393,21 @@ const Invoice = () => {
         } finally {
             setIsLoadingInvoices(false);
         }
+    };
+
+    // ============================================
+    // HANDLE FILTER CHANGE
+    // ============================================
+    const handleFilterChange = () => {
+        fetchAllInvoices();
+    };
+
+    // ============================================
+    // HANDLE SEARCH
+    // ============================================
+    const handleSearch = (value) => {
+        setInvoiceSearchTerm(value);
+        fetchAllInvoices();
     };
 
     // ============================================
@@ -1367,17 +1426,14 @@ const Invoice = () => {
 
             const invoice = await response.json();
 
-            // Set customer
             setSelectedCustomer({
                 value: invoice.customer.customerId,
                 label: `${invoice.customer.customerName} - ${invoice.customer.contactNumber}`,
                 data: invoice.customer
             });
 
-            // ✅ Store if invoice has a workshop
             const hasWorkshop = invoice.hasWorkshop && invoice.workshop;
 
-            // ✅ Set workshop directly from invoice data if exists
             if (hasWorkshop) {
                 const workshopOption = {
                     value: invoice.workshop.workshopId,
@@ -1393,7 +1449,6 @@ const Invoice = () => {
                 setSelectedWorkshop(workshopOption);
                 setRecentWorkshop(invoice.workshop);
 
-                // ✅ Add workshop to workshops state so Select has options
                 setWorkshops([{
                     workshopId: invoice.workshop.workshopId,
                     date: invoice.workshop.date,
@@ -1402,9 +1457,7 @@ const Invoice = () => {
                     customers: []
                 }]);
             } else {
-                // ✅ If no workshop, fetch available workshops for this customer
                 const customerWorkshops = await fetchWorkshopsForCustomer(invoice.customer.customerId);
-                // ✅ Filter out workshops that already have invoice for this customer
                 const availableWorkshops = customerWorkshops.filter(w => {
                     const customerInWorkshop = w.customers?.find(
                         c => c.customerId === invoice.customer.customerId
@@ -1416,7 +1469,6 @@ const Invoice = () => {
                 setRecentWorkshop(null);
             }
 
-            // Set package if exists
             if (invoice.hasPackage && invoice.packageItem) {
                 const pkg = invoice.packageItem;
                 setSelectedPackage({
@@ -1436,7 +1488,6 @@ const Invoice = () => {
                 });
                 setPackageDiscountInput(pkg.discount || 0);
 
-                // Set XP Oil
                 if (pkg.xpOil && pkg.xpOil.xpId) {
                     setSelectedXPOil({
                         value: pkg.xpOil.xpId,
@@ -1451,7 +1502,6 @@ const Invoice = () => {
                 }
             }
 
-            // Set dispenser items
             if (invoice.hasDispenser && invoice.dispenserItems.length > 0) {
                 const items = invoice.dispenserItems.map(item => ({
                     dispenserId: item.dispenserId,
@@ -1466,7 +1516,6 @@ const Invoice = () => {
                 setDispenserItems(items);
             }
 
-            // Set promo if exists
             if (invoice.hasPromo && invoice.promoApplied) {
                 setSelectedPromo({
                     value: invoice.promoApplied.promoId,
@@ -1477,12 +1526,10 @@ const Invoice = () => {
                 });
             }
 
-            // Set payment status
             setPaymentStatus(invoice.paymentStatus || 'Cash');
             setInvoiceDate(invoice.invoiceDate ? new Date(invoice.invoiceDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
             setNotes(invoice.notes || '');
 
-            // Switch to create view and enable edit mode
             setActiveView("create");
             setIsEditing(true);
             setEditingInvoiceId(invoiceId);
@@ -1503,6 +1550,8 @@ const Invoice = () => {
     const handleSwitchToListView = () => {
         setActiveView("list");
         setInvoiceSearchTerm("");
+        setTimeFilter("all");
+        setPaymentFilter("");
         fetchAllInvoices();
     };
 
@@ -1559,6 +1608,117 @@ const Invoice = () => {
     };
 
     // ============================================
+    // ✅ HANDLE EXPORT ALL INVOICES - FIXED
+    // ============================================
+    const handleExportAll = async () => {
+        try {
+            setIsExportingAll(true);
+
+            // Build query params
+            const params = new URLSearchParams();
+
+            // Search filter
+            if (invoiceSearchTerm.trim()) {
+                params.set('search', invoiceSearchTerm.trim());
+            }
+
+            // Time filter - convert to startDate and endDate
+            if (timeFilter && timeFilter !== 'all') {
+                const now = new Date();
+                const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                let startDate, endDate;
+
+                switch (timeFilter) {
+                    case 'today':
+                        startDate = new Date(today);
+                        endDate = new Date(today);
+                        endDate.setDate(endDate.getDate() + 1);
+                        break;
+                    case 'yesterday': {
+                        const yesterday = new Date(today);
+                        yesterday.setDate(yesterday.getDate() - 1);
+                        startDate = new Date(yesterday);
+                        endDate = new Date(today);
+                        break;
+                    }
+                    case 'thisWeek': {
+                        const startOfWeek = new Date(today);
+                        const day = today.getDay();
+                        const diff = today.getDate() - day + (day === 0 ? -6 : 1);
+                        startOfWeek.setDate(diff);
+                        startOfWeek.setHours(0, 0, 0, 0);
+                        startDate = new Date(startOfWeek);
+                        endDate = new Date(today);
+                        endDate.setDate(endDate.getDate() + 1);
+                        break;
+                    }
+                    case 'thisMonth': {
+                        startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                        endDate = new Date(today);
+                        endDate.setDate(endDate.getDate() + 1);
+                        break;
+                    }
+                    case 'thisYear': {
+                        startDate = new Date(today.getFullYear(), 0, 1);
+                        endDate = new Date(today);
+                        endDate.setDate(endDate.getDate() + 1);
+                        break;
+                    }
+                    case 'lastYear': {
+                        startDate = new Date(today.getFullYear() - 1, 0, 1);
+                        endDate = new Date(today.getFullYear(), 0, 1);
+                        break;
+                    }
+                    default:
+                        break;
+                }
+
+                if (startDate) {
+                    params.set('startDate', startDate.toISOString().split('T')[0]);
+                }
+                if (endDate) {
+                    params.set('endDate', endDate.toISOString().split('T')[0]);
+                }
+            }
+
+            // Payment filter
+            if (paymentFilter) {
+                params.set('paymentStatus', paymentFilter);
+            }
+
+            console.log('📤 Export Params:', params.toString());
+
+            const response = await fetch(
+                `${import.meta.env.VITE_API_URL}/invoice/export?${params}`,
+                { credentials: 'include' }
+            );
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to export invoices');
+            }
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `invoices_export_${new Date().toISOString().split('T')[0]}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+
+            toast.success('Invoices exported successfully!');
+
+        } catch (error) {
+            console.error("Error exporting invoices:", error);
+            toast.error(error.message || 'Failed to export invoices');
+        } finally {
+            setIsExportingAll(false);
+        }
+    };
+
+    // ============================================
     // HELPERS
     // ============================================
     const formatDate = (dateString) => {
@@ -1578,15 +1738,9 @@ const Invoice = () => {
     };
 
     // ============================================
-    // FILTERED INVOICES
+    // FILTERED INVOICES (already filtered in state)
     // ============================================
-    const filteredInvoices = !invoiceSearchTerm.trim()
-        ? allInvoices
-        : allInvoices.filter(inv =>
-            inv.invoiceNumber?.toLowerCase().includes(invoiceSearchTerm.toLowerCase()) ||
-            inv.customer?.customerName?.toLowerCase().includes(invoiceSearchTerm.toLowerCase()) ||
-            inv.customer?.contactNumber?.includes(invoiceSearchTerm)
-        );
+    const filteredInvoices = allInvoices;
 
     // ============================================
     // CUSTOM SELECT STYLES
@@ -1802,7 +1956,6 @@ const Invoice = () => {
                                 <div className="inv-form-row">
                                     <div className="inv-form-field">
                                         <label>Select Workshop</label>
-                                        {/* WORKSHOP - Conditionally Read-Only */}
                                         <Select
                                             options={workshopOptions}
                                             value={selectedWorkshop}
@@ -1811,10 +1964,6 @@ const Invoice = () => {
                                             isClearable
                                             styles={customSelectStyles}
                                             noOptionsMessage={() => "No workshops found for this customer"}
-                                            // ✅ CORRECT LOGIC:
-                                            // - In CREATE mode: ALWAYS disabled (auto-selected)
-                                            // - In UPDATE mode with workshop: disabled (cannot change)
-                                            // - In UPDATE mode without workshop: enabled (can add)
                                             isDisabled={!isEditing ? true : (selectedWorkshop !== null)}
                                         />
                                         {recentWorkshop && !selectedWorkshop && !isEditing && (
@@ -1843,7 +1992,7 @@ const Invoice = () => {
                                         isClearable
                                         styles={customSelectStyles}
                                         noOptionsMessage={() => "No active packages found"}
-                                        isDisabled={true}  // ✅ Package is READ-ONLY in both modes
+                                        isDisabled={true}
                                     />
                                     {isEditing && selectedPackage && (
                                         <small className="inv-hint">Package cannot be changed in edit mode</small>
@@ -1857,7 +2006,6 @@ const Invoice = () => {
                                 </div>
                             </div>
 
-                            {/* Package Discount - EDITABLE */}
                             {selectedPackage && (
                                 <div className="inv-form-row">
                                     <div className="inv-form-field">
@@ -1961,7 +2109,6 @@ const Invoice = () => {
                                 </div>
                             </div>
 
-                            {/* Dispenser Items List */}
                             {dispenserItems.length > 0 && (
                                 <div className="inv-dispenser-list">
                                     <h4>Added Dispenser Items</h4>
@@ -2238,7 +2385,6 @@ const Invoice = () => {
                             </h3>
 
                             <div className="inv-summary-grid">
-                                {/* Package */}
                                 <div className="inv-summary-item">
                                     <span>Package Price</span>
                                     <span className="inv-summary-value">
@@ -2260,7 +2406,6 @@ const Invoice = () => {
                                     </span>
                                 </div>
 
-                                {/* Dispenser */}
                                 <div className="inv-summary-item">
                                     <span>Dispenser Original</span>
                                     <span className="inv-summary-value">₹{dispenserOriginalTotal.toFixed(2)}</span>
@@ -2280,7 +2425,6 @@ const Invoice = () => {
                                     </span>
                                 </div>
 
-                                {/* Totals */}
                                 <div className="inv-summary-item inv-summary-total">
                                     <span>Subtotal (incl. GST)</span>
                                     <span className="inv-summary-value">₹{subtotal.toFixed(2)}</span>
@@ -2386,23 +2530,63 @@ const Invoice = () => {
                 )}
 
                 {/* ============================================ */}
-                {/* VIEW INVOICES — INLINE TABLE */}
+                {/* VIEW INVOICES — WITH FILTERS */}
                 {/* ============================================ */}
                 {activeView === "list" && (
                     <div className="inv-list-container">
-                        <div className="inv-list-header-bar">
+                        {/* FILTER BAR */}
+                        <div className="inv-list-filter-bar">
+                            {/* Search */}
                             <div className="inv-list-search">
                                 <FaSearch className="inv-list-search-icon" />
                                 <input
                                     type="text"
-                                    placeholder="Search by invoice number, customer name or phone..."
+                                    placeholder="Search by invoice, customer or phone..."
                                     value={invoiceSearchTerm}
-                                    onChange={(e) => setInvoiceSearchTerm(e.target.value)}
+                                    onChange={(e) => handleSearch(e.target.value)}
                                     autoComplete="off"
                                 />
                             </div>
+
+                            {/* ✅ PRESET TIME FILTER */}
+                            <select
+                                className="inv-filter-time"
+                                value={timeFilter}
+                                onChange={(e) => setTimeFilter(e.target.value)}
+                            >
+                                <option value="all">📅 All Time</option>
+                                <option value="today">📆 Today</option>
+                                <option value="yesterday">📆 Yesterday</option>
+                                <option value="thisWeek">📆 This Week</option>
+                                <option value="thisMonth">📆 This Month</option>
+                                <option value="thisYear">📆 This Year</option>
+                                <option value="lastYear">📆 Last Year</option>
+                            </select>
+
+                            <select
+                                className="inv-filter-payment"
+                                value={paymentFilter}
+                                onChange={(e) => setPaymentFilter(e.target.value)}
+                            >
+                                <option value="">💳 All Payments</option>
+                                <option value="Cash">Cash</option>
+                                <option value="UPI">UPI</option>
+                                <option value="Card">Card</option>
+                            </select>
+
+                            {/* ✅ EXPORT BUTTON */}
+                            <button
+                                className="inv-export-btn"
+                                onClick={handleExportAll}
+                                disabled={isExportingAll || allInvoices.length === 0}
+                                title="Export filtered invoices to Excel"
+                            >
+                                <FaDownload /> {isExportingAll ? "Exporting..." : "Export"}
+                            </button>
+
+                            {/* Result Count */}
                             {!isLoadingInvoices && (
-                                <span className="inv-list-result-count">{filteredInvoices.length} invoices</span>
+                                <span className="inv-list-result-count">{allInvoices.length} invoices</span>
                             )}
                         </div>
 
@@ -2411,7 +2595,7 @@ const Invoice = () => {
                                 <div className="inv-loading-spinner-dark large"></div>
                                 <p>Loading invoices...</p>
                             </div>
-                        ) : filteredInvoices.length === 0 ? (
+                        ) : allInvoices.length === 0 ? (
                             <div className="inv-list-empty">
                                 <FaFileInvoice className="inv-list-empty-icon" />
                                 <p>No invoices found</p>
@@ -2430,7 +2614,7 @@ const Invoice = () => {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {filteredInvoices.map((inv) => (
+                                        {allInvoices.map((inv) => (
                                             <tr key={inv.invoiceId}>
                                                 <td className="inv-list-number-cell">{inv.invoiceNumber}</td>
                                                 <td>

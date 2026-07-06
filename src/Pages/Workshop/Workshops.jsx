@@ -5,7 +5,7 @@ import {
     FaSave, FaEdit, FaTrash, FaTimes,
     FaUser, FaPhone, FaEnvelope, FaBox,
     FaEye, FaUsers, FaUserPlus, FaCheckCircle, FaUserMinus,
-    FaChevronLeft, FaChevronRight
+    FaChevronLeft, FaChevronRight, FaDownload  // ✅ ADDED FaDownload
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../../Components/Navbar/Navbar";
@@ -479,6 +479,8 @@ const Workshops = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [viewMode, setViewMode] = useState("active");
+    // ✅ NEW: Export state
+    const [isExporting, setIsExporting] = useState(false);
     const navigate = useNavigate();
 
     // ============================================
@@ -611,27 +613,27 @@ const Workshops = () => {
     };
 
     const fetchCustomers = async () => {
-    try {
-        const response = await fetch(
-            `${import.meta.env.VITE_API_URL}/customer/get-customers?limit=1000`,
-            { credentials: 'include' }
-        );
-        if (!response.ok) throw new Error('Failed to fetch customers');
-        const data = await response.json();
-        
-        // ✅ Check if data is array or object with data property
-        if (Array.isArray(data)) {
-            setCustomers(data);
-        } else if (data && data.data && Array.isArray(data.data)) {
-            setCustomers(data.data);
-        } else {
-            setCustomers([]);
+        try {
+            const response = await fetch(
+                `${import.meta.env.VITE_API_URL}/customer/get-customers?limit=1000`,
+                { credentials: 'include' }
+            );
+            if (!response.ok) throw new Error('Failed to fetch customers');
+            const data = await response.json();
+
+            // ✅ Check if data is array or object with data property
+            if (Array.isArray(data)) {
+                setCustomers(data);
+            } else if (data && data.data && Array.isArray(data.data)) {
+                setCustomers(data.data);
+            } else {
+                setCustomers([]);
+            }
+        } catch (error) {
+            console.error("Error fetching customers:", error);
+            toast.error("Failed to fetch customers");
         }
-    } catch (error) {
-        console.error("Error fetching customers:", error);
-        toast.error("Failed to fetch customers");
-    }
-};
+    };
 
     // ============================================
     // FETCH PACKAGES
@@ -1145,6 +1147,67 @@ const Workshops = () => {
         );
 
     // ============================================
+    // ✅ HANDLE EXPORT ALL WORKSHOPS
+    // ============================================
+    const handleExportAll = async () => {
+        try {
+            setIsExporting(true);
+
+            // Build query params with current filters
+            const params = new URLSearchParams();
+
+            // Add filter
+            if (filterType) {
+                params.set('filter', filterType);
+            }
+
+            // Add custom date range if filter is 'custom'
+            if (filterType === 'custom' && fromDate && toDate) {
+                params.set('from', fromDate);
+                params.set('to', toDate);
+            }
+
+            // Add search term if present
+            if (searchTerm.trim()) {
+                params.set('search', searchTerm.trim());
+            }
+
+            // Add view mode
+            params.set('viewMode', viewMode);
+
+            console.log('📤 Export Params:', params.toString());
+
+            const response = await fetch(
+                `${import.meta.env.VITE_API_URL}/workshops/export?${params}`,
+                { credentials: 'include' }
+            );
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to export workshops');
+            }
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `workshops_export_${new Date().toISOString().split('T')[0]}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+
+            toast.success('Workshops exported successfully!');
+
+        } catch (error) {
+            console.error("Error exporting workshops:", error);
+            toast.error(error.message || 'Failed to export workshops');
+        } finally {
+            setIsExporting(false);
+        }
+    };
+
+    // ============================================
     // FORMAT DATE
     // ============================================
     const formatDate = (dateString) => {
@@ -1193,6 +1256,15 @@ const Workshops = () => {
                             />
                         </div>
                         <div className="ws-action-buttons-group">
+                            {/* ✅ EXPORT BUTTON */}
+                            <button
+                                className="ws-export-btn"
+                                onClick={handleExportAll}
+                                disabled={isExporting || workshops.length === 0}
+                                title="Export workshops to Excel"
+                            >
+                                <FaDownload /> {isExporting ? "Exporting..." : "Export"}
+                            </button>
                             <button
                                 className={`ws-toggle-view-btn ${viewMode === 'active' ? 'ws-view-active' : ''}`}
                                 onClick={() => setViewMode(viewMode === 'active' ? 'all' : 'active')}

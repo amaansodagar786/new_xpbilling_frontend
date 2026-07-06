@@ -7,7 +7,7 @@ import {
   FaCheckCircle, FaTimesCircle, FaMoneyBillWave,
   FaChevronDown, FaChevronUp, FaHistory, FaUser, FaCalendarAlt, FaArrowUp, FaArrowDown,
   FaChevronLeft, FaChevronRight, FaTag, FaClock, FaInfoCircle, FaTrashAlt,
-  FaEye
+  FaEye, FaFilter
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../../../Components/Navbar/Navbar";
@@ -234,7 +234,6 @@ const AddStockModal = ({
     })
   };
 
-  // ✅ Show loading state while fetching all products
   if (isLoadingProducts) {
     return (
       <div className="di-modal-overlay" onClick={onClose}>
@@ -288,9 +287,6 @@ const AddStockModal = ({
                 noOptionsMessage={() => "No products found"}
                 isDisabled={isSubmitting}
               />
-              {/* <small className="di-hint">
-                {products.length} products available (all products loaded)
-              </small> */}
             </div>
           </div>
 
@@ -950,7 +946,6 @@ const FullTransactionModal = ({
             <div className="di-transaction-empty">No transactions found for this product.</div>
           ) : (
             <>
-              {/* Toggle Tabs */}
               <div className="di-transaction-tabs">
                 <button
                   className={`di-tab-btn ${activeTab === 'in' ? 'di-tab-active' : ''}`}
@@ -966,7 +961,6 @@ const FullTransactionModal = ({
                 </button>
               </div>
 
-              {/* Transactions List */}
               <div className="di-full-transaction-list">
                 {currentTransactions.length === 0 ? (
                   <div className="di-transaction-empty">
@@ -1204,13 +1198,15 @@ const TransactionHistoryRow = ({
 const DispenserInventory = () => {
   const [inventory, setInventory] = useState([]);
   const [filteredInventory, setFilteredInventory] = useState([]);
-  const [allProducts, setAllProducts] = useState([]); // ✅ NEW: All products for dropdown
-  const [isLoadingAllProducts, setIsLoadingAllProducts] = useState(false); // ✅ NEW
+  const [allProducts, setAllProducts] = useState([]);
+  const [isLoadingAllProducts, setIsLoadingAllProducts] = useState(false);
   const [alerts, setAlerts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all"); // ✅ NEW: Status filter
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isExporting, setIsExporting] = useState(false); // ✅ NEW
 
   const [currentPage, setCurrentPage] = useState(1);
   const [pagination, setPagination] = useState({
@@ -1263,9 +1259,6 @@ const DispenserInventory = () => {
   const [loadingDisposal, setLoadingDisposal] = useState(false);
   const [currentDisposalDispenserId, setCurrentDisposalDispenserId] = useState(null);
 
-  // ============================================
-  // FULL TRANSACTION MODAL STATE
-  // ============================================
   const [showFullTransactionModal, setShowFullTransactionModal] = useState(false);
   const [fullTransactions, setFullTransactions] = useState([]);
   const [loadingFullTransactions, setLoadingFullTransactions] = useState(false);
@@ -1276,7 +1269,7 @@ const DispenserInventory = () => {
   const fileInputRef = useRef(null);
 
   // ============================================
-  // FETCH ALL PRODUCTS FOR DROPDOWN (NO PAGINATION)
+  // FETCH ALL PRODUCTS FOR DROPDOWN
   // ============================================
   const fetchAllProducts = async () => {
     try {
@@ -1301,7 +1294,10 @@ const DispenserInventory = () => {
     }
   };
 
-  const fetchInventory = async (page = 1, search = '') => {
+  // ============================================
+  // FETCH DATA WITH PAGINATION
+  // ============================================
+  const fetchInventory = async (page = 1, search = '', status = 'all') => {
     try {
       setIsLoading(true);
       const queryParams = new URLSearchParams({
@@ -1322,15 +1318,20 @@ const DispenserInventory = () => {
 
       const data = await response.json();
 
-      setInventory(data.products || []);
-      setFilteredInventory(data.products || []);
-      setPagination(data.pagination || {
-        total: 0,
-        page: 1,
-        limit: 20,
-        totalPages: 0,
-        hasNextPage: false,
-        hasPrevPage: false
+      let products = data.products || [];
+
+      if (status === 'low') {
+        products = products.filter(p => p.quantity > 0 && p.quantity <= (p.minStock || 5));
+      } else if (status === 'out-of-stock') {
+        products = products.filter(p => p.quantity === 0);
+      }
+
+      setInventory(products);
+      setFilteredInventory(products);
+      setPagination({
+        ...data.pagination,
+        total: products.length,
+        totalPages: Math.ceil(products.length / 20)
       });
       setCurrentPage(data.pagination?.page || 1);
 
@@ -1359,25 +1360,79 @@ const DispenserInventory = () => {
   };
 
   useEffect(() => {
-    fetchInventory(1, '');
+    fetchInventory(1, '', statusFilter);
     fetchAlerts();
-    // ✅ Fetch all products once on load
     fetchAllProducts();
   }, []);
 
+  // ============================================
+  // HANDLE SEARCH
+  // ============================================
   const handleSearch = (term) => {
     setSearchTerm(term);
-    fetchInventory(1, term);
-  };
-
-  const handlePageChange = (newPage) => {
-    if (newPage < 1 || newPage > pagination.totalPages) return;
-    setCurrentPage(newPage);
-    fetchInventory(newPage, searchTerm);
+    fetchInventory(1, term, statusFilter);
   };
 
   // ============================================
-  // FETCH TRANSACTIONS (With hideInvoice=true - ONLY IN, no invoice related)
+  // HANDLE STATUS FILTER
+  // ============================================
+  const handleStatusFilter = (status) => {
+    setStatusFilter(status);
+    fetchInventory(1, searchTerm, status);
+  };
+
+  // ============================================
+  // HANDLE PAGE CHANGE
+  // ============================================
+  const handlePageChange = (newPage) => {
+    if (newPage < 1 || newPage > pagination.totalPages) return;
+    setCurrentPage(newPage);
+    fetchInventory(newPage, searchTerm, statusFilter);
+  };
+
+  // ============================================
+  // ✅ EXPORT TO EXCEL
+  // ============================================
+  const handleExport = async () => {
+    try {
+      setIsExporting(true);
+
+      const params = new URLSearchParams();
+      if (statusFilter !== 'all') params.set('status', statusFilter);
+      if (searchTerm.trim()) params.set('search', searchTerm.trim());
+
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/dispenser/export?${params}`,
+        { credentials: 'include' }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to export');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `dispenser_inventory_export_${new Date().toISOString().split('T')[0]}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      toast.success('Export completed successfully!');
+
+    } catch (error) {
+      console.error("Error exporting:", error);
+      toast.error(error.message || 'Failed to export');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  // ============================================
+  // FETCH TRANSACTIONS
   // ============================================
   const fetchTransactionsForProduct = async (dispenserId) => {
     try {
@@ -1408,9 +1463,6 @@ const DispenserInventory = () => {
     }
   };
 
-  // ============================================
-  // FETCH FULL TRANSACTIONS (ALL IN + OUT - hideInvoice=false)
-  // ============================================
   const fetchFullTransactions = async (dispenserId, productName) => {
     try {
       setLoadingFullTransactions(true);
@@ -1462,20 +1514,6 @@ const DispenserInventory = () => {
       setDisposalData(null);
     } finally {
       setLoadingDisposal(false);
-    }
-  };
-
-  const checkHasDisposal = async (dispenserId) => {
-    try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/disposal/get-by-product/${dispenserId}`,
-        { credentials: 'include' }
-      );
-      if (!response.ok) return false;
-      const data = await response.json();
-      return data.data && data.data.disposals && data.data.disposals.length > 0;
-    } catch (error) {
-      return false;
     }
   };
 
@@ -1547,9 +1585,8 @@ const DispenserInventory = () => {
 
       setNewProduct({ productName: "", sellingPrice3ml: "", sellingPrice6ml: "", discount: "0" });
       setShowAddProductModal(false);
-      await fetchInventory(currentPage, searchTerm);
+      await fetchInventory(currentPage, searchTerm, statusFilter);
       await fetchAlerts();
-      // ✅ Refresh all products after adding new product
       await fetchAllProducts();
 
     } catch (error) {
@@ -1618,9 +1655,8 @@ const DispenserInventory = () => {
         notes: ""
       });
       setShowAddStockModal(false);
-      await fetchInventory(currentPage, searchTerm);
+      await fetchInventory(currentPage, searchTerm, statusFilter);
       await fetchAlerts();
-      // ✅ Refresh all products after adding stock
       await fetchAllProducts();
 
       if (expandedRowId === updatedDispenserId) {
@@ -1689,8 +1725,7 @@ const DispenserInventory = () => {
       setEditData({ dispenserId: "", productName: "", sellingPrice3ml: "", sellingPrice6ml: "", discount: "0" });
       setShowEditModal(false);
       setSelectedProduct(null);
-      await fetchInventory(currentPage, searchTerm);
-      // ✅ Refresh all products after updating
+      await fetchInventory(currentPage, searchTerm, statusFilter);
       await fetchAllProducts();
 
     } catch (error) {
@@ -1734,9 +1769,8 @@ const DispenserInventory = () => {
 
       setShowDeleteModal(false);
       setSelectedProduct(null);
-      await fetchInventory(currentPage, searchTerm);
+      await fetchInventory(currentPage, searchTerm, statusFilter);
       await fetchAlerts();
-      // ✅ Refresh all products after deleting
       await fetchAllProducts();
 
     } catch (error) {
@@ -1806,9 +1840,8 @@ const DispenserInventory = () => {
         fileInputRef.current.value = "";
       }
       setShowBulkUploadModal(false);
-      await fetchInventory(currentPage, searchTerm);
+      await fetchInventory(currentPage, searchTerm, statusFilter);
       await fetchAlerts();
-      // ✅ Refresh all products after bulk upload
       await fetchAllProducts();
 
       if (expandedRowId) {
@@ -1912,14 +1945,16 @@ const DispenserInventory = () => {
   };
 
   // ============================================
-  // OPEN ADD STOCK MODAL - FETCH ALL PRODUCTS FIRST
+  // OPEN ADD STOCK MODAL
   // ============================================
   const openAddStockModal = async () => {
     setShowAddStockModal(true);
-    // ✅ Fetch all products when modal opens
     await fetchAllProducts();
   };
 
+  // ============================================
+  // HELPERS
+  // ============================================
   const getStockStatus = (quantity, minStock) => {
     if (quantity <= 0) return { status: 'empty', label: 'Empty' };
     if (quantity <= minStock) return { status: 'low', label: 'Low Stock' };
@@ -1966,6 +2001,20 @@ const DispenserInventory = () => {
               />
             </div>
             <div className="di-action-buttons-group">
+              {/* ✅ STATUS FILTER */}
+              <div className="di-status-filter">
+                <FaFilter className="di-filter-icon" />
+                <select
+                  value={statusFilter}
+                  onChange={(e) => handleStatusFilter(e.target.value)}
+                  className="di-status-select"
+                >
+                  <option value="all">All Products</option>
+                  <option value="low">Low Stock</option>
+                  <option value="out-of-stock">Out of Stock</option>
+                </select>
+              </div>
+
               <button
                 className="di-alert-btn"
                 onClick={() => setShowAlertModal(true)}
@@ -1976,6 +2025,15 @@ const DispenserInventory = () => {
               </button>
               <button className="di-upload-btn" onClick={() => setShowBulkUploadModal(true)}>
                 <FaUpload /> Bulk Upload
+              </button>
+              {/* ✅ EXPORT BUTTON */}
+              <button
+                className="di-export-btn"
+                onClick={handleExport}
+                disabled={isExporting}
+                title="Export to Excel"
+              >
+                <FaDownload /> {isExporting ? "Exporting..." : "Export"}
               </button>
               <button
                 className="di-add-stock-btn"
@@ -2173,7 +2231,6 @@ const DispenserInventory = () => {
           onSubmit={handleCreateProduct}
         />
 
-        {/* ✅ UPDATED: AddStockModal with allProducts and loading state */}
         <AddStockModal
           show={showAddStockModal}
           onClose={() => {
@@ -2189,7 +2246,7 @@ const DispenserInventory = () => {
               notes: ""
             });
           }}
-          products={allProducts} // ✅ Use allProducts, not inventory
+          products={allProducts}
           addStockData={addStockData}
           setAddStockData={setAddStockData}
           isSubmitting={isSubmitting}
@@ -2256,7 +2313,6 @@ const DispenserInventory = () => {
           alerts={alerts}
         />
 
-        {/* Full Transaction Modal */}
         <FullTransactionModal
           show={showFullTransactionModal}
           onClose={() => {
