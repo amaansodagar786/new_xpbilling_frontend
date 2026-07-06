@@ -69,11 +69,11 @@ const AddProductModal = ({
 };
 
 // ============================================
-// ADD STOCK MODAL
+// ADD STOCK MODAL - UPDATED TO USE allProducts
 // ============================================
 const AddStockModal = ({
   show, onClose, products, addStockData, setAddStockData,
-  isSubmitting, onSubmit
+  isSubmitting, onSubmit, isLoadingProducts
 }) => {
   if (!show) return null;
 
@@ -188,6 +188,35 @@ const AddStockModal = ({
     })
   };
 
+  // ✅ Show loading state while fetching all products
+  if (isLoadingProducts) {
+    return (
+      <div className="xp-modal-overlay" onClick={onClose}>
+        <div className="xp-modal-content" onClick={(e) => e.stopPropagation()}>
+          <div className="xp-modal-header">
+            <div className="xp-modal-title">
+              <FaPlus /> Add Stock
+            </div>
+            <button className="xp-modal-close" onClick={onClose}>
+              <FaTimes />
+            </button>
+          </div>
+          <div className="xp-modal-body">
+            <div className="xp-loading-products">
+              <div className="xp-loading-spinner small"></div>
+              <p>Loading products...</p>
+            </div>
+          </div>
+          <div className="xp-modal-footer">
+            <button className="xp-btn-cancel" onClick={onClose}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="xp-modal-overlay" onClick={onClose}>
       <div className="xp-modal-content" onClick={(e) => e.stopPropagation()}>
@@ -213,6 +242,9 @@ const AddStockModal = ({
                 noOptionsMessage={() => "No products found"}
                 isDisabled={isSubmitting}
               />
+              {/* <small className="xp-hint">
+                {products.length} products available (all products loaded)
+              </small> */}
             </div>
           </div>
 
@@ -1032,6 +1064,8 @@ const FullTransactionModal = ({
 const XPInventory = () => {
   const [inventory, setInventory] = useState([]);
   const [filteredInventory, setFilteredInventory] = useState([]);
+  const [allProducts, setAllProducts] = useState([]); // ✅ NEW: All products for dropdown
+  const [isLoadingAllProducts, setIsLoadingAllProducts] = useState(false); // ✅ NEW
   const [alerts, setAlerts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -1101,6 +1135,32 @@ const XPInventory = () => {
   const fileInputRef = useRef(null);
 
   // ============================================
+  // FETCH ALL PRODUCTS FOR DROPDOWN (NO PAGINATION)
+  // ============================================
+  const fetchAllProducts = async () => {
+    try {
+      setIsLoadingAllProducts(true);
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/xp/get-all?limit=9999&search=`,
+        { credentials: 'include' }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch all products');
+      }
+
+      const data = await response.json();
+      setAllProducts(data.products || []);
+    } catch (error) {
+      console.error("Error fetching all products:", error);
+      toast.error("Failed to load products");
+      setAllProducts([]);
+    } finally {
+      setIsLoadingAllProducts(false);
+    }
+  };
+
+  // ============================================
   // FETCH DATA WITH PAGINATION
   // ============================================
   const fetchInventory = async (page = 1, search = '') => {
@@ -1163,6 +1223,8 @@ const XPInventory = () => {
   useEffect(() => {
     fetchInventory(1, '');
     fetchAlerts();
+    // ✅ Fetch all products once on load
+    fetchAllProducts();
   }, []);
 
   // ============================================
@@ -1319,6 +1381,8 @@ const XPInventory = () => {
       setShowAddProductModal(false);
       await fetchInventory(currentPage, searchTerm);
       await fetchAlerts();
+      // ✅ Refresh all products after adding new product
+      await fetchAllProducts();
 
     } catch (error) {
       console.error("Error creating product:", error);
@@ -1385,6 +1449,8 @@ const XPInventory = () => {
       setShowAddStockModal(false);
       await fetchInventory(currentPage, searchTerm);
       await fetchAlerts();
+      // ✅ Refresh all products after adding stock
+      await fetchAllProducts();
 
       if (expandedRowId === updatedXpId) {
         await fetchTransactionsForProduct(updatedXpId);
@@ -1440,6 +1506,8 @@ const XPInventory = () => {
       setShowEditModal(false);
       setSelectedProduct(null);
       await fetchInventory(currentPage, searchTerm);
+      // ✅ Refresh all products after updating
+      await fetchAllProducts();
 
     } catch (error) {
       console.error("Error updating product:", error);
@@ -1489,6 +1557,8 @@ const XPInventory = () => {
       setSelectedProduct(null);
       await fetchInventory(currentPage, searchTerm);
       await fetchAlerts();
+      // ✅ Refresh all products after deleting
+      await fetchAllProducts();
 
     } catch (error) {
       console.error("Error deleting product:", error);
@@ -1559,6 +1629,8 @@ const XPInventory = () => {
       setShowBulkUploadModal(false);
       await fetchInventory(currentPage, searchTerm);
       await fetchAlerts();
+      // ✅ Refresh all products after bulk upload
+      await fetchAllProducts();
 
       if (uploadType === 'inventory') {
         setTransactionsByXpId({});
@@ -1664,6 +1736,15 @@ const XPInventory = () => {
   };
 
   // ============================================
+  // OPEN ADD STOCK MODAL - FETCH ALL PRODUCTS FIRST
+  // ============================================
+  const openAddStockModal = async () => {
+    setShowAddStockModal(true);
+    // ✅ Fetch all products when modal opens
+    await fetchAllProducts();
+  };
+
+  // ============================================
   // HELPERS
   // ============================================
   const getStockStatus = (quantity, minStock) => {
@@ -1754,7 +1835,11 @@ const XPInventory = () => {
               >
                 <FaUpload /> Bulk Upload
               </button>
-              <button className="xp-add-stock-btn" onClick={() => setShowAddStockModal(true)}>
+              <button
+                className="xp-add-stock-btn"
+                onClick={openAddStockModal}
+                title="Add stock to a product"
+              >
                 <FaPlus /> Add Stock
               </button>
               <button className="xp-add-product-btn" onClick={() => setShowAddProductModal(true)}>
@@ -1968,14 +2053,25 @@ const XPInventory = () => {
           onSubmit={handleCreateProduct}
         />
 
+        {/* ✅ UPDATED: AddStockModal with allProducts and loading state */}
         <AddStockModal
           show={showAddStockModal}
-          onClose={() => setShowAddStockModal(false)}
-          products={inventory}
+          onClose={() => {
+            setShowAddStockModal(false);
+            setAddStockData({
+              xpId: "",
+              productName: "",
+              quantity: "",
+              purchasePrice: "",
+              notes: ""
+            });
+          }}
+          products={allProducts} // ✅ Use allProducts, not inventory
           addStockData={addStockData}
           setAddStockData={setAddStockData}
           isSubmitting={isSubmitting}
           onSubmit={handleAddStock}
+          isLoadingProducts={isLoadingAllProducts}
         />
 
         <EditProductModal

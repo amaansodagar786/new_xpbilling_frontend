@@ -12,12 +12,9 @@ const InvoicePrint = ({ invoice }) => {
         packageItem,
         dispenserItems,
         paymentStatus,
-        subtotal,
         subtotalWithoutGST,
         gstRate,
         gstAmount,
-        packageDiscountAmount,
-        dispenserDiscountAmount,
         promoDiscount,
         loyaltyDiscountAmount,
         loyaltyCoinsUsed,
@@ -118,31 +115,20 @@ const InvoicePrint = ({ invoice }) => {
     };
 
     // ============================================
-    // ✅ CALCULATE DISPENSER TOTAL
+    // ✅ GET VALUES DIRECTLY FROM INVOICE
     // ============================================
-    const calculateDispenserTotal = () => {
-        if (!hasDispenser || !dispenserItems || dispenserItems.length === 0) return 0;
-        return dispenserItems.reduce((sum, item) => {
-            const price = item.ml === 3 ? item.sellingPrice3ml : item.sellingPrice6ml;
-            const originalTotal = price * item.totalML;
-            const discountAmt = (originalTotal * (item.discount || 0)) / 100;
-            return sum + (originalTotal - discountAmt);
-        }, 0);
-    };
+    const packageFinalPrice = packageItem?.finalPrice || packageItem?.pricing || 0;
 
-    // ============================================
-    // ✅ CALCULATE SUBTOTAL AFTER ALL DISCOUNTS (BEFORE GST)
-    // ============================================
-    const calculateSubtotalAfterDiscounts = () => {
-        let afterPromo = subtotalWithoutGST || 0;
-        if (hasPromo && promoDiscount) {
-            afterPromo = afterPromo - promoDiscount;
-        }
-        if (loyaltyDiscountAmount) {
-            afterPromo = afterPromo - loyaltyDiscountAmount;
-        }
-        return afterPromo;
-    };
+    // ✅ Dispenser Total - Use finalPrice from database
+    const dispenserTotal = hasDispenser && dispenserItems
+        ? dispenserItems.reduce((sum, item) => sum + (item.finalPrice || 0), 0)
+        : 0;
+
+    // ✅ Price (excl GST) = BEFORE promo and loyalty (only package + dispenser discounts)
+    const priceExclGST = subtotalWithoutGST || 0;
+
+    // ✅ Subtotal = AFTER promo and loyalty discounts
+    const subtotalAfterAllDiscounts = (subtotalWithoutGST || 0) - (promoDiscount || 0) - (loyaltyDiscountAmount || 0);
 
     // ============================================
     // TERMS & CONDITIONS
@@ -152,13 +138,6 @@ const InvoicePrint = ({ invoice }) => {
 
     const declaration =
         `We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.`;
-
-    // ============================================
-    // GET VALUES
-    // ============================================
-    const packageFinalPrice = packageItem?.finalPrice || packageItem?.pricing || 0;
-    const dispenserTotal = calculateDispenserTotal();
-    const subtotalAfterDiscounts = calculateSubtotalAfterDiscounts();
 
     return (
         <div id="invoice-print">
@@ -290,13 +269,12 @@ const InvoicePrint = ({ invoice }) => {
                                 </tr>
                             )}
 
-                            {/* Dispenser Items */}
+                            {/* ✅ Dispenser Items - USING DATABASE VALUES DIRECTLY */}
                             {hasDispenser && dispenserItems && dispenserItems.length > 0 && (
                                 dispenserItems.map((item, index) => {
                                     const price = item.ml === 3 ? item.sellingPrice3ml : item.sellingPrice6ml;
-                                    const originalTotal = price * item.totalML;
-                                    const discountAmt = (originalTotal * (item.discount || 0)) / 100;
-                                    const finalPrice = originalTotal - discountAmt;
+                                    // ✅ Use finalPrice directly from database!
+                                    const finalPrice = item.finalPrice || 0;
 
                                     return (
                                         <tr key={index}>
@@ -316,16 +294,16 @@ const InvoicePrint = ({ invoice }) => {
                 </div>
 
                 {/* ============================================
-                    ✅ UPDATED TOTALS SECTION - CORRECT ORDER
+                    ✅ TOTALS SECTION - CORRECT ORDER
                 ============================================ */}
                 <div className="totals-section">
                     <div className="amount-details">
                         <table>
                             <tbody>
-                                {/* 1. PRICE (Subtotal without GST) */}
+                                {/* 1. PRICE (excl GST) - BEFORE promo & loyalty */}
                                 <tr>
-                                    <td>Price (excl GST):</td>
-                                    <td>{formatCurrency(subtotalWithoutGST || 0)}</td>
+                                    <td><strong>Price(Excl gst):</strong></td>
+                                    <td><strong>{formatCurrency(priceExclGST)}</strong></td>
                                 </tr>
 
                                 {/* 2. Package Price (after discount) */}
@@ -339,7 +317,7 @@ const InvoicePrint = ({ invoice }) => {
                                 {/* 3. Dispenser Price (after discount) */}
                                 {hasDispenser && dispenserItems && dispenserItems.length > 0 && (
                                     <tr>
-                                        <td>Dispenser Price:</td>
+                                        <td >Dispenser Price:</td>
                                         <td>{formatCurrency(dispenserTotal)}</td>
                                     </tr>
                                 )}
@@ -347,7 +325,7 @@ const InvoicePrint = ({ invoice }) => {
                                 {/* 4. Promo Discount (if exists) */}
                                 {hasPromo && promoDiscount > 0 && (
                                     <tr>
-                                        <td>Promo Discount:</td>
+                                        <td >Promo Discount:</td>
                                         <td style={{ color: '#dc3545' }}>-{formatCurrency(promoDiscount)}</td>
                                     </tr>
                                 )}
@@ -368,10 +346,10 @@ const InvoicePrint = ({ invoice }) => {
                                     </tr>
                                 )}
 
-                                {/* 7. Subtotal (After all discounts, BEFORE GST) */}
+                                {/* 7. Subtotal (After ALL discounts, BEFORE GST) */}
                                 <tr style={{ borderTop: '1px dashed #ddd' }}>
                                     <td><strong>Subtotal:</strong></td>
-                                    <td><strong>{formatCurrency(subtotalAfterDiscounts)}</strong></td>
+                                    <td><strong>{formatCurrency(subtotalAfterAllDiscounts)}</strong></td>
                                 </tr>
 
                                 {/* 8. GST */}
@@ -387,7 +365,7 @@ const InvoicePrint = ({ invoice }) => {
                                 </tr>
 
                                 {/* ✅ Loyalty Coins Earned (At bottom) */}
-                                {loyaltyCoinsEarned > 0 && (
+                                {/* {loyaltyCoinsEarned > 0 && (
                                     <tr>
                                         <td style={{ paddingTop: '10px', borderTop: '1px solid #ddd' }}>
                                             <span style={{ fontSize: '12px', color: '#555' }}>🪙 Loyalty Coins Earned:</span>
@@ -396,7 +374,7 @@ const InvoicePrint = ({ invoice }) => {
                                             <span style={{ color: '#28a745', fontWeight: 'bold' }}>+{loyaltyCoinsEarned} coins</span>
                                         </td>
                                     </tr>
-                                )}
+                                )} */}
                             </tbody>
                         </table>
                     </div>
@@ -406,7 +384,7 @@ const InvoicePrint = ({ invoice }) => {
                     AMOUNT IN WORDS
                 ============================================ */}
                 <div className="amount-in-words">
-                    <p><strong>Amount in Words:</strong> {numberToWords(grandTotal || 0)}Only</p>
+                    <p><strong>Amount in Words:</strong> {numberToWords(grandTotal || 0)} Only</p>
                 </div>
 
                 {/* ============================================

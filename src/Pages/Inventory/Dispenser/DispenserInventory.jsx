@@ -109,11 +109,11 @@ const AddProductModal = ({
 };
 
 // ============================================
-// ADD STOCK MODAL
+// ADD STOCK MODAL - UPDATED TO USE allProducts
 // ============================================
 const AddStockModal = ({
   show, onClose, products, addStockData, setAddStockData,
-  isSubmitting, onSubmit
+  isSubmitting, onSubmit, isLoadingProducts
 }) => {
   if (!show) return null;
 
@@ -234,6 +234,35 @@ const AddStockModal = ({
     })
   };
 
+  // ✅ Show loading state while fetching all products
+  if (isLoadingProducts) {
+    return (
+      <div className="di-modal-overlay" onClick={onClose}>
+        <div className="di-modal-content" onClick={(e) => e.stopPropagation()}>
+          <div className="di-modal-header">
+            <div className="di-modal-title">
+              <FaPlus /> Add Stock
+            </div>
+            <button className="di-modal-close" onClick={onClose}>
+              <FaTimes />
+            </button>
+          </div>
+          <div className="di-modal-body">
+            <div className="di-loading-products">
+              <div className="di-loading-spinner small"></div>
+              <p>Loading products...</p>
+            </div>
+          </div>
+          <div className="di-modal-footer">
+            <button className="di-btn-cancel" onClick={onClose}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="di-modal-overlay" onClick={onClose}>
       <div className="di-modal-content" onClick={(e) => e.stopPropagation()}>
@@ -259,6 +288,9 @@ const AddStockModal = ({
                 noOptionsMessage={() => "No products found"}
                 isDisabled={isSubmitting}
               />
+              {/* <small className="di-hint">
+                {products.length} products available (all products loaded)
+              </small> */}
             </div>
           </div>
 
@@ -1172,6 +1204,8 @@ const TransactionHistoryRow = ({
 const DispenserInventory = () => {
   const [inventory, setInventory] = useState([]);
   const [filteredInventory, setFilteredInventory] = useState([]);
+  const [allProducts, setAllProducts] = useState([]); // ✅ NEW: All products for dropdown
+  const [isLoadingAllProducts, setIsLoadingAllProducts] = useState(false); // ✅ NEW
   const [alerts, setAlerts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -1241,6 +1275,32 @@ const DispenserInventory = () => {
 
   const fileInputRef = useRef(null);
 
+  // ============================================
+  // FETCH ALL PRODUCTS FOR DROPDOWN (NO PAGINATION)
+  // ============================================
+  const fetchAllProducts = async () => {
+    try {
+      setIsLoadingAllProducts(true);
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/dispenser/get-all?limit=9999&search=`,
+        { credentials: 'include' }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch all products');
+      }
+
+      const data = await response.json();
+      setAllProducts(data.products || []);
+    } catch (error) {
+      console.error("Error fetching all products:", error);
+      toast.error("Failed to load products");
+      setAllProducts([]);
+    } finally {
+      setIsLoadingAllProducts(false);
+    }
+  };
+
   const fetchInventory = async (page = 1, search = '') => {
     try {
       setIsLoading(true);
@@ -1301,6 +1361,8 @@ const DispenserInventory = () => {
   useEffect(() => {
     fetchInventory(1, '');
     fetchAlerts();
+    // ✅ Fetch all products once on load
+    fetchAllProducts();
   }, []);
 
   const handleSearch = (term) => {
@@ -1487,6 +1549,8 @@ const DispenserInventory = () => {
       setShowAddProductModal(false);
       await fetchInventory(currentPage, searchTerm);
       await fetchAlerts();
+      // ✅ Refresh all products after adding new product
+      await fetchAllProducts();
 
     } catch (error) {
       console.error("Error creating product:", error);
@@ -1556,6 +1620,8 @@ const DispenserInventory = () => {
       setShowAddStockModal(false);
       await fetchInventory(currentPage, searchTerm);
       await fetchAlerts();
+      // ✅ Refresh all products after adding stock
+      await fetchAllProducts();
 
       if (expandedRowId === updatedDispenserId) {
         fetchTransactionsForProduct(updatedDispenserId);
@@ -1624,6 +1690,8 @@ const DispenserInventory = () => {
       setShowEditModal(false);
       setSelectedProduct(null);
       await fetchInventory(currentPage, searchTerm);
+      // ✅ Refresh all products after updating
+      await fetchAllProducts();
 
     } catch (error) {
       console.error("Error updating product:", error);
@@ -1668,6 +1736,8 @@ const DispenserInventory = () => {
       setSelectedProduct(null);
       await fetchInventory(currentPage, searchTerm);
       await fetchAlerts();
+      // ✅ Refresh all products after deleting
+      await fetchAllProducts();
 
     } catch (error) {
       console.error("Error deleting product:", error);
@@ -1738,6 +1808,8 @@ const DispenserInventory = () => {
       setShowBulkUploadModal(false);
       await fetchInventory(currentPage, searchTerm);
       await fetchAlerts();
+      // ✅ Refresh all products after bulk upload
+      await fetchAllProducts();
 
       if (expandedRowId) {
         fetchTransactionsForProduct(expandedRowId);
@@ -1839,6 +1911,15 @@ const DispenserInventory = () => {
     }
   };
 
+  // ============================================
+  // OPEN ADD STOCK MODAL - FETCH ALL PRODUCTS FIRST
+  // ============================================
+  const openAddStockModal = async () => {
+    setShowAddStockModal(true);
+    // ✅ Fetch all products when modal opens
+    await fetchAllProducts();
+  };
+
   const getStockStatus = (quantity, minStock) => {
     if (quantity <= 0) return { status: 'empty', label: 'Empty' };
     if (quantity <= minStock) return { status: 'low', label: 'Low Stock' };
@@ -1896,7 +1977,11 @@ const DispenserInventory = () => {
               <button className="di-upload-btn" onClick={() => setShowBulkUploadModal(true)}>
                 <FaUpload /> Bulk Upload
               </button>
-              <button className="di-add-stock-btn" onClick={() => setShowAddStockModal(true)}>
+              <button
+                className="di-add-stock-btn"
+                onClick={openAddStockModal}
+                title="Add stock to a product"
+              >
                 <FaPlus /> Add Stock
               </button>
               <button className="di-add-product-btn" onClick={() => setShowAddProductModal(true)}>
@@ -2088,14 +2173,28 @@ const DispenserInventory = () => {
           onSubmit={handleCreateProduct}
         />
 
+        {/* ✅ UPDATED: AddStockModal with allProducts and loading state */}
         <AddStockModal
           show={showAddStockModal}
-          onClose={() => setShowAddStockModal(false)}
-          products={inventory}
+          onClose={() => {
+            setShowAddStockModal(false);
+            setAddStockData({
+              dispenserId: "",
+              productName: "",
+              sellingPrice3ml: "",
+              sellingPrice6ml: "",
+              discount: "",
+              quantity: "",
+              purchasePrice: "",
+              notes: ""
+            });
+          }}
+          products={allProducts} // ✅ Use allProducts, not inventory
           addStockData={addStockData}
           setAddStockData={setAddStockData}
           isSubmitting={isSubmitting}
           onSubmit={handleAddStock}
+          isLoadingProducts={isLoadingAllProducts}
         />
 
         <EditProductModal

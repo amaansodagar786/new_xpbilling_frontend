@@ -6,7 +6,7 @@ import {
     FaCheckCircle, FaTimesCircle, FaChevronLeft, FaChevronRight,
     FaChevronRight as FaExpandChevron, FaHistory, FaArrowUp, FaArrowDown,
     FaUser, FaCalendarAlt, FaClock, FaTag, FaInfoCircle, FaTrashAlt,
-    FaEye , FaChevronDown
+    FaEye, FaChevronDown
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../../../Components/Navbar/Navbar";
@@ -15,13 +15,42 @@ import "react-toastify/dist/ReactToastify.css";
 import * as XLSX from 'xlsx';
 
 // ============================================
-// ADD STOCK MODAL
+// ADD STOCK MODAL - UPDATED TO USE allInventory
 // ============================================
 const AddStockModal = ({
     show, onClose, mlSizes, itemTypes,
-    addStockData, setAddStockData, isSubmitting, onSubmit
+    addStockData, setAddStockData, isSubmitting, onSubmit,
+    isLoadingItems
 }) => {
     if (!show) return null;
+
+    if (isLoadingItems) {
+        return (
+            <div className="bi-modal-overlay" onClick={onClose}>
+                <div className="bi-modal-content" onClick={(e) => e.stopPropagation()}>
+                    <div className="bi-modal-header">
+                        <div className="bi-modal-title">
+                            <FaPlus /> Add Stock
+                        </div>
+                        <button className="bi-modal-close" onClick={onClose}>
+                            <FaTimes />
+                        </button>
+                    </div>
+                    <div className="bi-modal-body">
+                        <div className="bi-loading-products">
+                            <div className="bi-loading-spinner small"></div>
+                            <p>Loading inventory...</p>
+                        </div>
+                    </div>
+                    <div className="bi-modal-footer">
+                        <button className="bi-btn-cancel" onClick={onClose}>
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="bi-modal-overlay" onClick={onClose}>
@@ -47,6 +76,7 @@ const AddStockModal = ({
                                     <option key={ml} value={ml}>{ml}</option>
                                 ))}
                             </select>
+                            <small className="bi-hint">{mlSizes.length} ML sizes available</small>
                         </div>
                         <div className="bi-form-field">
                             <label>Item Type *</label>
@@ -59,6 +89,7 @@ const AddStockModal = ({
                                     <option key={type} value={type}>{type}</option>
                                 ))}
                             </select>
+                            <small className="bi-hint">{itemTypes.length} item types available</small>
                         </div>
                     </div>
                     <div className="bi-form-row">
@@ -804,6 +835,8 @@ const TransactionPanel = ({
 const BottleInventory = () => {
     const [inventory, setInventory] = useState([]);
     const [filteredInventory, setFilteredInventory] = useState([]);
+    const [allInventory, setAllInventory] = useState([]); // ✅ NEW: All items for dropdown
+    const [isLoadingAllInventory, setIsLoadingAllInventory] = useState(false); // ✅ NEW
     const [mlSizes, setMlSizes] = useState([]);
     const [itemTypes, setItemTypes] = useState([]);
     const [alerts, setAlerts] = useState([]);
@@ -874,6 +907,38 @@ const BottleInventory = () => {
     // ROW KEY HELPER
     // ============================================
     const getRowKey = (item) => `${item.mlSize}__${item.itemType}`;
+
+    // ============================================
+    // FETCH ALL INVENTORY FOR DROPDOWN (NO PAGINATION)
+    // ============================================
+    const fetchAllInventory = async () => {
+        try {
+            setIsLoadingAllInventory(true);
+            const response = await fetch(
+                `${import.meta.env.VITE_API_URL}/bottles/get-all?limit=9999&search=`,
+                { credentials: 'include' }
+            );
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch all inventory');
+            }
+
+            const data = await response.json();
+            setAllInventory(data.inventory || []);
+
+            // Extract distinct ML sizes and Item Types from all inventory
+            const allMlSizes = [...new Set((data.inventory || []).map(item => item.mlSize))].sort();
+            const allItemTypes = [...new Set((data.inventory || []).map(item => item.itemType))].sort();
+
+            if (allMlSizes.length > 0) setMlSizes(allMlSizes);
+            if (allItemTypes.length > 0) setItemTypes(allItemTypes);
+        } catch (error) {
+            console.error("Error fetching all inventory:", error);
+            setAllInventory([]);
+        } finally {
+            setIsLoadingAllInventory(false);
+        }
+    };
 
     // ============================================
     // FETCH DATA WITH PAGINATION
@@ -970,6 +1035,8 @@ const BottleInventory = () => {
         fetchMLSizes();
         fetchItemTypes();
         fetchAlerts();
+        // ✅ Fetch all inventory once on load
+        fetchAllInventory();
     }, []);
 
     // ============================================
@@ -1149,6 +1216,15 @@ const BottleInventory = () => {
     };
 
     // ============================================
+    // OPEN ADD STOCK MODAL - FETCH ALL INVENTORY FIRST
+    // ============================================
+    const openAddStockModal = async () => {
+        setShowAddStockModal(true);
+        // ✅ Fetch all inventory when modal opens
+        await fetchAllInventory();
+    };
+
+    // ============================================
     // ADD STOCK
     // ============================================
     const handleAddStock = async () => {
@@ -1197,6 +1273,8 @@ const BottleInventory = () => {
             setShowAddStockModal(false);
             await fetchInventory(currentPage, searchTerm, selectedML, selectedItemType);
             await fetchAlerts();
+            // ✅ Refresh all inventory after adding stock
+            await fetchAllInventory();
 
             if (expandedRowKey === updatedRowKey) {
                 const updatedItem = inventory.find(
@@ -1253,6 +1331,8 @@ const BottleInventory = () => {
             setShowAddMLModal(false);
             await fetchInventory(currentPage, searchTerm, selectedML, selectedItemType);
             await fetchMLSizes();
+            // ✅ Refresh all inventory after adding ML
+            await fetchAllInventory();
 
         } catch (error) {
             console.error("Error adding ML:", error);
@@ -1296,6 +1376,8 @@ const BottleInventory = () => {
             setShowAddItemModal(false);
             await fetchInventory(currentPage, searchTerm, selectedML, selectedItemType);
             await fetchItemTypes();
+            // ✅ Refresh all inventory after adding item type
+            await fetchAllInventory();
 
         } catch (error) {
             console.error("Error adding item type:", error);
@@ -1365,6 +1447,8 @@ const BottleInventory = () => {
             setShowBulkUploadModal(false);
             await fetchInventory(currentPage, searchTerm, selectedML, selectedItemType);
             await fetchAlerts();
+            // ✅ Refresh all inventory after bulk upload
+            await fetchAllInventory();
 
             setTransactionsByRowKey({});
             if (expandedRowKey) {
@@ -1504,7 +1588,11 @@ const BottleInventory = () => {
                             <button className="bi-upload-btn" onClick={() => setShowBulkUploadModal(true)}>
                                 <FaUpload /> Bulk Upload
                             </button>
-                            <button className="bi-add-stock-btn" onClick={() => setShowAddStockModal(true)}>
+                            <button
+                                className="bi-add-stock-btn"
+                                onClick={openAddStockModal}
+                                title="Add stock to an item"
+                            >
                                 <FaPlus /> Add Stock
                             </button>
                         </div>
@@ -1696,6 +1784,7 @@ const BottleInventory = () => {
                 )}
 
                 {/* Modals */}
+                {/* ✅ UPDATED: AddStockModal with allInventory and loading state */}
                 <AddStockModal
                     show={showAddStockModal}
                     onClose={() => setShowAddStockModal(false)}
@@ -1705,6 +1794,7 @@ const BottleInventory = () => {
                     setAddStockData={setAddStockData}
                     isSubmitting={isSubmitting}
                     onSubmit={handleAddStock}
+                    isLoadingItems={isLoadingAllInventory}
                 />
 
                 <AddMLModal
