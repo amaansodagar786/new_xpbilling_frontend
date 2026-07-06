@@ -8,7 +8,7 @@ import {
   FaChevronLeft, FaChevronRight as FaChevronRightIcon,
   FaUser, FaCalendarAlt, FaClock, FaMoneyBillWave,
   FaTag, FaInfoCircle, FaTrashAlt, FaToggleOn, FaToggleOff,
-  FaWeightHanging, FaFlask, FaList, FaEye
+  FaWeightHanging, FaFlask, FaList, FaEye, FaFilter
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../../../Components/Navbar/Navbar";
@@ -188,7 +188,6 @@ const AddStockModal = ({
     })
   };
 
-  // ✅ Show loading state while fetching all products
   if (isLoadingProducts) {
     return (
       <div className="xp-modal-overlay" onClick={onClose}>
@@ -242,9 +241,6 @@ const AddStockModal = ({
                 noOptionsMessage={() => "No products found"}
                 isDisabled={isSubmitting}
               />
-              {/* <small className="xp-hint">
-                {products.length} products available (all products loaded)
-              </small> */}
             </div>
           </div>
 
@@ -956,7 +952,6 @@ const FullTransactionModal = ({
             <div className="xp-transaction-empty">No transactions found for this product.</div>
           ) : (
             <>
-              {/* Toggle Tabs */}
               <div className="xp-transaction-tabs">
                 <button
                   className={`xp-tab-btn ${activeTab === 'in' ? 'xp-tab-active' : ''}`}
@@ -972,7 +967,6 @@ const FullTransactionModal = ({
                 </button>
               </div>
 
-              {/* Transactions List */}
               <div className="xp-full-transaction-list">
                 {currentTransactions.length === 0 ? (
                   <div className="xp-transaction-empty">
@@ -1064,13 +1058,15 @@ const FullTransactionModal = ({
 const XPInventory = () => {
   const [inventory, setInventory] = useState([]);
   const [filteredInventory, setFilteredInventory] = useState([]);
-  const [allProducts, setAllProducts] = useState([]); // ✅ NEW: All products for dropdown
-  const [isLoadingAllProducts, setIsLoadingAllProducts] = useState(false); // ✅ NEW
+  const [allProducts, setAllProducts] = useState([]);
+  const [isLoadingAllProducts, setIsLoadingAllProducts] = useState(false);
   const [alerts, setAlerts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all"); // ✅ NEW: Status filter
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isExporting, setIsExporting] = useState(false); // ✅ NEW
 
   const [showGrams, setShowGrams] = useState(true);
 
@@ -1122,9 +1118,6 @@ const XPInventory = () => {
   const [loadingDisposal, setLoadingDisposal] = useState(false);
   const [currentDisposalXpId, setCurrentDisposalXpId] = useState(null);
 
-  // ============================================
-  // FULL TRANSACTION MODAL STATE
-  // ============================================
   const [showFullTransactionModal, setShowFullTransactionModal] = useState(false);
   const [fullTransactions, setFullTransactions] = useState([]);
   const [loadingFullTransactions, setLoadingFullTransactions] = useState(false);
@@ -1135,7 +1128,7 @@ const XPInventory = () => {
   const fileInputRef = useRef(null);
 
   // ============================================
-  // FETCH ALL PRODUCTS FOR DROPDOWN (NO PAGINATION)
+  // FETCH ALL PRODUCTS FOR DROPDOWN
   // ============================================
   const fetchAllProducts = async () => {
     try {
@@ -1163,7 +1156,7 @@ const XPInventory = () => {
   // ============================================
   // FETCH DATA WITH PAGINATION
   // ============================================
-  const fetchInventory = async (page = 1, search = '') => {
+  const fetchInventory = async (page = 1, search = '', status = 'all') => {
     try {
       setIsLoading(true);
       const queryParams = new URLSearchParams({
@@ -1184,15 +1177,21 @@ const XPInventory = () => {
 
       const data = await response.json();
 
-      setInventory(data.products || []);
-      setFilteredInventory(data.products || []);
-      setPagination(data.pagination || {
-        total: 0,
-        page: 1,
-        limit: 20,
-        totalPages: 0,
-        hasNextPage: false,
-        hasPrevPage: false
+      let products = data.products || [];
+
+      // ✅ Apply status filter on frontend (since backend doesn't have status filter yet)
+      if (status === 'low') {
+        products = products.filter(p => p.quantity > 0 && p.quantity <= (p.minStock || 5));
+      } else if (status === 'out-of-stock') {
+        products = products.filter(p => p.quantity === 0);
+      }
+
+      setInventory(products);
+      setFilteredInventory(products);
+      setPagination({
+        ...data.pagination,
+        total: products.length,
+        totalPages: Math.ceil(products.length / 20)
       });
       setCurrentPage(data.pagination?.page || 1);
 
@@ -1221,9 +1220,8 @@ const XPInventory = () => {
   };
 
   useEffect(() => {
-    fetchInventory(1, '');
+    fetchInventory(1, '', statusFilter);
     fetchAlerts();
-    // ✅ Fetch all products once on load
     fetchAllProducts();
   }, []);
 
@@ -1232,7 +1230,15 @@ const XPInventory = () => {
   // ============================================
   const handleSearch = (term) => {
     setSearchTerm(term);
-    fetchInventory(1, term);
+    fetchInventory(1, term, statusFilter);
+  };
+
+  // ============================================
+  // HANDLE STATUS FILTER
+  // ============================================
+  const handleStatusFilter = (status) => {
+    setStatusFilter(status);
+    fetchInventory(1, searchTerm, status);
   };
 
   // ============================================
@@ -1241,11 +1247,52 @@ const XPInventory = () => {
   const handlePageChange = (newPage) => {
     if (newPage < 1 || newPage > pagination.totalPages) return;
     setCurrentPage(newPage);
-    fetchInventory(newPage, searchTerm);
+    fetchInventory(newPage, searchTerm, statusFilter);
   };
 
   // ============================================
-  // ROW EXPANSION — FETCH TRANSACTION HISTORY (ONLY IN - hideInvoice=true)
+  // ✅ EXPORT TO EXCEL
+  // ============================================
+  const handleExport = async () => {
+    try {
+      setIsExporting(true);
+
+      const params = new URLSearchParams();
+      if (statusFilter !== 'all') params.set('status', statusFilter);
+      if (searchTerm.trim()) params.set('search', searchTerm.trim());
+
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/xp/export?${params}`,
+        { credentials: 'include' }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to export');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `xp_inventory_export_${new Date().toISOString().split('T')[0]}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      toast.success('Export completed successfully!');
+
+    } catch (error) {
+      console.error("Error exporting:", error);
+      toast.error(error.message || 'Failed to export');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  // ============================================
+  // ROW EXPANSION
   // ============================================
   const fetchTransactionsForProduct = async (xpId) => {
     try {
@@ -1271,9 +1318,6 @@ const XPInventory = () => {
     }
   };
 
-  // ============================================
-  // FETCH FULL TRANSACTIONS (ALL IN + OUT - hideInvoice=false)
-  // ============================================
   const fetchFullTransactions = async (xpId, productName) => {
     try {
       setLoadingFullTransactions(true);
@@ -1303,9 +1347,6 @@ const XPInventory = () => {
     }
   };
 
-  // ============================================
-  // FETCH DISPOSAL HISTORY
-  // ============================================
   const fetchDisposalHistory = async (xpId) => {
     try {
       setLoadingDisposal(true);
@@ -1379,9 +1420,8 @@ const XPInventory = () => {
 
       setNewProduct({ productName: "" });
       setShowAddProductModal(false);
-      await fetchInventory(currentPage, searchTerm);
+      await fetchInventory(currentPage, searchTerm, statusFilter);
       await fetchAlerts();
-      // ✅ Refresh all products after adding new product
       await fetchAllProducts();
 
     } catch (error) {
@@ -1447,9 +1487,8 @@ const XPInventory = () => {
         notes: ""
       });
       setShowAddStockModal(false);
-      await fetchInventory(currentPage, searchTerm);
+      await fetchInventory(currentPage, searchTerm, statusFilter);
       await fetchAlerts();
-      // ✅ Refresh all products after adding stock
       await fetchAllProducts();
 
       if (expandedRowId === updatedXpId) {
@@ -1505,8 +1544,7 @@ const XPInventory = () => {
       setEditData({ xpId: "", productName: "" });
       setShowEditModal(false);
       setSelectedProduct(null);
-      await fetchInventory(currentPage, searchTerm);
-      // ✅ Refresh all products after updating
+      await fetchInventory(currentPage, searchTerm, statusFilter);
       await fetchAllProducts();
 
     } catch (error) {
@@ -1555,9 +1593,8 @@ const XPInventory = () => {
 
       setShowDeleteModal(false);
       setSelectedProduct(null);
-      await fetchInventory(currentPage, searchTerm);
+      await fetchInventory(currentPage, searchTerm, statusFilter);
       await fetchAlerts();
-      // ✅ Refresh all products after deleting
       await fetchAllProducts();
 
     } catch (error) {
@@ -1627,9 +1664,8 @@ const XPInventory = () => {
         fileInputRef.current.value = "";
       }
       setShowBulkUploadModal(false);
-      await fetchInventory(currentPage, searchTerm);
+      await fetchInventory(currentPage, searchTerm, statusFilter);
       await fetchAlerts();
-      // ✅ Refresh all products after bulk upload
       await fetchAllProducts();
 
       if (uploadType === 'inventory') {
@@ -1736,11 +1772,10 @@ const XPInventory = () => {
   };
 
   // ============================================
-  // OPEN ADD STOCK MODAL - FETCH ALL PRODUCTS FIRST
+  // OPEN ADD STOCK MODAL
   // ============================================
   const openAddStockModal = async () => {
     setShowAddStockModal(true);
-    // ✅ Fetch all products when modal opens
     await fetchAllProducts();
   };
 
@@ -1783,9 +1818,6 @@ const XPInventory = () => {
     setShowDeleteModal(true);
   };
 
-  // ============================================
-  // FORMAT DATE TIME FOR FULL MODAL
-  // ============================================
   const formatDateTime = (dateString) => {
     const date = new Date(dateString);
     return {
@@ -1817,6 +1849,20 @@ const XPInventory = () => {
               />
             </div>
             <div className="xp-action-buttons-group">
+              {/* ✅ STATUS FILTER */}
+              <div className="xp-status-filter">
+                <FaFilter className="xp-filter-icon" />
+                <select
+                  value={statusFilter}
+                  onChange={(e) => handleStatusFilter(e.target.value)}
+                  className="xp-status-select"
+                >
+                  <option value="all">All Products</option>
+                  <option value="low">Low Stock</option>
+                  <option value="out-of-stock">Out of Stock</option>
+                </select>
+              </div>
+
               <button
                 className="xp-alert-btn"
                 onClick={() => setShowAlertModal(true)}
@@ -1834,6 +1880,15 @@ const XPInventory = () => {
                 title="Bulk add stock for multiple products at once"
               >
                 <FaUpload /> Bulk Upload
+              </button>
+              {/* ✅ EXPORT BUTTON */}
+              <button
+                className="xp-export-btn"
+                onClick={handleExport}
+                disabled={isExporting}
+                title="Export to Excel"
+              >
+                <FaDownload /> {isExporting ? "Exporting..." : "Export"}
               </button>
               <button
                 className="xp-add-stock-btn"
@@ -2053,7 +2108,6 @@ const XPInventory = () => {
           onSubmit={handleCreateProduct}
         />
 
-        {/* ✅ UPDATED: AddStockModal with allProducts and loading state */}
         <AddStockModal
           show={showAddStockModal}
           onClose={() => {
@@ -2066,7 +2120,7 @@ const XPInventory = () => {
               notes: ""
             });
           }}
-          products={allProducts} // ✅ Use allProducts, not inventory
+          products={allProducts}
           addStockData={addStockData}
           setAddStockData={setAddStockData}
           isSubmitting={isSubmitting}
@@ -2133,7 +2187,6 @@ const XPInventory = () => {
           alerts={alerts}
         />
 
-        {/* Full Transaction Modal */}
         <FullTransactionModal
           show={showFullTransactionModal}
           onClose={() => {
