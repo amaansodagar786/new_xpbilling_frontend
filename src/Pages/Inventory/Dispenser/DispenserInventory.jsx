@@ -7,7 +7,7 @@ import {
   FaCheckCircle, FaTimesCircle, FaMoneyBillWave,
   FaChevronDown, FaChevronUp, FaHistory, FaUser, FaCalendarAlt, FaArrowUp, FaArrowDown,
   FaChevronLeft, FaChevronRight, FaTag, FaClock, FaInfoCircle, FaTrashAlt,
-  FaEye, FaFilter
+  FaEye, FaFilter , FaToggleOff
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../../../Components/Navbar/Navbar";
@@ -1266,6 +1266,9 @@ const DispenserInventory = () => {
   const [fullTransactionDispenserId, setFullTransactionDispenserId] = useState('');
   const [fullTransactionActiveTab, setFullTransactionActiveTab] = useState('in');
 
+
+  const [showML, setShowML] = useState(false);
+
   const fileInputRef = useRef(null);
 
   // ============================================
@@ -1532,6 +1535,19 @@ const DispenserInventory = () => {
     }
   };
 
+  // Helper functions
+  const getStockInML = (quantity) => {
+    return quantity * 1000;  // 1 KG = 1000 ml
+  };
+
+
+  const getStockDisplay = (quantity, showML) => {
+    if (showML) {
+      return { value: getStockInML(quantity), unit: 'ml' };
+    } else {
+      return { value: quantity, unit: 'KG' };
+    }
+  };
   // ============================================
   // CREATE PRODUCT
   // ============================================
@@ -2063,6 +2079,26 @@ const DispenserInventory = () => {
                   <th style={{ width: '34px' }}></th>
                   <th>Product Name</th>
                   <th>Quantity (KG)</th>
+                  <th>
+                    <div className="di-stock-toggle-header">
+                      <span>Stock</span>
+                      <button
+                        className="di-stock-toggle-btn"
+                        onClick={() => setShowML(!showML)}
+                        title={showML ? "Switch to KG" : "Switch to ML"}
+                      >
+                        {showML ? (
+                          <>
+                            <FaToggleOn /> ML
+                          </>
+                        ) : (
+                          <>
+                            <FaToggleOff /> KG
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </th>
                   <th>Selling Price 3ml (₹/KG)</th>
                   <th>Selling Price 6ml (₹/KG)</th>
                   <th>Discount (%)</th>
@@ -2074,7 +2110,7 @@ const DispenserInventory = () => {
               <tbody>
                 {filteredInventory.length === 0 ? (
                   <tr>
-                    <td colSpan="9">
+                    <td colSpan="10">
                       <div className="di-empty-state">
                         <FaBox className="di-empty-icon" />
                         <p>No products found</p>
@@ -2085,6 +2121,10 @@ const DispenserInventory = () => {
                   filteredInventory.map((item) => {
                     const status = getStockStatus(item.quantity, item.minStock);
                     const isExpanded = expandedRowId === item.dispenserId;
+                    const { value: stockDisplayValue, unit: stockDisplayUnit } = getStockDisplay(
+                      item.quantity,
+                      showML
+                    );
 
                     return (
                       <React.Fragment key={item.dispenserId}>
@@ -2097,6 +2137,9 @@ const DispenserInventory = () => {
                           </td>
                           <td className="di-name-cell">{item.productName}</td>
                           <td className="di-qty-cell">{item.quantity}</td>
+                          <td className="di-stock-cell">
+                            {stockDisplayValue.toFixed(2)} {stockDisplayUnit}
+                          </td>
                           <td className="di-selling-price-cell">
                             ₹{item.sellingPrice3ml?.toFixed(2) || '0.00'}
                           </td>
@@ -2136,7 +2179,7 @@ const DispenserInventory = () => {
                         {isExpanded && (
                           <>
                             <TransactionHistoryRow
-                              colSpan={9}
+                              colSpan={10}
                               isLoading={loadingTransactionsFor === item.dispenserId}
                               transactions={transactionCache[item.dispenserId]}
                               onViewDisposal={() => fetchDisposalHistory(item.dispenserId)}
@@ -2146,7 +2189,7 @@ const DispenserInventory = () => {
 
                             {showDisposalPanel && currentDisposalDispenserId === item.dispenserId && (
                               <tr className="di-expand-row">
-                                <td colSpan={9}>
+                                <td colSpan={10}>
                                   <DisposalHistoryPanel
                                     disposals={disposalData?.disposals || []}
                                     isLoading={loadingDisposal}
