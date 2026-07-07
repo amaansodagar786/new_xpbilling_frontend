@@ -3,14 +3,14 @@ import { useNavigate, NavLink, useLocation } from "react-router-dom";
 
 // Icon imports
 import { BiLogOut, BiLayout, BiLogIn } from "react-icons/bi";
-import { 
-  TbLayoutGridAdd, 
-  TbMessages, 
-  TbUsers, 
-  TbReportAnalytics, 
-  TbTrash, 
-  TbPackage, 
-  TbTools, 
+import {
+  TbLayoutGridAdd,
+  TbMessages,
+  TbUsers,
+  TbReportAnalytics,
+  TbTrash,
+  TbPackage,
+  TbTools,
   TbBottle,
   TbFlask,
   TbChevronDown,
@@ -163,105 +163,105 @@ const Navbar = ({
 
   // ✅ MENU CONFIGURATION WITH DROPDOWN SUPPORT
   const menuConfig = [
-    { 
+    {
       id: 'home',
-      icon: <HiOutlineHome />, 
-      title: "Dashboard", 
-      path: "/dashboard", 
-      permission: "dashboard" 
+      icon: <HiOutlineHome />,
+      title: "Dashboard",
+      path: "/dashboard",
+      permission: "dashboard"
     },
-    { 
+    {
       id: 'invoice',
-      icon: <TbPackage />, 
-      title: "Invoice", 
-      path: "/", 
-      permission: "invoice" 
+      icon: <TbPackage />,
+      title: "Invoice",
+      path: "/",
+      permission: "invoice"
     },
-    { 
+    {
       id: 'customer',
-      icon: <TbUsers />, 
-      title: "Customer", 
-      path: "/customer", 
-      permission: "customer" 
+      icon: <TbUsers />,
+      title: "Customer",
+      path: "/customer",
+      permission: "customer"
     },
-    { 
+    {
       id: 'packages',
-      icon: <TbPackage />, 
-      title: "Packages", 
-      path: "/packages", 
-      permission: "packages" 
+      icon: <TbPackage />,
+      title: "Packages",
+      path: "/packages",
+      permission: "packages"
     },
-    { 
+    {
       id: 'workshop',
-      icon: <TbTools />, 
-      title: "Workshop", 
-      path: "/workshop", 
-      permission: "packages" 
+      icon: <TbTools />,
+      title: "Workshop",
+      path: "/workshop",
+      permission: "packages"
     },
-    { 
+    {
       id: 'promo',
-      icon: <MdDiscount />, 
-      title: "Promo Codes", 
-      path: "/promo", 
-      permission: "discount" 
+      icon: <MdDiscount />,
+      title: "Promo Codes",
+      path: "/promo",
+      permission: "discount"
     },
-    { 
+    {
       id: 'inventory',
-      icon: <FaWarehouse />, 
-      title: "Inventories", 
+      icon: <FaWarehouse />,
+      title: "Inventories",
       permission: "inventory",
       isDropdown: true,
       children: [
-        { 
+        {
           id: 'inventory-xp',
-          icon: <FaFlask />, 
-          title: "XP Inventory", 
-          path: "/inventory/xp", 
-          permission: "inventory" 
+          icon: <FaFlask />,
+          title: "XP Inventory",
+          path: "/inventory/xp",
+          permission: "inventory"
         },
-        { 
+        {
           id: 'inventory-dispenser',
-          icon: <FaSyringe />, 
-          title: "Dispenser Inventory", 
-          path: "/inventory/dispenser", 
-          permission: "inventory" 
+          icon: <FaSyringe />,
+          title: "Dispenser Inventory",
+          path: "/inventory/dispenser",
+          permission: "inventory"
         },
-        { 
+        {
           id: 'inventory-bottles',
-          icon: <TbBottle />, 
-          title: "Bottles Inventory", 
-          path: "/inventory/bottles", 
-          permission: "inventory" 
+          icon: <TbBottle />,
+          title: "Bottles Inventory",
+          path: "/inventory/bottles",
+          permission: "inventory"
         },
-        { 
+        {
           id: 'inventory-exclusive',
-          icon: <FaVial />, 
-          title: "Exclusive Inventory", 
-          path: "/inventory/exclusive", 
-          permission: "inventory" 
+          icon: <FaVial />,
+          title: "Exclusive Inventory",
+          path: "/inventory/exclusive",
+          permission: "inventory"
         }
       ]
     },
-    { 
+    {
       id: 'productdisposal',
-      icon: <TbTrash />, 
-      title: "Product Disposal", 
-      path: "/productdisposal", 
-      permission: "disposal" 
+      icon: <TbTrash />,
+      title: "Product Disposal",
+      path: "/productdisposal",
+      permission: "disposal"
     },
-    { 
+    {
       id: 'report',
-      icon: <TbReportAnalytics />, 
-      title: "Report", 
-      path: "/report", 
-      permission: "report" 
+      icon: <TbReportAnalytics />,
+      title: "Report",
+      path: "/report",
+      permission: "report"
     },
-    { 
+    {
       id: 'admin',
-      icon: <TbUsers />, 
-      title: "Admin", 
-      path: "/admin", 
-      permission: "admin" 
+      icon: <TbUsers />,
+      title: "Admin",
+      path: "/admin",
+      permission: "admin"
     }
   ];
 
@@ -270,7 +270,7 @@ const Navbar = ({
     if (userPermissions.includes("admin")) {
       return menuConfig;
     }
-    
+
     const filterItems = (items) => {
       return items
         .filter(item => userPermissions.includes(item.permission))
@@ -290,7 +290,7 @@ const Navbar = ({
           return true;
         });
     };
-    
+
     return filterItems(menuConfig);
   };
 
@@ -306,10 +306,10 @@ const Navbar = ({
     if (item.isDropdown) {
       const isOpen = openDropdowns[item.id] || false;
       const hasActiveChild = isChildActive(item.children);
-      
+
       return (
         <li key={item.id} className={`dropdown-item ${hasActiveChild ? 'active-parent' : ''}`}>
-          <div 
+          <div
             className="dropdown-trigger"
             onClick={() => toggleDropdown(item.id)}
           >
@@ -361,15 +361,12 @@ const Navbar = ({
     );
   };
 
+  // ✅ UPDATED LOADING SCREEN WITH THEME
   if (isLoading) {
     return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100vh'
-      }}>
-        <div>Loading...</div>
+      <div className="navbar-loading-container">
+        <div className="navbar-loading-spinner"></div>
+        <p>Loading...</p>
       </div>
     );
   }
