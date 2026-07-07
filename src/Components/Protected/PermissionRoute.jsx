@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import SmartRedirect from "./SmartRedirect";
+import "./PermissionRoute.scss";
 
 const PermissionRoute = ({ children, requiredPermission }) => {
   const [userPermissions, setUserPermissions] = useState([]);
@@ -28,13 +29,9 @@ const PermissionRoute = ({ children, requiredPermission }) => {
 
   if (isLoading) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        height: '100vh' 
-      }}>
-        <div>Loading permissions...</div>
+      <div className="pr-loading-container">
+        <div className="pr-loading-spinner"></div>
+        <p>Loading permissions...</p>
       </div>
     );
   }

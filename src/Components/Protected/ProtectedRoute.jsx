@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Navigate } from "react-router-dom";
+import "./ProtectedRoute.scss";
 
 const ProtectedRoute = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(null);
@@ -28,13 +29,9 @@ const ProtectedRoute = ({ children }) => {
   // Show loading while checking auth
   if (isAuthenticated === null) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        height: '100vh' 
-      }}>
-        <div>Loading...</div>
+      <div className="pr-loading-container">
+        <div className="pr-loading-spinner"></div>
+        <p>Loading...</p>
       </div>
     );
   }
