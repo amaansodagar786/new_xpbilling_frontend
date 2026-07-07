@@ -161,7 +161,7 @@ const Navbar = ({
 
   const pageTitle = getPageTitle();
 
-  // ✅ MENU CONFIGURATION WITH DROPDOWN SUPPORT
+  // ✅ FIXED MENU CONFIGURATION WITH CORRECT PERMISSIONS
   const menuConfig = [
 
     {
@@ -169,42 +169,42 @@ const Navbar = ({
       icon: <TbPackage />,
       title: "Invoice",
       path: "/",
-      permission: "invoice"
+      permission: "invoice"  // ✅ CORRECT
     },
     {
       id: 'home',
       icon: <HiOutlineHome />,
       title: "Dashboard",
       path: "/dashboard",
-      permission: "dashboard"
+      permission: "dashboard"  // ✅ CORRECT
     },
     {
       id: 'customer',
       icon: <TbUsers />,
       title: "Customer",
       path: "/customer",
-      permission: "customer"
+      permission: "customer"  // ✅ CORRECT
     },
     {
       id: 'packages',
       icon: <TbPackage />,
       title: "Packages",
       path: "/packages",
-      permission: "packages"
+      permission: "packages"  // ✅ CORRECT
     },
     {
       id: 'workshop',
       icon: <TbTools />,
       title: "Workshop",
       path: "/workshop",
-      permission: "packages"
+      permission: "workshop"  // ✅ FIXED: Was "packages"
     },
     {
       id: 'promo',
       icon: <MdDiscount />,
       title: "Promo Codes",
       path: "/promo",
-      permission: "discount"
+      permission: "promo"  // ✅ FIXED: Was "discount"
     },
     {
       id: 'inventory',
@@ -248,38 +248,58 @@ const Navbar = ({
       icon: <TbTrash />,
       title: "Product Disposal",
       path: "/productdisposal",
-      permission: "disposal"
+      permission: "disposal"  // ✅ CORRECT
     },
     {
       id: 'report',
       icon: <TbReportAnalytics />,
       title: "Report",
       path: "/report",
-      permission: "report"
+      permission: "report"  // ✅ CORRECT
     },
-    // {
-    //   id: 'admin',
-    //   icon: <TbUsers />,
-    //   title: "Admin",
-    //   path: "/admin",
-    //   permission: "admin"
-    // }
+    {
+      id: 'admin',
+      icon: <TbUsers />,
+      title: "Admin",
+      path: "/admin",
+      permission: "admin"  // ✅ CORRECT
+    }
   ];
 
-  // Filter menu based on permissions
+  // ✅ IMPROVED FILTERING - Handles admin, manager, and multiple permissions
   const getFilteredMenu = () => {
+    // ✅ Admin gets everything
     if (userPermissions.includes("admin")) {
       return menuConfig;
     }
 
+    // ✅ Manager gets dashboard and reports (even without explicit permission)
+    const isManager = userPermissions.includes("manager");
+
     const filterItems = (items) => {
       return items
-        .filter(item => userPermissions.includes(item.permission))
+        .filter(item => {
+          // If it's dashboard or report, check for manager or specific permission
+          if (item.id === 'home' && isManager) {
+            return true;  // ✅ Managers can see dashboard
+          }
+          if (item.id === 'report' && isManager) {
+            return true;  // ✅ Managers can see reports
+          }
+          // For all other items, check if user has the specific permission
+          return userPermissions.includes(item.permission);
+        })
         .map(item => {
           if (item.isDropdown) {
             return {
               ...item,
-              children: item.children.filter(child => userPermissions.includes(child.permission))
+              children: item.children.filter(child => {
+                // For inventory, check if user has inventory permission OR is manager
+                if (child.permission === 'inventory' && isManager) {
+                  return true;
+                }
+                return userPermissions.includes(child.permission);
+              })
             };
           }
           return item;

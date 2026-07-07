@@ -123,7 +123,7 @@ const InvoiceDetailsModal = ({
                       <strong>{invoice.packageItem.fragranceQty}g</strong>
                     </div>
                     <div className="inv-details-item">
-                      <span className="inv-details-label">Alcohol Qty</span>
+                      <span className="inv-details-label">Fragrance Base Qty</span>
                       <strong>{invoice.packageItem.alcoholQty}ml</strong>
                     </div>
                     {invoice.packageItem.xpOil && (
