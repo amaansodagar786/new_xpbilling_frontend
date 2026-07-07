@@ -163,19 +163,20 @@ const Navbar = ({
 
   // ✅ MENU CONFIGURATION WITH DROPDOWN SUPPORT
   const menuConfig = [
-    {
-      id: 'home',
-      icon: <HiOutlineHome />,
-      title: "Dashboard",
-      path: "/dashboard",
-      permission: "dashboard"
-    },
+
     {
       id: 'invoice',
       icon: <TbPackage />,
       title: "Invoice",
       path: "/",
       permission: "invoice"
+    },
+    {
+      id: 'home',
+      icon: <HiOutlineHome />,
+      title: "Dashboard",
+      path: "/dashboard",
+      permission: "dashboard"
     },
     {
       id: 'customer',
@@ -256,13 +257,13 @@ const Navbar = ({
       path: "/report",
       permission: "report"
     },
-    {
-      id: 'admin',
-      icon: <TbUsers />,
-      title: "Admin",
-      path: "/admin",
-      permission: "admin"
-    }
+    // {
+    //   id: 'admin',
+    //   icon: <TbUsers />,
+    //   title: "Admin",
+    //   path: "/admin",
+    //   permission: "admin"
+    // }
   ];
 
   // Filter menu based on permissions
