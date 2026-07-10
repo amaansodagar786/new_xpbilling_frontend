@@ -162,9 +162,9 @@ const InvoicePrint = ({ invoice }) => {
                         </div>
                         <div className="company-address">
                             <div className="address-details">
-                                <p>C/9, Laxmi Kunj Society, Part-2, Beside Shree Ayyappa</p>
-                                <p>Temple, New Sama Road, Vadodara - 390024, Gujarat</p>
-                                <p>+91 12345 67890 | info@jassperfumes.com</p>
+                                <p>Shop no 4, Siddharth Complex, RC Dutt Rd, Aradhana Society,</p>
+                                <p>Vishwas Colony, Alkapuri, Vadodara, Gujarat 390023</p>
+
                             </div>
                         </div>
                     </div>
