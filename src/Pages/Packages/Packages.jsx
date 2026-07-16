@@ -346,7 +346,7 @@ const Packages = () => {
                             <div className="pk-detail-card-info">
                                 <div>Name: <strong>{pkg?.packageName}</strong></div>
                                 <div>Pricing: <strong>₹{pkg?.pricing}</strong></div>
-                                <div>Oil Count: <strong>{pkg?.oilCount || 1}</strong></div>
+                                {/* <div>Oil Count: <strong>{pkg?.oilCount || 1}</strong></div> */}
                                 <div>Discount: <strong>{pkg?.discount || 0}%</strong></div>
                                 <div>Bottle ML: <strong>{pkg?.bottleML}ml</strong></div>
                                 <div>Filling Level: <strong>{pkg?.fillingLevel}g</strong></div>
@@ -451,10 +451,10 @@ const Packages = () => {
                                 <small className="pk-field-hint">Default: 0%, Maximum 100%</small>
                             </div>
                             <div className="pk-form-field">
-                                <label><FaHashtag /> Oil Count</label>
+                                {/* <label><FaHashtag /> Oil Count</label> */}
                                 <div className="pk-oil-count-display">
-                                    <span className="pk-oil-count-value">Default: 1</span>
-                                    <small className="pk-field-hint">Auto-set to 1 (fixed)</small>
+                                    {/* <span className="pk-oil-count-value">Default: 1</span> */}
+                                    {/* <small className="pk-field-hint">Auto-set to 1 (fixed)</small> */}
                                 </div>
                             </div>
                         </div>
@@ -564,7 +564,7 @@ const Packages = () => {
                                 <tr>
                                     <th>Package Name</th>
                                     <th>Pricing (₹)</th>
-                                    <th>Oil Count</th>
+                                    {/* <th>Oil Count</th> */}
                                     <th>Bottle ML</th>
                                     <th>Filling (g)</th>
                                     <th>Fragrance (g)</th>
@@ -589,9 +589,9 @@ const Packages = () => {
                                         <tr key={pkg.packageId}>
                                             <td className="pk-name-cell">{pkg.packageName}</td>
                                             <td className="pk-price-cell">₹{pkg.pricing}</td>
-                                            <td className="pk-oil-count-cell">
+                                            {/* <td className="pk-oil-count-cell">
                                                 <span className="pk-oil-count-pill">{pkg.oilCount || 1} Oils</span>
-                                            </td>
+                                            </td> */}
                                             <td className="pk-ml-cell">{pkg.bottleML}ml</td>
                                             <td className="pk-filling-cell">{pkg.fillingLevel}g</td>
                                             <td className="pk-fragrance-cell">{pkg.fragranceQty}g</td>
