@@ -24,7 +24,6 @@ const Packages = () => {
     const [editingPackage, setEditingPackage] = useState(null);
     const [packageName, setPackageName] = useState("");
     const [pricing, setPricing] = useState("");
-    const [oilCount, setOilCount] = useState("");
     const [discount, setDiscount] = useState("0");
 
     // NEW FIELDS
@@ -79,7 +78,6 @@ const Packages = () => {
     const resetForm = () => {
         setPackageName("");
         setPricing("");
-        setOilCount("");
         setDiscount("0");
         setBottleML("");
         setFillingLevel("");
@@ -135,7 +133,6 @@ const Packages = () => {
         setEditingPackage(pkg);
         setPackageName(pkg.packageName);
         setPricing(pkg.pricing.toString());
-        setOilCount(pkg.oilCount.toString());
         setDiscount(pkg.discount?.toString() || "0");
         setBottleML(pkg.bottleML?.toString() || "");
         setFillingLevel(pkg.fillingLevel?.toString() || "");
@@ -160,11 +157,6 @@ const Packages = () => {
 
             if (!pricing || parseFloat(pricing) < 1) {
                 toast.error("Please enter valid pricing (minimum 1)");
-                return;
-            }
-
-            if (!oilCount || parseInt(oilCount) < 1 || parseInt(oilCount) > 25) {
-                toast.error("Oil count must be between 1 and 25");
                 return;
             }
 
@@ -208,20 +200,26 @@ const Packages = () => {
 
             const method = editingPackage ? "PUT" : "POST";
 
+            // ✅ Build payload - OIL COUNT NOT SENT (backend will default to 1)
+            const payload = {
+                packageName: packageName.trim(),
+                pricing: parseFloat(pricing),
+                discount: parseFloat(discount) || 0,
+                bottleML: parseInt(bottleML),
+                fillingLevel: parseFloat(fillingLevel),
+                fragranceQty: parseFloat(fragranceQty),
+                alcoholQty: parseFloat(alcoholQty)
+            };
+
+            // ✅ Only add oilCount if editing and user wants to change it
+            // (But since we removed the input, we NEVER send it)
+            // Backend will handle default = 1
+
             const response = await fetch(url, {
                 method,
                 credentials: 'include',
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    packageName: packageName.trim(),
-                    pricing: parseFloat(pricing),
-                    oilCount: parseInt(oilCount),
-                    discount: parseFloat(discount) || 0,
-                    bottleML: parseInt(bottleML),
-                    fillingLevel: parseFloat(fillingLevel),
-                    fragranceQty: parseFloat(fragranceQty),
-                    alcoholQty: parseFloat(alcoholQty)
-                }),
+                body: JSON.stringify(payload),
             });
 
             if (!response.ok) {
@@ -348,7 +346,7 @@ const Packages = () => {
                             <div className="pk-detail-card-info">
                                 <div>Name: <strong>{pkg?.packageName}</strong></div>
                                 <div>Pricing: <strong>₹{pkg?.pricing}</strong></div>
-                                <div>Oil Count: <strong>{pkg?.oilCount}</strong></div>
+                                <div>Oil Count: <strong>{pkg?.oilCount || 1}</strong></div>
                                 <div>Discount: <strong>{pkg?.discount || 0}%</strong></div>
                                 <div>Bottle ML: <strong>{pkg?.bottleML}ml</strong></div>
                                 <div>Filling Level: <strong>{pkg?.fillingLevel}g</strong></div>
@@ -437,20 +435,8 @@ const Packages = () => {
                             </div>
                         </div>
 
-                        {/* Basic Info Row 2 */}
+                        {/* Basic Info Row 2 - OIL COUNT REMOVED */}
                         <div className="pk-form-row">
-                            <div className="pk-form-field">
-                                <label><FaHashtag /> Oil Count *</label>
-                                <input
-                                    type="number"
-                                    min="1"
-                                    max="25"
-                                    value={oilCount}
-                                    onChange={(e) => setOilCount(e.target.value)}
-                                    placeholder="Enter oil count (1-25)"
-                                />
-                                <small className="pk-field-hint">Minimum 1, Maximum 25</small>
-                            </div>
                             <div className="pk-form-field">
                                 <label><FaPercentage /> Discount (%)</label>
                                 <input
@@ -463,6 +449,13 @@ const Packages = () => {
                                     placeholder="Enter discount (0-100)"
                                 />
                                 <small className="pk-field-hint">Default: 0%, Maximum 100%</small>
+                            </div>
+                            <div className="pk-form-field">
+                                <label><FaHashtag /> Oil Count</label>
+                                <div className="pk-oil-count-display">
+                                    <span className="pk-oil-count-value">Default: 1</span>
+                                    <small className="pk-field-hint">Auto-set to 1 (fixed)</small>
+                                </div>
                             </div>
                         </div>
 
@@ -540,7 +533,7 @@ const Packages = () => {
                                 type="button"
                                 className="pk-save-btn"
                                 onClick={handleSave}
-                                disabled={isSaving || !packageName.trim() || !pricing || !oilCount || !bottleML || !fillingLevel}
+                                disabled={isSaving || !packageName.trim() || !pricing || !bottleML || !fillingLevel}
                             >
                                 {isSaving ? (
                                     <>
@@ -597,7 +590,7 @@ const Packages = () => {
                                             <td className="pk-name-cell">{pkg.packageName}</td>
                                             <td className="pk-price-cell">₹{pkg.pricing}</td>
                                             <td className="pk-oil-count-cell">
-                                                <span className="pk-oil-count-pill">{pkg.oilCount} Oils</span>
+                                                <span className="pk-oil-count-pill">{pkg.oilCount || 1} Oils</span>
                                             </td>
                                             <td className="pk-ml-cell">{pkg.bottleML}ml</td>
                                             <td className="pk-filling-cell">{pkg.fillingLevel}g</td>
