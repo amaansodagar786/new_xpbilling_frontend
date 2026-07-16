@@ -7,7 +7,7 @@ import {
     FaFileInvoice, FaSearch, FaBan, FaCalendarAlt,
     FaCreditCard, FaPlusCircle, FaCheck, FaWindowClose,
     FaPercentage, FaEdit, FaUndo, FaHistory, FaCoins,
-    FaFilePdf, FaWhatsapp, FaDownload
+    FaFilePdf, FaWhatsapp, FaDownload, FaOilCan
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../../Components/Navbar/Navbar";
@@ -196,13 +196,41 @@ const InvoiceDetailsModal = ({
                                             <span className="inv-details-label">Oil Count</span>
                                             <strong>{invoice.packageItem.oilCount}</strong>
                                         </div>
-                                        {invoice.packageItem.xpOil && (
-                                            <div className="inv-details-item">
-                                                <span className="inv-details-label">XP Oil Used</span>
-                                                <strong>{invoice.packageItem.xpOil.productName}</strong>
-                                            </div>
-                                        )}
+                                        <div className="inv-details-item">
+                                            <span className="inv-details-label">Fragrance Qty</span>
+                                            <strong>{invoice.packageItem.fragranceQty}ml</strong>
+                                        </div>
                                     </div>
+
+                                    {/* ✅ Multiple XP Oils Display */}
+                                    {invoice.packageItem.xpOilItems && invoice.packageItem.xpOilItems.length > 0 && (
+                                        <div className="inv-details-xp-oils">
+                                            <h5><FaOilCan /> XP Oils Used</h5>
+                                            <table className="inv-details-xp-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Oil Name</th>
+                                                        <th>ML</th>
+                                                        <th>Density</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {invoice.packageItem.xpOilItems.map((oil, idx) => (
+                                                        <tr key={idx}>
+                                                            <td>{oil.productName}</td>
+                                                            <td>{oil.ml}ml</td>
+                                                            <td>{oil.density || 1000}</td>
+                                                        </tr>
+                                                    ))}
+                                                    <tr className="inv-details-xp-total">
+                                                        <td colSpan="1"><strong>Total Fragrance</strong></td>
+                                                        <td><strong>{invoice.packageItem.xpOilItems.reduce((sum, o) => sum + (o.ml || 0), 0)}ml</strong></td>
+                                                        <td></td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
@@ -436,7 +464,6 @@ const Invoice = () => {
     const [isUpdating, setIsUpdating] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [exportingInvoices, setExportingInvoices] = useState({});
-    // ✅ NEW: Export all invoices state
     const [isExportingAll, setIsExportingAll] = useState(false);
     const navigate = useNavigate();
 
@@ -474,7 +501,16 @@ const Invoice = () => {
     const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [selectedWorkshop, setSelectedWorkshop] = useState(null);
     const [selectedPackage, setSelectedPackage] = useState(null);
-    const [selectedXPOil, setSelectedXPOil] = useState(null);
+
+    // ✅ NEW: Multiple XP Oils state
+    const [xpOilItems, setXpOilItems] = useState([]);
+    const [xpOilSelect, setXpOilSelect] = useState(null);
+    const [xpOilML, setXpOilML] = useState("");
+
+    // ✅ NEW: XP Oil validation
+    const [xpOilTotalML, setXpOilTotalML] = useState(0);
+    const [xpOilValidationError, setXpOilValidationError] = useState("");
+
     const [dispenserItems, setDispenserItems] = useState([]);
     const [selectedPromo, setSelectedPromo] = useState(null);
     const [paymentStatus, setPaymentStatus] = useState("Cash");
@@ -727,6 +763,31 @@ const Invoice = () => {
     }, [selectedWorkshop, selectedCustomer, packages]);
 
     // ============================================
+    // ✅ VALIDATE XP OIL TOTAL vs PACKAGE FRAGRANCE
+    // ============================================
+    useEffect(() => {
+        if (selectedPackage) {
+            const packageFragranceML = selectedPackage.data?.fragranceQty || 0;
+            const totalML = xpOilItems.reduce((sum, item) => sum + (item.ml || 0), 0);
+            setXpOilTotalML(totalML);
+
+            const tolerance = 0.01;
+            if (xpOilItems.length === 0) {
+                setXpOilValidationError("Please add at least one XP Oil");
+            } else if (Math.abs(totalML - packageFragranceML) > tolerance) {
+                setXpOilValidationError(
+                    `Total XP Oil (${totalML}ml) does not match package fragrance (${packageFragranceML}ml). ${totalML < packageFragranceML ? `Need ${(packageFragranceML - totalML).toFixed(2)}ml more.` : `Remove ${(totalML - packageFragranceML).toFixed(2)}ml.`}`
+                );
+            } else {
+                setXpOilValidationError("");
+            }
+        } else {
+            setXpOilTotalML(0);
+            setXpOilValidationError("");
+        }
+    }, [xpOilItems, selectedPackage]);
+
+    // ============================================
     // CUSTOMER SELECTION - Fetch Loyalty Coins
     // ============================================
     useEffect(() => {
@@ -835,8 +896,6 @@ const Invoice = () => {
 
     }, [selectedPackage, packageDiscountInput, dispenserItems, selectedPromo, useLoyaltyCoins, usableLoyaltyCoins, isEditing, GST_RATE]);
 
-
-
     // ============================================
     // REFETCH INVOICES WHEN FILTERS CHANGE (LIST VIEW)
     // ============================================
@@ -845,7 +904,6 @@ const Invoice = () => {
             fetchAllInvoices();
         }
     }, [timeFilter, paymentFilter]);
-
 
     // ============================================
     // HANDLE WORKSHOP SELECTION (EDIT MODE)
@@ -868,6 +926,99 @@ const Invoice = () => {
 
         setSelectedWorkshop(selected);
         setRecentWorkshop(selected.data);
+    };
+
+    // ============================================
+    // ✅ HANDLE ADD XP OIL
+    // ============================================
+    const handleAddXPOil = () => {
+        if (!xpOilSelect) {
+            toast.error("Please select an XP Oil");
+            return;
+        }
+
+        if (!xpOilML || parseFloat(xpOilML) <= 0) {
+            toast.error("Please enter a valid ML quantity (greater than 0)");
+            return;
+        }
+
+        const ml = parseFloat(xpOilML);
+        const tolerance = 0.01;
+
+        // Check if already added
+        const exists = xpOilItems.some(
+            item => item.xpId === xpOilSelect.value
+        );
+
+        if (exists) {
+            toast.error("This XP Oil is already added");
+            return;
+        }
+
+        // Check if adding this would exceed package fragrance
+        if (selectedPackage) {
+            const packageFragranceML = selectedPackage.data?.fragranceQty || 0;
+            const currentTotal = xpOilItems.reduce((sum, item) => sum + (item.ml || 0), 0);
+            const newTotal = currentTotal + ml;
+
+            if (newTotal > packageFragranceML + tolerance) {
+                toast.error(`Total would exceed package fragrance (${packageFragranceML}ml). Current: ${currentTotal}ml, Adding: ${ml}ml`);
+                return;
+            }
+        }
+
+        const newItem = {
+            xpId: xpOilSelect.value,
+            productName: xpOilSelect.label,
+            ml: ml,
+            density: xpOilSelect.data?.density || 1000,
+            pricePerKG: xpOilSelect.data?.avgPurchasePrice || 0
+        };
+
+        setXpOilItems([...xpOilItems, newItem]);
+        setXpOilSelect(null);
+        setXpOilML("");
+
+        toast.success(`Added ${newItem.productName} (${ml}ml)`);
+    };
+
+    // ============================================
+    // ✅ HANDLE REMOVE XP OIL
+    // ============================================
+    const handleRemoveXPOil = (index) => {
+        const removed = xpOilItems[index];
+        const newItems = xpOilItems.filter((_, i) => i !== index);
+        setXpOilItems(newItems);
+        toast.info(`Removed ${removed.productName}`);
+    };
+
+    // ============================================
+    // ✅ HANDLE UPDATE XP OIL ML
+    // ============================================
+    const handleUpdateXPOilML = (index, newML) => {
+        const ml = parseFloat(newML);
+        if (isNaN(ml) || ml <= 0) {
+            toast.error("ML must be greater than 0");
+            return;
+        }
+
+        const updatedItems = [...xpOilItems];
+        const currentTotal = xpOilItems.reduce((sum, item, i) => {
+            if (i === index) return sum + ml;
+            return sum + (item.ml || 0);
+        }, 0);
+
+        if (selectedPackage) {
+            const packageFragranceML = selectedPackage.data?.fragranceQty || 0;
+            const tolerance = 0.01;
+            if (currentTotal > packageFragranceML + tolerance) {
+                toast.error(`Total would exceed package fragrance (${packageFragranceML}ml)`);
+                return;
+            }
+        }
+
+        updatedItems[index].ml = ml;
+        setXpOilItems(updatedItems);
     };
 
     // ============================================
@@ -987,7 +1138,11 @@ const Invoice = () => {
     const handleAddAndCloseWorkshop = () => {
         setSelectedWorkshop(null);
         setSelectedPackage(null);
-        setSelectedXPOil(null);
+        setXpOilItems([]);
+        setXpOilSelect(null);
+        setXpOilML("");
+        setXpOilTotalML(0);
+        setXpOilValidationError("");
         setRecentWorkshop(null);
         setPackageDiscountInput(0);
         toast.info("Workshop & Package selections cleared");
@@ -1136,8 +1291,14 @@ const Invoice = () => {
                 return;
             }
 
-            if (selectedPackage && !selectedXPOil) {
-                toast.error("Please select an XP oil for the package");
+            if (selectedPackage && xpOilItems.length === 0) {
+                toast.error("Please add at least one XP Oil for the package");
+                return;
+            }
+
+            // ✅ Validate XP Oil total matches package fragrance
+            if (selectedPackage && xpOilValidationError) {
+                toast.error(`XP Oil validation error: ${xpOilValidationError}`);
                 return;
             }
 
@@ -1147,7 +1308,10 @@ const Invoice = () => {
                 customerId: selectedCustomer.value,
                 workshopId: selectedWorkshop?.value || null,
                 packageId: selectedPackage?.value || null,
-                xpOilId: selectedXPOil?.value || null,
+                xpOilItems: xpOilItems.map(item => ({
+                    xpId: item.xpId,
+                    ml: item.ml
+                })),
                 packageDiscount: packageDiscountInput || 0,
                 dispenserItems: dispenserItems.map(item => ({
                     dispenserId: item.dispenserId,
@@ -1220,8 +1384,14 @@ const Invoice = () => {
                 return;
             }
 
-            if (selectedPackage && !selectedXPOil) {
-                toast.error("Please select an XP oil for the package");
+            if (selectedPackage && xpOilItems.length === 0) {
+                toast.error("Please add at least one XP Oil for the package");
+                return;
+            }
+
+            // ✅ Validate XP Oil total matches package fragrance
+            if (selectedPackage && xpOilValidationError) {
+                toast.error(`XP Oil validation error: ${xpOilValidationError}`);
                 return;
             }
 
@@ -1229,7 +1399,10 @@ const Invoice = () => {
 
             const payload = {
                 packageId: selectedPackage?.value || null,
-                xpOilId: selectedXPOil?.value || null,
+                xpOilItems: xpOilItems.map(item => ({
+                    xpId: item.xpId,
+                    ml: item.ml
+                })),
                 packageDiscount: packageDiscountInput || 0,
                 dispenserItems: dispenserItems.map(item => ({
                     dispenserId: item.dispenserId,
@@ -1328,7 +1501,11 @@ const Invoice = () => {
         setSelectedCustomer(null);
         setSelectedWorkshop(null);
         setSelectedPackage(null);
-        setSelectedXPOil(null);
+        setXpOilItems([]);
+        setXpOilSelect(null);
+        setXpOilML("");
+        setXpOilTotalML(0);
+        setXpOilValidationError("");
         setDispenserItems([]);
         setSelectedPromo(null);
         setPaymentStatus("Cash");
@@ -1351,16 +1528,13 @@ const Invoice = () => {
         try {
             setIsLoadingInvoices(true);
 
-            // Build query params
             const params = new URLSearchParams();
             params.set('limit', '200');
 
-            // Time filter
             if (timeFilter && timeFilter !== 'all') {
                 params.set('timeFilter', timeFilter);
             }
 
-            // Payment filter
             if (paymentFilter) {
                 params.set('paymentStatus', paymentFilter);
             }
@@ -1374,7 +1548,6 @@ const Invoice = () => {
 
             const data = await response.json();
 
-            // Apply search filter client-side
             let filtered = data.invoices || [];
             if (invoiceSearchTerm.trim()) {
                 const search = invoiceSearchTerm.trim().toLowerCase();
@@ -1488,17 +1661,25 @@ const Invoice = () => {
                 });
                 setPackageDiscountInput(pkg.discount || 0);
 
-                if (pkg.xpOil && pkg.xpOil.xpId) {
-                    setSelectedXPOil({
-                        value: pkg.xpOil.xpId,
-                        label: pkg.xpOil.productName,
-                        data: {
-                            xpId: pkg.xpOil.xpId,
-                            productName: pkg.xpOil.productName,
-                            quantity: pkg.xpOil.quantity,
-                            density: pkg.xpOil.density
-                        }
-                    });
+                // ✅ Load Multiple XP Oils
+                if (pkg.xpOilItems && pkg.xpOilItems.length > 0) {
+                    const loadedItems = pkg.xpOilItems.map(item => ({
+                        xpId: item.xpId,
+                        productName: item.productName,
+                        ml: item.ml,
+                        density: item.density || 1000,
+                        pricePerKG: item.pricePerKG || 0
+                    }));
+                    setXpOilItems(loadedItems);
+                } else if (pkg.xpOil && pkg.xpOil.xpId) {
+                    // Fallback for old invoices with single XP Oil
+                    setXpOilItems([{
+                        xpId: pkg.xpOil.xpId,
+                        productName: pkg.xpOil.productName,
+                        ml: (pkg.xpOil.quantity || 0) * 1000,
+                        density: pkg.xpOil.density || 1000,
+                        pricePerKG: 0
+                    }]);
                 }
             }
 
@@ -1608,21 +1789,18 @@ const Invoice = () => {
     };
 
     // ============================================
-    // ✅ HANDLE EXPORT ALL INVOICES - FIXED
+    // HANDLE EXPORT ALL INVOICES
     // ============================================
     const handleExportAll = async () => {
         try {
             setIsExportingAll(true);
 
-            // Build query params
             const params = new URLSearchParams();
 
-            // Search filter
             if (invoiceSearchTerm.trim()) {
                 params.set('search', invoiceSearchTerm.trim());
             }
 
-            // Time filter - convert to startDate and endDate
             if (timeFilter && timeFilter !== 'all') {
                 const now = new Date();
                 const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -1681,12 +1859,9 @@ const Invoice = () => {
                 }
             }
 
-            // Payment filter
             if (paymentFilter) {
                 params.set('paymentStatus', paymentFilter);
             }
-
-            console.log('📤 Export Params:', params.toString());
 
             const response = await fetch(
                 `${import.meta.env.VITE_API_URL}/invoice/export?${params}`,
@@ -1738,7 +1913,7 @@ const Invoice = () => {
     };
 
     // ============================================
-    // FILTERED INVOICES (already filtered in state)
+    // FILTERED INVOICES
     // ============================================
     const filteredInvoices = allInvoices;
 
@@ -2024,23 +2199,152 @@ const Invoice = () => {
                                         </div>
                                         <small className="inv-hint">Enter discount percentage for this package</small>
                                     </div>
-                                    <div className="inv-form-field">
-                                        <label>Select XP Oil *</label>
-                                        <Select
-                                            options={xpOilOptions}
-                                            value={selectedXPOil}
-                                            onChange={setSelectedXPOil}
-                                            placeholder="Select XP oil for fragrance"
-                                            isClearable
-                                            styles={customSelectStyles}
-                                            noOptionsMessage={() => "No XP oils available"}
-                                        />
-                                        {selectedXPOil && (
-                                            <small className="inv-hint">
-                                                Stock: {selectedXPOil.data?.quantity} KG | Density: {selectedXPOil.data?.density || 1000}
-                                            </small>
-                                        )}
+                                </div>
+                            )}
+
+                            {/* ✅ SECTION: MULTIPLE XP OILS */}
+                            {selectedPackage && (
+                                <div className="inv-section inv-xp-oil-section">
+                                    <div className="inv-section-header-with-actions">
+                                        <h4 className="inv-section-subtitle">
+                                            <FaOilCan /> XP Oils for Fragrance
+                                        </h4>
+                                        <div className="inv-section-actions">
+                                            <button
+                                                className="inv-add-close-btn inv-close-xp-btn"
+                                                onClick={() => {
+                                                    setXpOilItems([]);
+                                                    setXpOilSelect(null);
+                                                    setXpOilML("");
+                                                    setXpOilTotalML(0);
+                                                    setXpOilValidationError("");
+                                                    toast.info("XP Oils cleared");
+                                                }}
+                                                type="button"
+                                            >
+                                                <FaWindowClose /> Clear All
+                                            </button>
+                                        </div>
                                     </div>
+
+                                    {/* XP Oil Add Form */}
+                                    <div className="inv-form-row inv-form-row-xp">
+                                        <div className="inv-form-field">
+                                            <label>Select XP Oil</label>
+                                            <Select
+                                                options={xpOilOptions}
+                                                value={xpOilSelect}
+                                                onChange={setXpOilSelect}
+                                                placeholder="Select XP oil..."
+                                                isClearable
+                                                styles={customSelectStyles}
+                                                noOptionsMessage={() => "No XP oils available"}
+                                            />
+                                        </div>
+                                        <div className="inv-form-field inv-form-field-narrow">
+                                            <label>ML *</label>
+                                            <input
+                                                type="number"
+                                                step="0.1"
+                                                min="0.1"
+                                                value={xpOilML}
+                                                onChange={(e) => setXpOilML(e.target.value)}
+                                                placeholder="Enter ml"
+                                                autoComplete="off"
+                                            />
+                                        </div>
+                                        <div className="inv-add-btn-wrap">
+                                            <button
+                                                className="inv-add-xp-btn"
+                                                onClick={handleAddXPOil}
+                                                type="button"
+                                            >
+                                                <FaPlus /> Add
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* ✅ XP Oil Validation Status */}
+                                    {selectedPackage && (
+                                        <div className="inv-xp-validation">
+                                            <div className="inv-xp-total">
+                                                <span>Total Fragrance: </span>
+                                                <strong>{xpOilTotalML.toFixed(2)}ml</strong>
+                                                <span className="inv-xp-package-qty">
+                                                    (Required: {selectedPackage.data?.fragranceQty || 0}ml)
+                                                </span>
+                                            </div>
+                                            {xpOilValidationError ? (
+                                                <div className="inv-xp-error">
+                                                    <FaBan /> {xpOilValidationError}
+                                                </div>
+                                            ) : xpOilItems.length > 0 ? (
+                                                <div className="inv-xp-success">
+                                                    <FaCheck /> ✓ Total matches package fragrance!
+                                                </div>
+                                            ) : (
+                                                <div className="inv-xp-info">
+                                                    <span>Add XP Oils to match the package fragrance quantity</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* ✅ XP Oil List */}
+                                    {xpOilItems.length > 0 && (
+                                        <div className="inv-xp-list">
+                                            <h5>Added XP Oils</h5>
+                                            <div className="inv-xp-table-wrap">
+                                                <table className="inv-xp-table">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>XP Oil</th>
+                                                            <th>ML</th>
+                                                            <th>Density</th>
+                                                            <th>Action</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {xpOilItems.map((item, index) => (
+                                                            <tr key={index}>
+                                                                <td>{item.productName}</td>
+                                                                <td>
+                                                                    {isEditing ? (
+                                                                        <input
+                                                                            type="number"
+                                                                            step="0.1"
+                                                                            min="0.1"
+                                                                            value={item.ml}
+                                                                            onChange={(e) => handleUpdateXPOilML(index, e.target.value)}
+                                                                            className="inv-edit-input inv-edit-input-small"
+                                                                        />
+                                                                    ) : (
+                                                                        `${item.ml}ml`
+                                                                    )}
+                                                                </td>
+                                                                <td>{item.density || 1000}</td>
+                                                                <td>
+                                                                    <button
+                                                                        className="inv-remove-btn"
+                                                                        onClick={() => handleRemoveXPOil(index)}
+                                                                        type="button"
+                                                                    >
+                                                                        <FaTrash />
+                                                                    </button>
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                        <tr className="inv-xp-table-total">
+                                                            <td><strong>Total</strong></td>
+                                                            <td><strong>{xpOilItems.reduce((sum, item) => sum + (item.ml || 0), 0).toFixed(2)}ml</strong></td>
+                                                            <td></td>
+                                                            <td></td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -2497,7 +2801,13 @@ const Invoice = () => {
                             <button
                                 className={isEditing ? "inv-update-btn" : "inv-submit-btn"}
                                 onClick={isEditing ? handleUpdateInvoice : handleCreateInvoice}
-                                disabled={isSubmitting || isUpdating || !selectedCustomer}
+                                disabled={
+                                    isSubmitting ||
+                                    isUpdating ||
+                                    !selectedCustomer ||
+                                    (selectedPackage && xpOilItems.length === 0) ||
+                                    (selectedPackage && xpOilValidationError)
+                                }
                                 type="button"
                             >
                                 {isEditing ? (
@@ -2530,13 +2840,11 @@ const Invoice = () => {
                 )}
 
                 {/* ============================================ */}
-                {/* VIEW INVOICES — WITH FILTERS */}
+                {/* VIEW INVOICES */}
                 {/* ============================================ */}
                 {activeView === "list" && (
                     <div className="inv-list-container">
-                        {/* FILTER BAR */}
                         <div className="inv-list-filter-bar">
-                            {/* Search */}
                             <div className="inv-list-search">
                                 <FaSearch className="inv-list-search-icon" />
                                 <input
@@ -2548,7 +2856,6 @@ const Invoice = () => {
                                 />
                             </div>
 
-                            {/* ✅ PRESET TIME FILTER */}
                             <select
                                 className="inv-filter-time"
                                 value={timeFilter}
@@ -2574,7 +2881,6 @@ const Invoice = () => {
                                 <option value="Card">Card</option>
                             </select>
 
-                            {/* ✅ EXPORT BUTTON */}
                             <button
                                 className="inv-export-btn"
                                 onClick={handleExportAll}
@@ -2584,7 +2890,6 @@ const Invoice = () => {
                                 <FaDownload /> {isExportingAll ? "Exporting..." : "Export"}
                             </button>
 
-                            {/* Result Count */}
                             {!isLoadingInvoices && (
                                 <span className="inv-list-result-count">{allInvoices.length} invoices</span>
                             )}
