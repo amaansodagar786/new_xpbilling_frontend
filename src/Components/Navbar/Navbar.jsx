@@ -22,7 +22,7 @@ import { HiOutlineHome } from "react-icons/hi";
 import { BsBell } from "react-icons/bs";
 import { GiHamburgerMenu } from "react-icons/gi";
 import { RxCross1 } from "react-icons/rx";
-import { FiUser } from "react-icons/fi";
+// ❌ REMOVED: import { FiUser } from "react-icons/fi";
 import { MdDiscount } from "react-icons/md";
 import { FaSearch, FaFileExcel, FaPlus, FaBox, FaFlask, FaSyringe, FaVial, FaWarehouse } from "react-icons/fa";
 
@@ -125,6 +125,11 @@ const Navbar = ({
     navigate("/login");
   };
 
+  // ✅ NEW: Handle Jass Billing redirect
+  const handleJassBilling = () => {
+    window.open("https://jass.techorses.com", "_blank");
+  };
+
   const getPageTitle = () => {
     const route = location.pathname;
     switch (route) {
@@ -169,42 +174,42 @@ const Navbar = ({
       icon: <TbPackage />,
       title: "Invoice",
       path: "/",
-      permission: "invoice"  // ✅ CORRECT
+      permission: "invoice"
     },
     {
       id: 'home',
       icon: <HiOutlineHome />,
       title: "Dashboard",
       path: "/dashboard",
-      permission: "dashboard"  // ✅ CORRECT
+      permission: "dashboard"
     },
     {
       id: 'customer',
       icon: <TbUsers />,
       title: "Customer",
       path: "/customer",
-      permission: "customer"  // ✅ CORRECT
+      permission: "customer"
     },
     {
       id: 'packages',
       icon: <TbPackage />,
       title: "Packages",
       path: "/packages",
-      permission: "packages"  // ✅ CORRECT
+      permission: "packages"
     },
     {
       id: 'workshop',
       icon: <TbTools />,
       title: "Workshop",
       path: "/workshop",
-      permission: "workshop"  // ✅ FIXED: Was "packages"
+      permission: "workshop"
     },
     {
       id: 'promo',
       icon: <MdDiscount />,
       title: "Promo Codes",
       path: "/promo",
-      permission: "promo"  // ✅ FIXED: Was "discount"
+      permission: "promo"
     },
     {
       id: 'inventory',
@@ -248,45 +253,41 @@ const Navbar = ({
       icon: <TbTrash />,
       title: "Product Disposal",
       path: "/productdisposal",
-      permission: "disposal"  // ✅ CORRECT
+      permission: "disposal"
     },
     {
       id: 'report',
       icon: <TbReportAnalytics />,
       title: "Report",
       path: "/report",
-      permission: "report"  // ✅ CORRECT
+      permission: "report"
     },
     {
       id: 'admin',
       icon: <TbUsers />,
       title: "Admin",
       path: "/admin",
-      permission: "admin"  // ✅ CORRECT
+      permission: "admin"
     }
   ];
 
   // ✅ IMPROVED FILTERING - Handles admin, manager, and multiple permissions
   const getFilteredMenu = () => {
-    // ✅ Admin gets everything
     if (userPermissions.includes("admin")) {
       return menuConfig;
     }
 
-    // ✅ Manager gets dashboard and reports (even without explicit permission)
     const isManager = userPermissions.includes("manager");
 
     const filterItems = (items) => {
       return items
         .filter(item => {
-          // If it's dashboard or report, check for manager or specific permission
           if (item.id === 'home' && isManager) {
-            return true;  // ✅ Managers can see dashboard
+            return true;
           }
           if (item.id === 'report' && isManager) {
-            return true;  // ✅ Managers can see reports
+            return true;
           }
-          // For all other items, check if user has the specific permission
           return userPermissions.includes(item.permission);
         })
         .map(item => {
@@ -294,7 +295,6 @@ const Navbar = ({
             return {
               ...item,
               children: item.children.filter(child => {
-                // For inventory, check if user has inventory permission OR is manager
                 if (child.permission === 'inventory' && isManager) {
                   return true;
                 }
@@ -443,16 +443,19 @@ const Navbar = ({
             )}
           </div>
 
-          <div>
+          <div className="nav-right-section">
+            {/* ✅ NEW: Jass Billing Button */}
+            <button className="jass-billing-btn" onClick={handleJassBilling}>
+              Jass Billing
+            </button>
+
             {!isLoggedIn ? (
               <button className="icon-button" onClick={handleLogin} title="Login">
                 <BiLogIn />
               </button>
             ) : (
               <div className="profile">
-                <div className="profile-icon" title="Account">
-                  <FiUser />
-                </div>
+                {/* ❌ REMOVED: <div className="profile-icon" title="Account"><FiUser /></div> */}
                 <button className="icon-button" onClick={handleLogout} title="Logout">
                   <BiLogOut />
                 </button>

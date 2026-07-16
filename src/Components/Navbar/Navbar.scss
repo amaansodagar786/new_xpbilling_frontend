@@ -824,3 +824,63 @@ $dropdown-hover: rgba(255, 255, 255, 0.15);
         border-width: 2.5px;
     }
 }
+
+
+// ============================================
+// JASS BILLING BUTTON
+// ============================================
+.nav-right-section {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.jass-billing-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 18px;
+    background: linear-gradient(135deg, #5a3ec8, #7b5dd6);
+    color: #ffffff;
+    border: none;
+    border-radius: 25px;
+    font-family: 'Roboto', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    box-shadow: 0 2px 8px rgba(90, 62, 200, 0.25);
+    white-space: nowrap;
+
+    &:hover {
+        background: linear-gradient(135deg, #4a32b0, #6a4dc8);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 14px rgba(90, 62, 200, 0.35);
+    }
+
+    &:active {
+        transform: translateY(0);
+    }
+}
+
+// ── Responsive ──
+@media screen and (max-width: 600px) {
+    .jass-billing-btn {
+        padding: 6px 14px;
+        font-size: 11px;
+        letter-spacing: 0.2px;
+    }
+
+    .nav-right-section {
+        gap: 8px;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .jass-billing-btn {
+        padding: 5px 10px;
+        font-size: 10px;
+        border-radius: 20px;
+    }
+}
