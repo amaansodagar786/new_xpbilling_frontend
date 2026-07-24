@@ -1391,7 +1391,6 @@ const Workshops = () => {
                                     type="date"
                                     value={selectedDate}
                                     onChange={handleDateChange}
-                                    min={new Date().toISOString().split('T')[0]}
                                 />
                             </div>
                         </div>

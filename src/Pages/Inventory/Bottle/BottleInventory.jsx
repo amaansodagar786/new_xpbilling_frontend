@@ -6,7 +6,7 @@ import {
     FaCheckCircle, FaTimesCircle, FaChevronLeft, FaChevronRight,
     FaChevronRight as FaExpandChevron, FaHistory, FaArrowUp, FaArrowDown,
     FaUser, FaCalendarAlt, FaClock, FaTag, FaInfoCircle, FaTrashAlt,
-    FaEye, FaChevronDown, FaFilter
+    FaEye, FaChevronDown, FaFilter, FaMoneyBillWave
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../../../Components/Navbar/Navbar";
@@ -15,7 +15,7 @@ import "react-toastify/dist/ReactToastify.css";
 import * as XLSX from 'xlsx';
 
 // ============================================
-// ADD STOCK MODAL - UPDATED TO USE allInventory
+// ADD STOCK MODAL - WITH PURCHASE PRICE
 // ============================================
 const AddStockModal = ({
     show, onClose, mlSizes, itemTypes,
@@ -105,6 +105,21 @@ const AddStockModal = ({
                             />
                         </div>
                         <div className="bi-form-field">
+                            <label><FaMoneyBillWave /> Purchase Price (per item) *</label>
+                            <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={addStockData.purchasePrice}
+                                onChange={(e) => setAddStockData({ ...addStockData, purchasePrice: e.target.value })}
+                                placeholder="Enter purchase price"
+                                autoComplete="off"
+                            />
+                            <small className="bi-hint">Price per single item</small>
+                        </div>
+                    </div>
+                    <div className="bi-form-row">
+                        <div className="bi-form-field">
                             <label>Reason</label>
                             <select
                                 value={addStockData.reason}
@@ -115,6 +130,16 @@ const AddStockModal = ({
                                 <option value="Adjustment">Adjustment</option>
                                 <option value="Other">Other</option>
                             </select>
+                        </div>
+                        <div className="bi-form-field">
+                            <label>Notes</label>
+                            <input
+                                type="text"
+                                value={addStockData.notes || ''}
+                                onChange={(e) => setAddStockData({ ...addStockData, notes: e.target.value })}
+                                placeholder="Optional notes"
+                                autoComplete="off"
+                            />
                         </div>
                     </div>
                 </div>
@@ -155,7 +180,11 @@ const AddMLModal = ({ show, onClose, newML, setNewML, isSubmitting, onSubmit }) 
                             <input
                                 type="text"
                                 value={newML}
-                                onChange={(e) => setNewML(e.target.value)}
+                                onChange={(e) => {
+                                    // ✅ ONLY allow numbers
+                                    const value = e.target.value.replace(/[^0-9]/g, '');
+                                    setNewML(value);
+                                }}
                                 placeholder="Enter ML size (e.g., 200)"
                                 autoComplete="off"
                             />
@@ -226,7 +255,7 @@ const AddItemModal = ({ show, onClose, newItemType, setNewItemType, isSubmitting
 };
 
 // ============================================
-// BULK UPLOAD MODAL
+// BULK UPLOAD MODAL - WITH PURCHASE PRICE
 // ============================================
 const BulkUploadModal = ({
     show, onClose, fileInputRef, selectedFile, onFileChange,
@@ -249,7 +278,7 @@ const BulkUploadModal = ({
                     <div className="bi-upload-area">
                         <p>Upload Excel file with inventory data</p>
                         <p className="bi-upload-hint">
-                            File should have columns: ML Size, Item Type, Quantity
+                            File should have columns: ML Size, Item Type, Quantity, Purchase Price
                         </p>
                         <div className="bi-file-drop">
                             <input
@@ -283,7 +312,7 @@ const BulkUploadModal = ({
 };
 
 // ============================================
-// ERROR MODAL
+// ERROR MODAL - WITH PURCHASE PRICE
 // ============================================
 const ErrorModal = ({
     show,
@@ -335,6 +364,7 @@ const ErrorModal = ({
                                             <th>ML Size</th>
                                             <th>Item Type</th>
                                             <th>Quantity</th>
+                                            <th>Purchase Price</th>
                                             <th>New Stock</th>
                                         </tr>
                                     </thead>
@@ -345,6 +375,7 @@ const ErrorModal = ({
                                                 <td>{item.mlSize}</td>
                                                 <td>{item.itemType}</td>
                                                 <td>{item.quantity}</td>
+                                                <td>₹{item.purchasePrice || 0}</td>
                                                 <td className="bi-success-cell">{item.newStock}</td>
                                             </tr>
                                         ))}
@@ -367,6 +398,7 @@ const ErrorModal = ({
                                             <th>ML Size</th>
                                             <th>Item Type</th>
                                             <th>Quantity</th>
+                                            <th>Purchase Price</th>
                                             <th>Error</th>
                                         </tr>
                                     </thead>
@@ -377,6 +409,7 @@ const ErrorModal = ({
                                                 <td>{err.mlSize || '-'}</td>
                                                 <td>{err.itemType || '-'}</td>
                                                 <td>{err.quantity || '-'}</td>
+                                                <td>{err.purchasePrice || '-'}</td>
                                                 <td className="bi-error-cell">{err.error}</td>
                                             </tr>
                                         ))}
@@ -560,7 +593,7 @@ const DisposalHistoryPanel = ({ disposals, isLoading, onClose }) => {
 };
 
 // ============================================
-// FULL TRANSACTION MODAL (IN + OUT with Toggle)
+// FULL TRANSACTION MODAL (IN + OUT with Toggle) - WITH PURCHASE PRICE
 // ============================================
 const FullTransactionModal = ({
     show, onClose, mlSize, itemType, transactions, isLoading,
@@ -666,6 +699,12 @@ const FullTransactionModal = ({
                                                             {t.previousStock} → <strong>{t.newStock}</strong>
                                                         </span>
                                                     </div>
+                                                    {t.purchasePrice !== undefined && t.purchasePrice > 0 && (
+                                                        <div className="bi-full-txn-row">
+                                                            <span className="bi-full-txn-label"><FaMoneyBillWave /> Purchase Price:</span>
+                                                            <span className="bi-full-txn-value bi-txn-price">₹{t.purchasePrice.toFixed(2)} / item</span>
+                                                        </div>
+                                                    )}
                                                     {t.notes && (
                                                         <div className="bi-full-txn-row">
                                                             <span className="bi-full-txn-label">Notes:</span>
@@ -704,7 +743,7 @@ const FullTransactionModal = ({
 };
 
 // ============================================
-// TRANSACTION PANEL - UPDATED WITH View All Transactions
+// TRANSACTION PANEL - WITH PURCHASE PRICE
 // ============================================
 const TransactionPanel = ({
     transactions,
@@ -721,7 +760,6 @@ const TransactionPanel = ({
         };
     };
 
-    // ✅ FILTER: Only show IN transactions
     const inTransactions = transactions?.filter(t => t.transactionType === 'IN') || [];
 
     if (isLoading) {
@@ -803,6 +841,14 @@ const TransactionPanel = ({
                                 <span className="bi-txn-label"><FaArrowUp /> Quantity:</span>
                                 <span className="bi-txn-value bi-txn-qty">+{t.quantity}</span>
 
+                                {t.purchasePrice !== undefined && t.purchasePrice > 0 && (
+                                    <>
+                                        <span className="bi-txn-separator">|</span>
+                                        <span className="bi-txn-label"><FaMoneyBillWave /> Price:</span>
+                                        <span className="bi-txn-value bi-txn-price">₹{t.purchasePrice.toFixed(2)}</span>
+                                    </>
+                                )}
+
                                 <span className="bi-txn-separator">|</span>
 
                                 <span className="bi-txn-label"><FaBox /> Stock:</span>
@@ -841,14 +887,14 @@ const BottleInventory = () => {
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedML, setSelectedML] = useState("");
     const [selectedItemType, setSelectedItemType] = useState("");
-    const [statusFilter, setStatusFilter] = useState("all"); // ✅ NEW: Status filter
+    const [statusFilter, setStatusFilter] = useState("all");
     const [showAddStockModal, setShowAddStockModal] = useState(false);
     const [showAddMLModal, setShowAddMLModal] = useState(false);
     const [showAddItemModal, setShowAddItemModal] = useState(false);
     const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
     const [showErrorModal, setShowErrorModal] = useState(false);
     const [showAlertModal, setShowAlertModal] = useState(false);
-    const [isExporting, setIsExporting] = useState(false); // ✅ NEW
+    const [isExporting, setIsExporting] = useState(false);
 
     // Pagination states
     const [currentPage, setCurrentPage] = useState(1);
@@ -861,12 +907,14 @@ const BottleInventory = () => {
         hasPrevPage: false
     });
 
-    // Form states
+    // Form states - ✅ ADDED purchasePrice
     const [addStockData, setAddStockData] = useState({
         mlSize: "",
         itemType: "",
         quantity: "",
-        reason: "Purchase"
+        purchasePrice: "",
+        reason: "Purchase",
+        notes: ""
     });
     const [newML, setNewML] = useState("");
     const [newItemType, setNewItemType] = useState("");
@@ -889,9 +937,7 @@ const BottleInventory = () => {
     const [loadingDisposal, setLoadingDisposal] = useState(false);
     const [currentDisposalRowKey, setCurrentDisposalRowKey] = useState(null);
 
-    // ============================================
-    // FULL TRANSACTION MODAL STATE
-    // ============================================
+    // Full Transaction Modal state
     const [showFullTransactionModal, setShowFullTransactionModal] = useState(false);
     const [fullTransactions, setFullTransactions] = useState([]);
     const [loadingFullTransactions, setLoadingFullTransactions] = useState(false);
@@ -908,7 +954,7 @@ const BottleInventory = () => {
     const getRowKey = (item) => `${item.mlSize}__${item.itemType}`;
 
     // ============================================
-    // FETCH ALL INVENTORY FOR DROPDOWN (NO PAGINATION)
+    // FETCH ALL INVENTORY FOR DROPDOWN
     // ============================================
     const fetchAllInventory = async () => {
         try {
@@ -1076,7 +1122,7 @@ const BottleInventory = () => {
     };
 
     // ============================================
-    // ✅ EXPORT TO EXCEL
+    // EXPORT TO EXCEL
     // ============================================
     const handleExport = async () => {
         try {
@@ -1119,7 +1165,7 @@ const BottleInventory = () => {
     };
 
     // ============================================
-    // FETCH TRANSACTIONS FOR ROW (With hideInvoice=true)
+    // FETCH TRANSACTIONS FOR ROW
     // ============================================
     const fetchTransactionsForRow = async (item) => {
         const rowKey = getRowKey(item);
@@ -1155,7 +1201,7 @@ const BottleInventory = () => {
     };
 
     // ============================================
-    // FETCH FULL TRANSACTIONS (ALL IN + OUT - hideInvoice=false)
+    // FETCH FULL TRANSACTIONS
     // ============================================
     const fetchFullTransactions = async (mlSize, itemType) => {
         try {
@@ -1249,15 +1295,24 @@ const BottleInventory = () => {
     };
 
     // ============================================
-    // OPEN ADD STOCK MODAL - FETCH ALL INVENTORY FIRST
+    // OPEN ADD STOCK MODAL
     // ============================================
     const openAddStockModal = async () => {
+        // Reset form with purchasePrice
+        setAddStockData({
+            mlSize: "",
+            itemType: "",
+            quantity: "",
+            purchasePrice: "",
+            reason: "Purchase",
+            notes: ""
+        });
         setShowAddStockModal(true);
         await fetchAllInventory();
     };
 
     // ============================================
-    // ADD STOCK
+    // ADD STOCK - WITH PURCHASE PRICE
     // ============================================
     const handleAddStock = async () => {
         try {
@@ -1273,6 +1328,10 @@ const BottleInventory = () => {
                 toast.error("Please enter valid quantity");
                 return;
             }
+            if (addStockData.purchasePrice === undefined || addStockData.purchasePrice === null || parseFloat(addStockData.purchasePrice) < 0) {
+                toast.error("Please enter valid purchase price (must be >= 0)");
+                return;
+            }
 
             setIsSubmitting(true);
 
@@ -1286,7 +1345,9 @@ const BottleInventory = () => {
                         mlSize: addStockData.mlSize,
                         itemType: addStockData.itemType,
                         quantity: parseInt(addStockData.quantity),
-                        reason: addStockData.reason
+                        purchasePrice: parseFloat(addStockData.purchasePrice),
+                        reason: addStockData.reason,
+                        notes: addStockData.notes || ''
                     })
                 }
             );
@@ -1301,7 +1362,14 @@ const BottleInventory = () => {
 
             const updatedRowKey = `${addStockData.mlSize}__${addStockData.itemType}`;
 
-            setAddStockData({ mlSize: "", itemType: "", quantity: "", reason: "Purchase" });
+            setAddStockData({
+                mlSize: "",
+                itemType: "",
+                quantity: "",
+                purchasePrice: "",
+                reason: "Purchase",
+                notes: ""
+            });
             setShowAddStockModal(false);
             await fetchInventory(currentPage, searchTerm, selectedML, selectedItemType, statusFilter);
             await fetchAlerts();
@@ -1503,12 +1571,13 @@ const BottleInventory = () => {
                 'ML Size': err.mlSize || '',
                 'Item Type': err.itemType || '',
                 'Quantity': err.quantity || '',
+                'Purchase Price': err.purchasePrice || '',
                 'Error Reason': err.error || 'Unknown error'
             }));
 
             const worksheetData = [
-                ['ML Size', 'Item Type', 'Quantity', 'Error Reason'],
-                ...errorData.map(item => [item['ML Size'], item['Item Type'], item['Quantity'], item['Error Reason']])
+                ['ML Size', 'Item Type', 'Quantity', 'Purchase Price', 'Error Reason'],
+                ...errorData.map(item => [item['ML Size'], item['Item Type'], item['Quantity'], item['Purchase Price'], item['Error Reason']])
             ];
 
             const wb = XLSX.utils.book_new();
@@ -1518,6 +1587,7 @@ const BottleInventory = () => {
                 { wch: 15 },
                 { wch: 15 },
                 { wch: 12 },
+                { wch: 18 },
                 { wch: 40 }
             ];
 
@@ -1599,7 +1669,6 @@ const BottleInventory = () => {
                             />
                         </div>
                         <div className="bi-action-buttons-group">
-                            {/* ✅ STATUS FILTER */}
                             <div className="bi-status-filter">
                                 <FaFilter className="bi-filter-icon" />
                                 <select
@@ -1630,7 +1699,6 @@ const BottleInventory = () => {
                             <button className="bi-upload-btn" onClick={() => setShowBulkUploadModal(true)}>
                                 <FaUpload /> Bulk Upload
                             </button>
-                            {/* ✅ EXPORT BUTTON */}
                             <button
                                 className="bi-export-btn"
                                 onClick={handleExport}

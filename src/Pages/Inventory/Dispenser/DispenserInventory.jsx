@@ -7,7 +7,7 @@ import {
   FaCheckCircle, FaTimesCircle, FaMoneyBillWave,
   FaChevronDown, FaChevronUp, FaHistory, FaUser, FaCalendarAlt, FaArrowUp, FaArrowDown,
   FaChevronLeft, FaChevronRight, FaTag, FaClock, FaInfoCircle, FaTrashAlt,
-  FaEye, FaFilter , FaToggleOff
+  FaEye, FaFilter , FaToggleOff , FaToggleOn 
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../../../Components/Navbar/Navbar";
@@ -2102,7 +2102,7 @@ const DispenserInventory = () => {
                   <th>Selling Price 3ml (₹/KG)</th>
                   <th>Selling Price 6ml (₹/KG)</th>
                   <th>Discount (%)</th>
-                  <th>Min Stock</th>
+                  {/* <th>Min Stock</th> */}
                   <th>Status</th>
                   <th>Actions</th>
                 </tr>
@@ -2149,7 +2149,7 @@ const DispenserInventory = () => {
                           <td className="di-discount-cell">
                             {item.discount || 0}%
                           </td>
-                          <td className="di-min-cell">{item.minStock}</td>
+                          {/* <td className="di-min-cell">{item.minStock}</td> */}
                           <td>
                             <span className={`di-status-badge di-status-${status.status}`}>
                               <span className="di-status-dot"></span>
