@@ -256,7 +256,7 @@ const AddStockModal = ({
               <label>Quantity (KG) *</label>
               <input
                 type="number"
-                min="1"
+                min="0.01"
                 step="0.01"
                 value={addStockData.quantity}
                 onChange={(e) => setAddStockData({ ...addStockData, quantity: e.target.value })}
